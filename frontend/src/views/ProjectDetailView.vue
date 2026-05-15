@@ -23,13 +23,20 @@
           </div>
           <p v-if="project.project_no" class="text-xs text-gray-400 mt-0.5">{{ project.project_no }}</p>
         </div>
-        <button
-          v-if="auth.isManager"
-          @click="showTaskModal = true; editingTask = null"
-          class="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          ＋ 新增任務
-        </button>
+        <div class="flex items-center gap-3">
+          <!-- WebSocket status indicator -->
+          <div class="flex items-center gap-1.5 text-xs" :class="wsConnected ? 'text-green-600' : 'text-gray-400'">
+            <span class="w-1.5 h-1.5 rounded-full inline-block" :class="wsConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-300'"></span>
+            {{ wsConnected ? '即時連線' : '連線中...' }}
+          </div>
+          <button
+            v-if="auth.isManager"
+            @click="showTaskModal = true; editingTask = null"
+            class="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            ＋ 新增任務
+          </button>
+        </div>
       </div>
     </div>
 
@@ -197,12 +204,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type Task } from '@/stores/project'
 import GanttChart from '@/components/GanttChart.vue'
 import TaskModal from '@/components/TaskModal.vue'
+import echo from '@/lib/echo'
 
 const route = useRoute()
 const router = useRouter()
@@ -211,9 +219,9 @@ const store = useProjectStore()
 
 const showTaskModal = ref(false)
 const editingTask = ref<Task | null>(null)
+const wsConnected = ref(false)
 
 const project = computed(() => store.current)
-
 const completedCount = computed(() => project.value?.tasks.filter(t => t.is_completed).length ?? 0)
 
 const dueDateClass = computed(() => {
@@ -242,8 +250,48 @@ async function handleGanttDateChange(taskId: number, start: string, end: string)
   await store.updateTask(project.value.id, taskId, { start_date: start, end_date: end })
 }
 
-onMounted(() => {
+// ── WebSocket ────────────────────────────────────────────────────────────────
+let channelLeave: (() => void) | null = null
+
+function subscribeToChannel(projectId: number) {
+  const channel = echo.private(`project.${projectId}`)
+
+  channel.subscribed(() => { wsConnected.value = true })
+
+  // Another user saved a task
+  channel.listen('.TaskSaved', (data: { task: Task }) => {
+    if (!store.current || store.current.id !== projectId) return
+    const idx = store.current.tasks.findIndex(t => t.id === data.task.id)
+    if (idx !== -1) {
+      store.current.tasks[idx] = data.task
+    } else {
+      store.current.tasks.push(data.task)
+    }
+  })
+
+  // Another user deleted a task
+  channel.listen('.TaskDeleted', (data: { task_id: number }) => {
+    if (!store.current || store.current.id !== projectId) return
+    store.current.tasks = store.current.tasks.filter(t => t.id !== data.task_id)
+  })
+
+  // Project progress recalculated
+  channel.listen('.ProjectProgressUpdated', (data: { project_id: number; progress_percent: number }) => {
+    if (!store.current || store.current.id !== data.project_id) return
+    store.current.progress_percent = data.progress_percent
+  })
+
+  channelLeave = () => echo.leave(`project.${projectId}`)
+}
+
+onMounted(async () => {
   const id = Number(route.params.id)
-  store.fetchDetail(id)
+  await store.fetchDetail(id)
+  subscribeToChannel(id)
+})
+
+onBeforeUnmount(() => {
+  channelLeave?.()
+  wsConnected.value = false
 })
 </script>

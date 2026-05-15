@@ -35,6 +35,23 @@ const router = createRouter({
           name: 'todo',
           component: () => import('@/views/TodoView.vue'),
         },
+        {
+          path: 'stats',
+          name: 'stats',
+          component: () => import('@/views/StatsView.vue'),
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/views/SettingsView.vue'),
+          meta: { adminOnly: true },
+        },
+        {
+          path: 'system',
+          name: 'system',
+          component: () => import('@/views/SystemView.vue'),
+          meta: { adminOnly: true },
+        },
       ],
     },
   ],
@@ -52,6 +69,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guest && auth.isLoggedIn) {
+    return { name: 'dashboard' }
+  }
+
+  if (to.meta.adminOnly && !auth.isAdmin) {
     return { name: 'dashboard' }
   }
 })

@@ -1,4 +1,5 @@
 <template>
+  <ToastContainer />
   <div class="flex h-screen bg-gray-100 overflow-hidden">
     <!-- Sidebar -->
     <aside class="w-52 flex-shrink-0 bg-gray-900 text-white flex flex-col">
@@ -63,22 +64,34 @@
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import ToastContainer from '@/components/ToastContainer.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const navItems = [
-  { to: '/', icon: '📊', label: '首頁總覽' },
-  { to: '/projects', icon: '📁', label: '專案管理' },
-  { to: '/todo', icon: '✅', label: 'Todo List' },
-]
+const navItems = computed(() => {
+  const items = [
+    { to: '/', icon: '📊', label: '首頁總覽' },
+    { to: '/projects', icon: '📁', label: '專案管理' },
+    { to: '/todo', icon: '✅', label: 'Todo List' },
+    { to: '/stats', icon: '📈', label: '統計分析' },
+  ]
+  if (auth.isAdmin) {
+    items.push({ to: '/settings', icon: '⚙️', label: '設定管理' })
+    items.push({ to: '/system', icon: '🛡️', label: '系統管理' })
+  }
+  return items
+})
 
 const pageTitles: Record<string, string> = {
   dashboard: '首頁總覽',
   projects: '專案管理',
   'project-detail': '專案詳情',
   todo: 'Todo List',
+  stats: '統計分析',
+  settings: '設定管理',
+  system: '系統管理',
 }
 
 const currentPageTitle = computed(() => pageTitles[route.name as string] ?? '')

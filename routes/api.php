@@ -4,8 +4,11 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LookupController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TodoController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public
@@ -18,6 +21,28 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/todo', [TodoController::class, 'index']);
+    Route::get('/stats', [StatsController::class, 'index']);
+
+    // User management (admin only)
+    Route::apiResource('users', UserController::class)->except(['show']);
+
+    // Settings management (admin only)
+    Route::prefix('settings')->group(function () {
+        Route::get('categories', [SettingController::class, 'categoriesIndex']);
+        Route::post('categories', [SettingController::class, 'categoriesStore']);
+        Route::put('categories/{category}', [SettingController::class, 'categoriesUpdate']);
+        Route::delete('categories/{category}', [SettingController::class, 'categoriesDestroy']);
+
+        Route::get('priorities', [SettingController::class, 'prioritiesIndex']);
+        Route::post('priorities', [SettingController::class, 'prioritiesStore']);
+        Route::put('priorities/{priority}', [SettingController::class, 'prioritiesUpdate']);
+        Route::delete('priorities/{priority}', [SettingController::class, 'prioritiesDestroy']);
+
+        Route::get('statuses', [SettingController::class, 'statusesIndex']);
+        Route::post('statuses', [SettingController::class, 'statusesStore']);
+        Route::put('statuses/{status}', [SettingController::class, 'statusesUpdate']);
+        Route::delete('statuses/{status}', [SettingController::class, 'statusesDestroy']);
+    });
 
     Route::prefix('lookups')->group(function () {
         Route::get('categories', [LookupController::class, 'categories']);

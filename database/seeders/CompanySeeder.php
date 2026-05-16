@@ -7,13 +7,12 @@ use App\Models\CompanyFeature;
 use App\Models\Feature;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class CompanySeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::where('role', 'admin')->first();
+        $admin = User::where('role', 'admin')->firstOrFail();
 
         // Demo company
         $company = Company::create([

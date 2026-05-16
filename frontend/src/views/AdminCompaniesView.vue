@@ -182,8 +182,12 @@ async function createCompany() {
 
 async function toggleStatus(company: Company) {
   const next = company.status === 'active' ? 'suspended' : 'active'
-  await store.update(company.id, { status: next })
-  toast.success(next === 'active' ? '已啟用' : '已停用')
+  try {
+    await store.update(company.id, { status: next })
+    toast.success(next === 'active' ? '已啟用' : '已停用')
+  } catch {
+    toast.error('操作失敗，請再試一次')
+  }
 }
 
 async function openFeatures(company: Company) {
@@ -198,8 +202,14 @@ async function openFeatures(company: Company) {
 
 async function toggleFeature(f: CompanyFeature) {
   if (!featureCompany.value) return
+  const prev = f.enabled
   f.enabled = !f.enabled
-  await store.toggleFeature(featureCompany.value.id, f.key, f.enabled)
+  try {
+    await store.toggleFeature(featureCompany.value.id, f.key, f.enabled)
+  } catch {
+    f.enabled = prev
+    toast.error('操作失敗，請再試一次')
+  }
 }
 
 async function copyInviteCode() {

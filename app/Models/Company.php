@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
 
 class Company extends Model
@@ -55,13 +56,20 @@ class Company extends Model
 
     public function regenerateInviteCode(): string
     {
-        $code = Str::random(12);
-        $this->update(['invite_code' => $code]);
-        return $code;
+        for ($i = 0; $i < 5; $i++) {
+            $code = strtoupper(Str::random(12));
+            try {
+                $this->update(['invite_code' => $code]);
+                return $code;
+            } catch (QueryException $e) {
+                if ($i === 4) throw $e;
+            }
+        }
+        throw new \RuntimeException('Failed to generate unique invite code');
     }
 
     public static function findByInviteCode(string $code): ?self
     {
-        return self::where('invite_code', $code)->where('status', 'active')->first();
+        return self::where('invite_code', strtoupper($code))->where('status', 'active')->first();
     }
 }

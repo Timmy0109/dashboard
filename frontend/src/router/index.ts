@@ -68,7 +68,7 @@ const router = createRouter({
           path: 'manager/approvals',
           name: 'member-approvals',
           component: () => import('@/views/MemberApprovalsView.vue'),
-          meta: { requiresAuth: true },
+          meta: { requiresAuth: true, managerOnly: true },
         },
       ],
     },
@@ -91,6 +91,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.adminOnly && !auth.isAdmin) {
+    return { name: 'dashboard' }
+  }
+
+  if (to.meta.managerOnly && !auth.isManager && !auth.isAdmin) {
     return { name: 'dashboard' }
   }
 })

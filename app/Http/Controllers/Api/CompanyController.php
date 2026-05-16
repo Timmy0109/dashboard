@@ -9,6 +9,7 @@ use App\Models\Feature;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CompanyController extends Controller
 {
@@ -48,30 +49,31 @@ class CompanyController extends Controller
             'name' => 'required|string|max:100',
         ]);
 
-        $company = Company::create([
-            'name'       => $data['name'],
-            'status'     => 'active',
-            'created_by' => $request->user()->id,
-        ]);
+        $company = DB::transaction(function () use ($data, $request) {
+            $company = Company::create([
+                'name'       => $data['name'],
+                'status'     => 'active',
+                'created_by' => $request->user()->id,
+            ]);
 
-        // Seed default features
-        foreach (Feature::defaults() as $key) {
-            CompanyFeature::create([
-                'company_id'  => $company->id,
-                'feature_key' => $key,
-                'enabled'     => true,
-                'enabled_by'  => $request->user()->id,
-                'enabled_at'  => now(),
-            ]);
-        }
-        // Non-default features → disabled
-        foreach (array_diff(Feature::pluck('key')->toArray(), Feature::defaults()) as $key) {
-            CompanyFeature::create([
-                'company_id'  => $company->id,
-                'feature_key' => $key,
-                'enabled'     => false,
-            ]);
-        }
+            $allKeys     = Feature::pluck('key')->toArray();
+            $defaultKeys = Feature::where('is_default', true)->pluck('key')->toArray();
+
+            $rows = [];
+            foreach ($allKeys as $key) {
+                $isDefault = in_array($key, $defaultKeys);
+                $rows[] = [
+                    'company_id'  => $company->id,
+                    'feature_key' => $key,
+                    'enabled'     => $isDefault,
+                    'enabled_by'  => $isDefault ? $request->user()->id : null,
+                    'enabled_at'  => $isDefault ? now() : null,
+                ];
+            }
+            CompanyFeature::insert($rows);
+
+            return $company;
+        });
 
         return response()->json($company, 201);
     }

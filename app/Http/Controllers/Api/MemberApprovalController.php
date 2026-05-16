@@ -15,6 +15,9 @@ class MemberApprovalController extends Controller
         if (! $user->isManager() && ! $user->isAdmin()) {
             return response()->json(['message' => '權限不足'], 403);
         }
+        if (! $user->company_id) {
+            return response()->json(['message' => '無公司歸屬'], 403);
+        }
         return null;
     }
 

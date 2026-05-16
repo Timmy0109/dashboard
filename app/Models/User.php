@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -17,6 +18,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'status', 'last_login_at',
+        'company_id', 'invited_by',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -28,6 +30,21 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function inviter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'invited_by');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
     }
 
     public function isAdmin(): bool

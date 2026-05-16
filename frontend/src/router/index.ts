@@ -52,6 +52,18 @@ const router = createRouter({
           component: () => import('@/views/SystemView.vue'),
           meta: { adminOnly: true },
         },
+        {
+          path: 'admin/companies',
+          name: 'admin-companies',
+          component: () => import('@/views/AdminCompaniesView.vue'),
+          meta: { adminOnly: true },
+        },
+        {
+          path: 'manager/approvals',
+          name: 'member-approvals',
+          component: () => import('@/views/MemberApprovalsView.vue'),
+          meta: { requiresAuth: true },
+        },
       ],
     },
   ],

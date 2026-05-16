@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LookupController;
+use App\Http\Controllers\Api\MemberApprovalController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\StatsController;
@@ -49,6 +51,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('priorities', [LookupController::class, 'priorities']);
         Route::get('statuses', [LookupController::class, 'statuses']);
         Route::get('users', [LookupController::class, 'users']);
+        Route::get('features', [LookupController::class, 'myFeatures']);
+    });
+
+    // Admin — company management
+    Route::prefix('admin/companies')->group(function () {
+        Route::get('/', [CompanyController::class, 'index']);
+        Route::post('/', [CompanyController::class, 'store']);
+        Route::put('{company}', [CompanyController::class, 'update']);
+        Route::get('{company}/features', [CompanyController::class, 'features']);
+        Route::put('{company}/features/{key}', [CompanyController::class, 'toggleFeature']);
+        Route::post('{company}/invite-code', [CompanyController::class, 'regenerateInviteCode']);
+        Route::get('{company}/users', [CompanyController::class, 'users']);
+    });
+
+    // Manager — member approval
+    Route::prefix('manager/members')->group(function () {
+        Route::get('pending', [MemberApprovalController::class, 'pending']);
+        Route::post('{user}/approve', [MemberApprovalController::class, 'approve']);
+        Route::post('{user}/reject', [MemberApprovalController::class, 'reject']);
     });
 
     Route::apiResource('projects', ProjectController::class);

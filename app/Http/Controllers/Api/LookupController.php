@@ -30,4 +30,21 @@ class LookupController extends Controller
     {
         return response()->json(User::where('status', 'active')->get(['id', 'name', 'role']));
     }
+
+    public function myFeatures(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Admin gets all features
+        if ($user->isAdmin()) {
+            return response()->json(\App\Models\Feature::pluck('key'));
+        }
+
+        if (! $user->company_id) {
+            return response()->json([]);
+        }
+
+        $company = $user->company;
+        return response()->json($company ? $company->enabledFeatureKeys() : []);
+    }
 }

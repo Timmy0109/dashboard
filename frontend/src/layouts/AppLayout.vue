@@ -61,26 +61,44 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useFeatureStore } from '@/stores/feature'
 import ToastContainer from '@/components/ToastContainer.vue'
 
 const auth = useAuthStore()
+const feature = useFeatureStore()
 const route = useRoute()
 const router = useRouter()
+
+onMounted(() => {
+  if (!feature.loaded) feature.fetch()
+})
 
 const navItems = computed(() => {
   const items = [
     { to: '/', icon: 'dashboard', label: '首頁總覽' },
     { to: '/projects', icon: 'folder', label: '專案管理' },
     { to: '/todo', icon: 'check_circle', label: 'Todo List' },
-    { to: '/stats', icon: 'bar_chart', label: '統計分析' },
   ]
+
+  if (feature.has('report.stats_dashboard')) {
+    items.push({ to: '/stats', icon: 'bar_chart', label: '統計分析' })
+  }
+
+  if (auth.isManager) {
+    if (feature.has('member.approval_required')) {
+      items.push({ to: '/manager/approvals', icon: 'how_to_reg', label: '成員審核' })
+    }
+  }
+
   if (auth.isAdmin) {
+    items.push({ to: '/admin/companies', icon: 'business', label: '公司管理' })
     items.push({ to: '/settings', icon: 'settings', label: '設定管理' })
     items.push({ to: '/system', icon: 'shield', label: '系統管理' })
   }
+
   return items
 })
 
@@ -92,6 +110,8 @@ const pageTitles: Record<string, string> = {
   stats: '統計分析',
   settings: '設定管理',
   system: '系統管理',
+  'admin-companies': '公司管理',
+  'member-approvals': '成員審核',
 }
 
 const currentPageTitle = computed(() => pageTitles[route.name as string] ?? '')
@@ -102,6 +122,7 @@ function isActive(path: string) {
 }
 
 async function handleLogout() {
+  feature.reset()
   await auth.logout()
   router.push('/login')
 }

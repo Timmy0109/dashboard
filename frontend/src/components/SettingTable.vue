@@ -6,7 +6,7 @@
         @click="$emit('add')"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
       >
-        ＋ 新增
+        <span class="material-icons text-sm leading-none">add</span> 新增
       </button>
     </div>
 
@@ -47,9 +47,13 @@
           <td class="px-4 py-2.5">
             <div class="flex gap-1">
               <button @click="$emit('edit', item)"
-                class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">✏️</button>
+                class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                <span class="material-icons text-base leading-none">edit</span>
+              </button>
               <button @click="$emit('delete', item)"
-                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">🗑️</button>
+                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                <span class="material-icons text-base leading-none">delete</span>
+              </button>
             </div>
           </td>
         </tr>

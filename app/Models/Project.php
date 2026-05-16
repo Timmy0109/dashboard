@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Project extends Model
 {
@@ -60,7 +61,12 @@ class Project extends Model
 
     public function recalculateProgress(): void
     {
-        $avg = $this->tasks()->avg('progress') ?? 0;
-        $this->update(['progress_percent' => (int) $avg]);
+        DB::transaction(function () {
+            $project = Project::lockForUpdate()->find($this->id);
+            if (!$project) return;
+            $avg = $project->tasks()->avg('progress') ?? 0;
+            $project->update(['progress_percent' => (int) $avg]);
+            $this->progress_percent = $project->progress_percent;
+        });
     }
 }

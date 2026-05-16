@@ -27,7 +27,7 @@
           <div v-else class="space-y-3">
             <div v-for="item in data.status_distribution" :key="item.status.name"
               class="flex items-center gap-3">
-              <span class="text-sm w-4">{{ item.status.icon }}</span>
+              <span class="material-icons text-base leading-none w-4" :style="{ color: item.status.color }">{{ item.status.icon }}</span>
               <span class="text-sm text-gray-600 w-20">{{ item.status.name }}</span>
               <div class="flex-1 bg-gray-100 rounded-full h-2">
                 <div

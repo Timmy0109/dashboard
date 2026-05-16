@@ -5,6 +5,13 @@
         <h2 class="text-xl font-bold text-gray-900">今日待辦</h2>
         <p class="text-sm text-gray-500 mt-0.5">所有未完成任務，依截止日期排序</p>
       </div>
+      <button
+        @click="openAdd"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        <span class="material-icons text-base leading-none">add</span>
+        新增任務
+      </button>
     </div>
 
     <!-- Filter tabs -->
@@ -38,16 +45,23 @@
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">優先級</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">狀態</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 w-24">進度</th>
+            <th class="px-4 py-3 w-20"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
           <tr
             v-for="task in filteredTasks"
             :key="task.id"
-            class="hover:bg-gray-50 transition-colors"
+            class="hover:bg-gray-50 transition-colors cursor-pointer"
+            @click="openEdit(task)"
           >
-            <td class="px-4 py-3">
-              <div class="w-4 h-4 rounded border-2 border-gray-300 cursor-pointer hover:border-blue-400" />
+            <td class="px-4 py-3" @click.stop="toggleComplete(task)">
+              <div
+                class="w-4 h-4 rounded border-2 cursor-pointer transition-colors"
+                :class="task.is_completed ? 'border-green-500 bg-green-500' : 'border-gray-300 hover:border-blue-400'"
+              >
+                <span v-if="task.is_completed" class="material-icons text-white text-xs leading-none flex items-center justify-center h-full">check</span>
+              </div>
             </td>
             <td class="px-4 py-3">
               <span class="text-sm text-gray-800 font-medium">{{ task.name }}</span>
@@ -69,7 +83,7 @@
                 class="text-xs font-medium"
                 :class="task.is_overdue ? 'text-red-600' : 'text-gray-600'"
               >
-                {{ task.is_overdue ? '⚠️ ' : '' }}{{ task.end_date }}
+                <span v-if="task.is_overdue" class="material-icons text-sm leading-none align-middle mr-0.5">warning</span>{{ task.end_date }}
               </span>
             </td>
             <td class="px-4 py-3">
@@ -87,7 +101,8 @@
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
                 :style="{ backgroundColor: task.status.color + '20', color: task.status.color }"
               >
-                {{ task.status.icon }} {{ task.status.name }}
+                <span class="material-icons text-xs leading-none">{{ task.status.icon }}</span>
+                {{ task.status.name }}
               </span>
             </td>
             <td class="px-4 py-3">
@@ -102,11 +117,33 @@
                 <span class="text-xs text-gray-400 w-7 text-right">{{ task.progress }}%</span>
               </div>
             </td>
+            <td class="px-4 py-3" @click.stop>
+              <div class="flex gap-1">
+                <button
+                  @click="openEdit(task)"
+                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  title="編輯"
+                >
+                  <span class="material-icons text-base leading-none">edit</span>
+                </button>
+                <button
+                  @click="handleDelete(task)"
+                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                  title="刪除"
+                >
+                  <span class="material-icons text-base leading-none">delete</span>
+                </button>
+              </div>
+            </td>
           </tr>
 
           <tr v-if="filteredTasks.length === 0">
-            <td colspan="8" class="px-4 py-12 text-center text-sm text-gray-400">
-              {{ activeTab === 'overdue' ? '沒有逾期任務 🎉' : '目前沒有待辦任務' }}
+            <td colspan="9" class="px-4 py-12 text-center text-sm text-gray-400">
+              {{
+                activeTab === 'overdue' ? '沒有逾期任務' :
+                activeTab === 'completed' ? '尚無已完成任務' :
+                '目前沒有待辦任務'
+              }}
             </td>
           </tr>
         </tbody>
@@ -120,36 +157,148 @@
         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> 已完成</span>
       </div>
     </div>
+
+    <!-- Project picker dialog (before adding a task) -->
+    <div v-if="showProjectPicker" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="showProjectPicker = false" />
+      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+        <h3 class="text-base font-semibold text-gray-900 mb-4">選擇所屬專案</h3>
+        <select
+          v-model="selectedProjectId"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+        >
+          <option value="">請選擇專案</option>
+          <option v-for="p in projectStore.list" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+        <div class="flex gap-3">
+          <button @click="showProjectPicker = false"
+            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">取消</button>
+          <button @click="confirmProjectPick" :disabled="!selectedProjectId"
+            class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">繼續</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Modal -->
+    <TaskModal
+      v-if="showTaskModal && activeProjectId !== null"
+      :task="editingTask"
+      :project-id="activeProjectId"
+      @close="showTaskModal = false"
+      @saved="onTaskSaved"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useTodoStore } from '@/stores/todo'
+import { useTodoStore, type TodoTask } from '@/stores/todo'
+import { useProjectStore } from '@/stores/project'
+import { useToast } from '@/composables/useToast'
+import TaskModal from '@/components/TaskModal.vue'
+import type { Task } from '@/stores/project'
 
 const store = useTodoStore()
+const projectStore = useProjectStore()
+const toast = useToast()
 const activeTab = ref('all')
+const showProjectPicker = ref(false)
+const showTaskModal = ref(false)
+const editingTask = ref<Task | null>(null)
+const activeProjectId = ref<number | null>(null)
+const selectedProjectId = ref<number | ''>('')
 
 const tabs = [
   { label: '全部', value: 'all' },
-  { label: '待辦', value: 'pending' },
+  { label: '待處理', value: 'pending' },
   { label: '進行中', value: 'in_progress' },
+  { label: '已完成', value: 'completed' },
   { label: '逾期', value: 'overdue' },
 ]
 
 const filteredTasks = computed(() => {
-  if (activeTab.value === 'overdue') return store.tasks.filter(t => t.is_overdue)
-  if (activeTab.value === 'pending') return store.tasks.filter(t => t.progress === 0)
-  if (activeTab.value === 'in_progress') return store.tasks.filter(t => t.progress > 0 && t.progress < 100)
+  if (activeTab.value === 'completed') return store.tasks.filter(t => t.is_completed)
+  if (activeTab.value === 'overdue') return store.tasks.filter(t => t.is_overdue && !t.is_completed)
+  if (activeTab.value === 'pending') return store.tasks.filter(t => t.progress === 0 && !t.is_completed)
+  if (activeTab.value === 'in_progress') return store.tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed)
   return store.tasks
 })
 
 function getTabCount(tab: string) {
-  if (tab === 'overdue') return store.tasks.filter(t => t.is_overdue).length
-  if (tab === 'pending') return store.tasks.filter(t => t.progress === 0).length
-  if (tab === 'in_progress') return store.tasks.filter(t => t.progress > 0 && t.progress < 100).length
+  if (tab === 'completed') return store.tasks.filter(t => t.is_completed).length
+  if (tab === 'overdue') return store.tasks.filter(t => t.is_overdue && !t.is_completed).length
+  if (tab === 'pending') return store.tasks.filter(t => t.progress === 0 && !t.is_completed).length
+  if (tab === 'in_progress') return store.tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length
   return store.tasks.length
 }
 
-onMounted(() => store.fetch())
+function todoTaskToTask(t: TodoTask): Task {
+  return {
+    id: t.id,
+    project_id: t.project_id,
+    name: t.name,
+    note: t.note,
+    start_date: t.start_date,
+    end_date: t.end_date,
+    progress: t.progress,
+    is_completed: t.is_completed,
+    assignee: t.assignee,
+    status: t.status ? { id: t.status.id, name: t.status.name, icon: t.status.icon, color: t.status.color } : null,
+    priority: t.priority,
+  }
+}
+
+function openAdd() {
+  if (projectStore.list.length === 0) {
+    toast.error('請先建立專案')
+    return
+  }
+  selectedProjectId.value = ''
+  showProjectPicker.value = true
+}
+
+function confirmProjectPick() {
+  if (!selectedProjectId.value) return
+  activeProjectId.value = selectedProjectId.value as number
+  editingTask.value = null
+  showProjectPicker.value = false
+  showTaskModal.value = true
+}
+
+function openEdit(task: TodoTask) {
+  editingTask.value = todoTaskToTask(task)
+  activeProjectId.value = task.project_id
+  showTaskModal.value = true
+}
+
+async function toggleComplete(task: TodoTask) {
+  try {
+    await import('@/lib/axios').then(({ default: api }) =>
+      api.put(`/projects/${task.project_id}/tasks/${task.id}`, { is_completed: !task.is_completed })
+    )
+    await store.fetch()
+  } catch {
+    toast.error('操作失敗')
+  }
+}
+
+async function handleDelete(task: TodoTask) {
+  if (!confirm(`確定要刪除任務「${task.name}」？`)) return
+  try {
+    await store.deleteTask(task.project_id, task.id)
+    toast.success('已刪除')
+  } catch {
+    toast.error('刪除失敗')
+  }
+}
+
+async function onTaskSaved() {
+  showTaskModal.value = false
+  await store.fetch()
+  toast.success('儲存成功')
+}
+
+onMounted(async () => {
+  await Promise.all([store.fetch(), projectStore.fetchList()])
+})
 </script>

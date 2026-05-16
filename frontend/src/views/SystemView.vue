@@ -9,7 +9,7 @@
         @click="openAdd"
         class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
       >
-        ＋ 新增使用者
+        <span class="material-icons text-base leading-none">add</span> 新增使用者
       </button>
     </div>
 
@@ -57,9 +57,13 @@
             <td class="px-4 py-3">
               <div class="flex gap-1">
                 <button @click="openEdit(user)"
-                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">✏️</button>
+                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                  <span class="material-icons text-base leading-none">edit</span>
+                </button>
                 <button @click="handleDelete(user)"
-                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">🗑️</button>
+                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                  <span class="material-icons text-base leading-none">delete</span>
+                </button>
               </div>
             </td>
           </tr>

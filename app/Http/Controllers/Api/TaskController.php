@@ -41,9 +41,16 @@ class TaskController extends Controller
         return response()->json($task->load(['assignee', 'status', 'priority']), 201);
     }
 
+    public function show(Request $request, Project $project, Task $task): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        return response()->json($task->load(['assignee', 'status', 'priority']));
+    }
+
     public function update(Request $request, Project $project, Task $task): JsonResponse
     {
-        $this->authorize('update', $project);
+        $this->authorize('update', $task);
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -64,7 +71,7 @@ class TaskController extends Controller
 
     public function destroy(Request $request, Project $project, Task $task): JsonResponse
     {
-        $this->authorize('update', $project);
+        $this->authorize('delete', $task);
 
         $task->delete();
 

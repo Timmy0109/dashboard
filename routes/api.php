@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
 // Authenticated (Sanctum cookie session)
 Route::middleware('auth:sanctum')->group(function () {
@@ -56,7 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('members', [ProjectController::class, 'members']);
         Route::post('members', [ProjectController::class, 'addMember']);
         Route::delete('members/{userId}', [ProjectController::class, 'removeMember']);
-        Route::apiResource('tasks', TaskController::class)->except(['index'])->shallow();
+        Route::apiResource('tasks', TaskController::class)->except(['index']);
         Route::get('tasks', [TaskController::class, 'index']);
     });
 });

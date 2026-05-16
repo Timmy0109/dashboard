@@ -8,7 +8,7 @@
           class="pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border"
           :class="styles[toast.type]"
         >
-          <span class="text-base shrink-0 mt-0.5">{{ icons[toast.type] }}</span>
+          <span class="material-icons text-lg leading-none shrink-0 mt-0.5">{{ icons[toast.type] }}</span>
           <span class="flex-1">{{ toast.message }}</span>
           <button
             @click="remove(toast.id)"
@@ -25,7 +25,7 @@ import { useToast } from '@/composables/useToast'
 
 const { toasts, remove } = useToast()
 
-const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' }
+const icons = { success: 'check_circle', error: 'error', info: 'info', warning: 'warning' }
 const styles = {
   success: 'bg-green-50 border-green-200 text-green-800',
   error: 'bg-red-50 border-red-200 text-red-800',

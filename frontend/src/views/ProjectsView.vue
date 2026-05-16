@@ -11,7 +11,7 @@
         @click="openCreate"
         class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
       >
-        ＋ 新增專案
+        <span class="material-icons text-base leading-none">add</span> 新增專案
       </button>
     </div>
 
@@ -62,7 +62,7 @@
             <td class="px-4 py-3">
               <span class="text-xs" :class="isOverdue(project) ? 'text-red-600 font-medium' : 'text-gray-600'">
                 {{ project.due_date ? formatDate(project.due_date) : '—' }}
-                <span v-if="isOverdue(project)" class="ml-1">⚠️</span>
+                <span v-if="isOverdue(project)" class="material-icons text-sm leading-none align-middle ml-0.5">warning</span>
               </span>
             </td>
             <td class="px-4 py-3">
@@ -92,7 +92,8 @@
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
                 :style="{ backgroundColor: project.status.color + '20', color: project.status.color }"
               >
-                {{ project.status.icon }} {{ project.status.name }}
+                <span class="material-icons text-xs leading-none">{{ project.status.icon }}</span>
+                {{ project.status.name }}
               </span>
             </td>
             <td class="px-4 py-3" @click.stop>
@@ -101,12 +102,12 @@
                   @click="openEdit(project)"
                   class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                   title="編輯"
-                >✏️</button>
+                ><span class="material-icons text-base leading-none">edit</span></button>
                 <button
                   @click="handleDelete(project)"
                   class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                   title="刪除"
-                >🗑️</button>
+                ><span class="material-icons text-base leading-none">delete</span></button>
               </div>
             </td>
           </tr>

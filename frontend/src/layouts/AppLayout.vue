@@ -20,7 +20,7 @@
             ? 'bg-blue-600 text-white'
             : 'text-gray-300 hover:bg-gray-700 hover:text-white'"
         >
-          <span class="text-base">{{ item.icon }}</span>
+          <span class="material-icons text-lg leading-none">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
@@ -31,7 +31,7 @@
           @click="handleLogout"
           class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
         >
-          <span class="text-base">🚪</span>
+          <span class="material-icons text-lg leading-none">logout</span>
           <span>登出</span>
         </button>
       </div>
@@ -72,14 +72,14 @@ const router = useRouter()
 
 const navItems = computed(() => {
   const items = [
-    { to: '/', icon: '📊', label: '首頁總覽' },
-    { to: '/projects', icon: '📁', label: '專案管理' },
-    { to: '/todo', icon: '✅', label: 'Todo List' },
-    { to: '/stats', icon: '📈', label: '統計分析' },
+    { to: '/', icon: 'dashboard', label: '首頁總覽' },
+    { to: '/projects', icon: 'folder', label: '專案管理' },
+    { to: '/todo', icon: 'check_circle', label: 'Todo List' },
+    { to: '/stats', icon: 'bar_chart', label: '統計分析' },
   ]
   if (auth.isAdmin) {
-    items.push({ to: '/settings', icon: '⚙️', label: '設定管理' })
-    items.push({ to: '/system', icon: '🛡️', label: '系統管理' })
+    items.push({ to: '/settings', icon: 'settings', label: '設定管理' })
+    items.push({ to: '/system', icon: 'shield', label: '系統管理' })
   }
   return items
 })

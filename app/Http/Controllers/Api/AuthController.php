@@ -23,6 +23,13 @@ class AuthController extends Controller
             ]);
         }
 
+        if (Auth::user()->status !== 'active') {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => ['此帳號已停用，請聯絡管理員'],
+            ]);
+        }
+
         $request->session()->regenerate();
 
         $user = Auth::user();

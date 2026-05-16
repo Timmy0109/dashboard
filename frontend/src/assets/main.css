@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '/node_modules/frappe-gantt/dist/frappe-gantt.css';
+@import 'material-icons/iconfont/material-icons.css';
 
 * {
   box-sizing: border-box;

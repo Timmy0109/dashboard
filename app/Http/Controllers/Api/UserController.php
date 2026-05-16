@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -56,7 +57,12 @@ class UserController extends Controller
             $data['password'] = Hash::make($data['password']);
         }
 
+        $wasActive = $user->status === 'active';
         $user->update($data);
+
+        if ($wasActive && ($data['status'] ?? null) === 'inactive') {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+        }
 
         return response()->json($user->only(['id', 'name', 'email', 'role', 'status']));
     }

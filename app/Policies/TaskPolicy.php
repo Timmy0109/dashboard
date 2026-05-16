@@ -19,7 +19,13 @@ class TaskPolicy
 
     public function update(User $user, Task $task): bool
     {
-        return (new ProjectPolicy())->update($user, $task->project);
+        if ((new ProjectPolicy())->update($user, $task->project)) {
+            return true;
+        }
+        // Members can update their own assigned tasks
+        return $user->isMember()
+            && (new ProjectPolicy())->view($user, $task->project)
+            && $task->assignee_id === $user->id;
     }
 
     public function delete(User $user, Task $task): bool

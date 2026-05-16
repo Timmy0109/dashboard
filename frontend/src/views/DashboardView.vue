@@ -20,7 +20,7 @@
           class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
         >
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-lg">{{ card.icon }}</span>
+            <span class="material-icons text-lg leading-none" :class="card.iconColor">{{ card.icon }}</span>
             <span class="text-xs text-gray-500">{{ card.label }}</span>
           </div>
           <div class="text-2xl font-bold" :class="card.color">{{ card.value }}</div>
@@ -91,7 +91,8 @@
                       class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
                       :style="{ backgroundColor: project.status.color + '20', color: project.status.color }"
                     >
-                      {{ project.status.icon }} {{ project.status.name }}
+                      <span class="material-icons text-xs leading-none">{{ project.status.icon }}</span>
+                      {{ project.status.name }}
                     </span>
                   </div>
                   <div class="flex items-center gap-2">
@@ -139,12 +140,12 @@ const router = useRouter()
 const statCards = computed(() => {
   if (!store.stats) return []
   return [
-    { label: '全部專案', icon: '📁', value: store.stats.total_projects, color: 'text-gray-900' },
-    { label: '進行中', icon: '🔵', value: store.stats.active_projects, color: 'text-blue-600' },
-    { label: '已完成', icon: '🟢', value: store.stats.completed_projects, color: 'text-green-600' },
-    { label: '全部任務', icon: '📋', value: store.stats.total_tasks, color: 'text-gray-900' },
-    { label: '已完成任務', icon: '✅', value: store.stats.completed_tasks, color: 'text-green-600' },
-    { label: '逾期任務', icon: '🔴', value: store.stats.overdue_tasks, color: store.stats.overdue_tasks > 0 ? 'text-red-600' : 'text-gray-400' },
+    { label: '全部專案', icon: 'folder', iconColor: 'text-gray-500', value: store.stats.total_projects, color: 'text-gray-900' },
+    { label: '進行中', icon: 'pending', iconColor: 'text-blue-500', value: store.stats.active_projects, color: 'text-blue-600' },
+    { label: '已完成', icon: 'check_circle', iconColor: 'text-green-500', value: store.stats.completed_projects, color: 'text-green-600' },
+    { label: '全部任務', icon: 'assignment', iconColor: 'text-gray-500', value: store.stats.total_tasks, color: 'text-gray-900' },
+    { label: '已完成任務', icon: 'task_alt', iconColor: 'text-green-500', value: store.stats.completed_tasks, color: 'text-green-600' },
+    { label: '逾期任務', icon: 'warning', iconColor: store.stats.overdue_tasks > 0 ? 'text-red-500' : 'text-gray-400', value: store.stats.overdue_tasks, color: store.stats.overdue_tasks > 0 ? 'text-red-600' : 'text-gray-400' },
   ]
 })
 

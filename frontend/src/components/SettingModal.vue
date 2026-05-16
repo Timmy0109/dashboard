@@ -2,14 +2,14 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="$emit('close')">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-800">{{ isEdit ? '編輯' : '新增' }}{{ typeLabel }}</h3>
+        <h3 class="text-sm font-semibold text-gray-800">{{ isEdit ? '編輯' : '新增' }}{{ typeLabel[type] }}</h3>
         <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
       </div>
 
       <form @submit.prevent="handleSubmit" class="p-5 space-y-4">
         <div v-if="type === 'statuses'">
           <label class="block text-xs font-medium text-gray-600 mb-1">圖示</label>
-          <input v-model="form.icon" type="text" placeholder="如 🟢" maxlength="4"
+          <input v-model="form.icon" type="text" placeholder="如 pending, check_circle" maxlength="40"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
         </div>
 

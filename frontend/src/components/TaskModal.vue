@@ -54,7 +54,7 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">選擇狀態</option>
-              <option v-for="s in lookup.statuses" :key="s.id" :value="s.id">{{ s.icon }} {{ s.name }}</option>
+              <option v-for="s in lookup.statuses" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
           </div>
           <div>
@@ -137,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, watch, onMounted } from 'vue'
 import { useProjectStore, type Task } from '@/stores/project'
 import { useLookupStore } from '@/stores/lookup'
 
@@ -159,6 +159,18 @@ const form = reactive({
   assignee_id: null as number | null,
   progress: 0,
   note: '',
+})
+
+const STATUS_PROGRESS: Record<string, number> = {
+  '準備中': 0, '待確認': 25, '進行中': 50, '追蹤中': 75, '已完成': 100,
+}
+
+watch(() => form.status_id, (id) => {
+  if (!id) return
+  const status = lookup.statuses.find(s => s.id === id)
+  if (status && status.name in STATUS_PROGRESS) {
+    form.progress = STATUS_PROGRESS[status.name]!
+  }
 })
 
 onMounted(async () => {
@@ -189,6 +201,7 @@ async function handleSubmit() {
   saving.value = true
   errorMsg.value = ''
   try {
+    const selectedStatus = lookup.statuses.find(s => s.id === form.status_id)
     const payload = {
       name: form.name,
       start_date: form.start_date,
@@ -198,6 +211,7 @@ async function handleSubmit() {
       assignee_id: form.assignee_id,
       progress: form.progress,
       note: form.note || null,
+      is_completed: selectedStatus?.name === '已完成',
     }
     if (props.task) {
       await projectStore.updateTask(props.projectId, props.task.id, payload)

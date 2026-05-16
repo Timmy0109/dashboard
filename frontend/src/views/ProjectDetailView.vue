@@ -7,7 +7,7 @@
     <!-- Back + Header -->
     <div class="mb-5">
       <button @click="router.push('/projects')" class="text-sm text-gray-400 hover:text-gray-600 mb-3 flex items-center gap-1">
-        ← 返回專案列表
+        <span class="material-icons text-base leading-none">arrow_back</span> 返回專案列表
       </button>
       <div class="flex items-start justify-between gap-4">
         <div>
@@ -18,7 +18,8 @@
               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
               :style="{ backgroundColor: project.status.color + '20', color: project.status.color }"
             >
-              {{ project.status.icon }} {{ project.status.name }}
+              <span class="material-icons text-xs leading-none">{{ project.status.icon }}</span>
+              {{ project.status.name }}
             </span>
           </div>
           <p v-if="project.project_no" class="text-xs text-gray-400 mt-0.5">{{ project.project_no }}</p>
@@ -34,7 +35,7 @@
             @click="showTaskModal = true; editingTask = null"
             class="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            ＋ 新增任務
+            <span class="material-icons text-base leading-none">add</span> 新增任務
           </button>
         </div>
       </div>
@@ -132,7 +133,7 @@
                 :class="isTaskOverdue(task) ? 'text-red-600 font-medium' : 'text-gray-600'"
               >
                 {{ task.end_date.slice(0, 10) }}
-                <span v-if="isTaskOverdue(task)">⚠️</span>
+                <span v-if="isTaskOverdue(task)" class="material-icons text-sm leading-none align-middle ml-0.5">warning</span>
               </span>
             </td>
             <td class="px-4 py-3">
@@ -141,7 +142,8 @@
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
                 :style="{ backgroundColor: task.status.color + '20', color: task.status.color }"
               >
-                {{ task.status.icon }} {{ task.status.name }}
+                <span class="material-icons text-xs leading-none">{{ task.status.icon }}</span>
+                {{ task.status.name }}
               </span>
             </td>
             <td class="px-4 py-3">
@@ -170,11 +172,11 @@
                 <button
                   @click="openEditTask(task)"
                   class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                >✏️</button>
+                ><span class="material-icons text-base leading-none">edit</span></button>
                 <button
                   @click="handleDeleteTask(task)"
                   class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                >🗑️</button>
+                ><span class="material-icons text-base leading-none">delete</span></button>
               </div>
             </td>
             <td class="px-4 py-3" v-else></td>
@@ -210,7 +212,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type Task } from '@/stores/project'
 import GanttChart from '@/components/GanttChart.vue'
 import TaskModal from '@/components/TaskModal.vue'
-import echo from '@/lib/echo'
+import getEcho from '@/lib/echo'
 
 const route = useRoute()
 const router = useRouter()
@@ -254,11 +256,13 @@ async function handleGanttDateChange(taskId: number, start: string, end: string)
 let channelLeave: (() => void) | null = null
 
 function subscribeToChannel(projectId: number) {
+  const echo = getEcho()
+  if (!echo) return  // Reverb not configured — skip WebSocket
+
   const channel = echo.private(`project.${projectId}`)
 
   channel.subscribed(() => { wsConnected.value = true })
 
-  // Another user saved a task
   channel.listen('.TaskSaved', (data: { task: Task }) => {
     if (!store.current || store.current.id !== projectId) return
     const idx = store.current.tasks.findIndex(t => t.id === data.task.id)
@@ -269,13 +273,11 @@ function subscribeToChannel(projectId: number) {
     }
   })
 
-  // Another user deleted a task
   channel.listen('.TaskDeleted', (data: { task_id: number }) => {
     if (!store.current || store.current.id !== projectId) return
     store.current.tasks = store.current.tasks.filter(t => t.id !== data.task_id)
   })
 
-  // Project progress recalculated
   channel.listen('.ProjectProgressUpdated', (data: { project_id: number; progress_percent: number }) => {
     if (!store.current || store.current.id !== data.project_id) return
     store.current.progress_percent = data.progress_percent

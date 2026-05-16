@@ -56,11 +56,17 @@ class StatsController extends Controller
             ]);
 
         // Monthly task completion trend (last 6 months)
+        $dateFormat = match (config('database.default')) {
+            'mysql', 'mariadb' => "DATE_FORMAT(updated_at, '%Y-%m')",
+            'pgsql' => "TO_CHAR(updated_at, 'YYYY-MM')",
+            default => "strftime('%Y-%m', updated_at)",
+        };
+
         $trend = Task::whereIn('project_id', $projectIds)
             ->where('is_completed', true)
             ->where('updated_at', '>=', now()->subMonths(6))
             ->select(
-                DB::raw("strftime('%Y-%m', updated_at) as month"),
+                DB::raw("$dateFormat as month"),
                 DB::raw('count(*) as count')
             )
             ->groupBy('month')

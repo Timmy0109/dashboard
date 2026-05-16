@@ -96,6 +96,28 @@
           </div>
         </div>
 
+        <!-- Members -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">指派成員</label>
+          <div class="border border-gray-300 rounded-lg px-3 py-2 max-h-32 overflow-y-auto space-y-1">
+            <label
+              v-for="u in memberOptions"
+              :key="u.id"
+              class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-gray-50 rounded"
+            >
+              <input
+                type="checkbox"
+                :value="u.id"
+                v-model="form.member_ids"
+                class="rounded border-gray-300 text-blue-600"
+              />
+              <span class="text-sm text-gray-700">{{ u.name }}</span>
+              <span class="text-xs text-gray-400 ml-auto">{{ u.role === 'manager' ? '經理' : '成員' }}</span>
+            </label>
+            <p v-if="memberOptions.length === 0" class="text-xs text-gray-400 py-1">無可指派的成員</p>
+          </div>
+        </div>
+
         <!-- Note -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">備註</label>
@@ -133,9 +155,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useProjectStore, type ProjectListItem } from '@/stores/project'
 import { useLookupStore } from '@/stores/lookup'
+import api from '@/lib/axios'
 
 const props = defineProps<{ project: ProjectListItem | null }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
@@ -155,7 +178,12 @@ const form = reactive({
   start_date: '',
   due_date: '',
   note: '',
+  member_ids: [] as number[],
 })
+
+const memberOptions = computed(() =>
+  lookup.users.filter(u => u.role === 'member' || u.role === 'manager')
+)
 
 onMounted(async () => {
   await lookup.fetch()
@@ -193,8 +221,11 @@ async function handleSubmit() {
     }
     if (props.project) {
       await projectStore.updateProject(props.project.id, payload)
+      // Sync members for existing project
+      await syncMembers(props.project.id)
     } else {
-      await projectStore.createProject(payload)
+      const created = await projectStore.createProject(payload)
+      await syncMembers(created.id)
     }
     emit('saved')
   } catch (err: any) {
@@ -202,5 +233,14 @@ async function handleSubmit() {
   } finally {
     saving.value = false
   }
+}
+
+async function syncMembers(projectId: number) {
+  if (form.member_ids.length === 0) return
+  await Promise.all(
+    form.member_ids.map(userId =>
+      api.post(`/projects/${projectId}/members`, { user_id: userId }).catch(() => {})
+    )
+  )
 }
 </script>

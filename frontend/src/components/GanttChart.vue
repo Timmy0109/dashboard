@@ -6,7 +6,7 @@
         <button
           v-for="m in modes"
           :key="m.value"
-          @click="currentMode = m.value; renderGantt()"
+          @click="switchMode(m.value)"
           class="px-2.5 py-1 text-xs rounded transition-colors"
           :class="currentMode === m.value
             ? 'bg-blue-600 text-white'
@@ -16,14 +16,14 @@
         </button>
       </div>
     </div>
-    <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-      <div ref="ganttEl" class="gantt-wrapper" />
+    <div class="gantt-outer">
+      <div ref="ganttEl" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import Gantt from 'frappe-gantt'
 import type { Task } from '@/stores/project'
 
@@ -50,49 +50,86 @@ function toGanttTasks() {
     start: t.start_date.slice(0, 10),
     end: t.end_date.slice(0, 10),
     progress: t.progress,
-    custom_class: t.is_completed ? 'gantt-task-done' : '',
+    custom_class: t.is_completed ? 'done' : '',
   }))
 }
 
-function renderGantt() {
+function initGantt() {
   if (!ganttEl.value || props.tasks.length === 0) return
-
-  ganttEl.value.innerHTML = ''
-
   ganttInstance = new Gantt(ganttEl.value, toGanttTasks(), {
     view_mode: currentMode.value,
-    date_format: 'YYYY-MM-DD',
     popup: false,
+    today_button: false,
+    view_mode_select: false,
     on_click: (task: { id: string }) => {
       const original = props.tasks.find(t => String(t.id) === task.id)
       if (original) emit('taskClick', original)
     },
     on_date_change: (task: { id: string }, start: Date, end: Date) => {
-      const toStr = (d: Date) => d.toISOString().slice(0, 10)
-      emit('taskDateChange', Number(task.id), toStr(start), toStr(end))
+      const fmt = (d: Date) => d.toISOString().slice(0, 10)
+      emit('taskDateChange', Number(task.id), fmt(start), fmt(end))
     },
   })
 }
 
-onMounted(() => renderGantt())
-watch(() => props.tasks, () => renderGantt(), { deep: true })
-onBeforeUnmount(() => { ganttInstance = null })
+function switchMode(mode: 'Day' | 'Week' | 'Month') {
+  currentMode.value = mode
+  if (ganttInstance) {
+    ganttInstance.change_view_mode(mode)
+  }
+}
+
+onMounted(async () => {
+  await nextTick()
+  initGantt()
+})
+
+watch(() => props.tasks, async () => {
+  await nextTick()
+  if (!ganttInstance) {
+    initGantt()
+  } else {
+    ganttInstance.refresh(toGanttTasks())
+  }
+}, { deep: true })
+
+onBeforeUnmount(() => {
+  ganttInstance = null
+  if (ganttEl.value) ganttEl.value.innerHTML = ''
+})
 </script>
 
 <style>
-.gantt-wrapper svg {
-  width: 100%;
+/* Override frappe-gantt CSS variables for our color scheme */
+.gantt-outer {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+.gantt-outer .gantt-container {
+  border-radius: 0;
+  border: none;
+}
+/* Bar colors */
+.gantt-outer :root,
+.gantt-outer {
+  --g-bar-color: #3b82f6;
+  --g-bar-border: #2563eb;
+  --g-progress-color: #1d4ed8;
 }
 .gantt .bar-wrapper .bar {
   fill: #3b82f6;
+  stroke: #2563eb;
 }
-.gantt .bar-wrapper.gantt-task-done .bar {
+.gantt .bar-wrapper.done .bar {
   fill: #10b981;
+  stroke: #059669;
 }
 .gantt .bar-progress {
   fill: #1d4ed8;
 }
-.gantt .bar-wrapper.gantt-task-done .bar-progress {
-  fill: #059669;
+.gantt .bar-wrapper.done .bar-progress {
+  fill: #047857;
 }
 </style>

@@ -13,8 +13,9 @@ class SettingController extends Controller
 {
     // ── Categories ────────────────────────────────────────────────────────────
 
-    public function categoriesIndex(): JsonResponse
+    public function categoriesIndex(Request $request): JsonResponse
     {
+        $this->adminOnly($request);
         return response()->json(Category::orderBy('name')->get());
     }
 
@@ -51,8 +52,9 @@ class SettingController extends Controller
 
     // ── Priorities ────────────────────────────────────────────────────────────
 
-    public function prioritiesIndex(): JsonResponse
+    public function prioritiesIndex(Request $request): JsonResponse
     {
+        $this->adminOnly($request);
         return response()->json(Priority::orderBy('sort_order')->get());
     }
 
@@ -89,8 +91,9 @@ class SettingController extends Controller
 
     // ── Status Rules ──────────────────────────────────────────────────────────
 
-    public function statusesIndex(): JsonResponse
+    public function statusesIndex(Request $request): JsonResponse
     {
+        $this->adminOnly($request);
         return response()->json(StatusRule::orderBy('sort_order')->get());
     }
 

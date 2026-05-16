@@ -124,9 +124,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import axios from 'axios'
 import api from '@/lib/axios'
+
+onMounted(async () => {
+  await axios.get('/sanctum/csrf-cookie', { withCredentials: true })
+})
 
 const step = ref<1 | 2>(1)
 const inviteCode = ref('')

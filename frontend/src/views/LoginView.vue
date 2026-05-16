@@ -45,7 +45,12 @@
           </button>
         </form>
 
-        <div class="mt-6 pt-4 border-t border-gray-100">
+        <p class="text-center text-sm text-gray-500 mt-5">
+          沒有帳號？
+          <RouterLink to="/register" class="text-blue-600 hover:underline">使用邀請碼申請</RouterLink>
+        </p>
+
+        <div class="mt-4 pt-4 border-t border-gray-100">
           <p class="text-xs text-gray-400 text-center">Demo 帳號</p>
           <div class="mt-2 space-y-1">
             <button
@@ -65,7 +70,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()

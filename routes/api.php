@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LookupController;
 use App\Http\Controllers\Api\MemberApprovalController;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Route;
 
 // Public
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/register/validate-code', [RegisterController::class, 'validateCode'])->middleware('throttle:20,1');
+Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:10,1');
 
 // Authenticated (Sanctum cookie session)
 Route::middleware('auth:sanctum')->group(function () {

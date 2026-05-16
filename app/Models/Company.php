@@ -70,6 +70,8 @@ class Company extends Model
 
     public static function findByInviteCode(string $code): ?self
     {
-        return self::where('invite_code', strtoupper($code))->where('status', 'active')->first();
+        return self::whereRaw('UPPER(invite_code) = ?', [strtoupper($code)])
+            ->where('status', 'active')
+            ->first();
     }
 }

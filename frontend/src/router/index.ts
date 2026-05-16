@@ -78,7 +78,9 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  if (!auth.isLoggedIn) {
+  // Guest pages (login/register) don't need a session check.
+  // Only fetch user state for protected routes where we need to verify auth.
+  if (!to.meta.guest && !auth.isLoggedIn) {
     await auth.fetchUser()
   }
 

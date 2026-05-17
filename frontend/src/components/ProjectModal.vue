@@ -160,7 +160,7 @@ import { useProjectStore, type ProjectListItem } from '@/stores/project'
 import { useLookupStore } from '@/stores/lookup'
 import api from '@/lib/axios'
 
-const props = defineProps<{ project: ProjectListItem | null }>()
+const props = defineProps<{ project: ProjectListItem | null; companyId?: number | null }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 
 const projectStore = useProjectStore()
@@ -209,7 +209,7 @@ async function handleSubmit() {
   saving.value = true
   errorMsg.value = ''
   try {
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: form.name,
       project_no: form.project_no || null,
       category_id: form.category_id,
@@ -218,6 +218,9 @@ async function handleSubmit() {
       start_date: form.start_date,
       due_date: form.due_date || null,
       note: form.note || null,
+    }
+    if (!props.project && props.companyId != null) {
+      payload.company_id = props.companyId
     }
     if (props.project) {
       await projectStore.updateProject(props.project.id, payload)

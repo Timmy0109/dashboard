@@ -25,18 +25,20 @@ class UserController extends Controller
         abort_unless($request->user()->isAdmin(), 403);
 
         $data = $request->validate([
-            'name' => 'required|string|max:100',
-            'email' => 'required|email|unique:users,email',
-            'password' => ['required', Password::min(8)],
-            'role' => 'required|in:admin,manager,member',
+            'name'       => 'required|string|max:100',
+            'email'      => 'required|email|unique:users,email',
+            'password'   => ['required', Password::min(8)],
+            'role'       => 'required|in:admin,manager,member',
+            'company_id' => 'sometimes|nullable|exists:companies,id',
         ]);
 
         $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role' => $data['role'],
-            'status' => 'active',
+            'name'       => $data['name'],
+            'email'      => $data['email'],
+            'password'   => Hash::make($data['password']),
+            'role'       => $data['role'],
+            'company_id' => $data['company_id'] ?? null,
+            'status'     => 'active',
         ]);
 
         return response()->json($user->only(['id', 'name', 'email', 'role', 'status']), 201);

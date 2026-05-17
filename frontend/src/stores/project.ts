@@ -36,6 +36,7 @@ export interface ProjectDetail {
 
 export interface ProjectListItem {
   id: number
+  company_id: number | null
   project_no: string | null
   name: string
   start_date: string
@@ -54,10 +55,11 @@ export const useProjectStore = defineStore('project', () => {
   const listLoading = ref(false)
   const detailLoading = ref(false)
 
-  async function fetchList() {
+  async function fetchList(companyId?: number) {
     listLoading.value = true
     try {
-      const res = await api.get('/projects')
+      const params = companyId ? { company_id: companyId } : {}
+      const res = await api.get('/projects', { params })
       list.value = res.data
     } finally {
       listLoading.value = false

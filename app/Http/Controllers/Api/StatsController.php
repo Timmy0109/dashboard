@@ -83,7 +83,13 @@ class StatsController extends Controller
                 'tasks' => Task::whereIn('project_id', $projectIds)->count(),
                 'completed_tasks' => Task::whereIn('project_id', $projectIds)->where('is_completed', true)->count(),
                 'overdue_tasks' => Task::whereIn('project_id', $projectIds)->where('is_completed', false)->where('end_date', '<', now()->toDateString())->count(),
-                'members' => User::where('status', 'active')->where('role', '!=', 'admin')->count(),
+                'members' => match ($user->role) {
+                    'admin'   => User::where('status', 'active')->where('role', '!=', 'admin')->count(),
+                    default   => User::where('status', 'active')->where('role', '!=', 'admin')
+                                     ->where('company_id', $user->company_id)
+                                     ->where('id', '!=', $user->id)
+                                     ->count(),
+                },
             ],
         ]);
     }

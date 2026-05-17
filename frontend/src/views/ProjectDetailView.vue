@@ -31,7 +31,7 @@
             {{ wsConnected ? '即時連線' : '連線中...' }}
           </div>
           <button
-            v-if="auth.isManager"
+            v-if="auth.canManageMembers"
             @click="showTaskModal = true; editingTask = null"
             class="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -92,8 +92,22 @@
 
     <!-- Task Table -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
         <h3 class="text-sm font-semibold text-gray-700">任務列表</h3>
+        <div class="flex gap-1.5">
+          <button
+            v-for="tab in taskTabs"
+            :key="tab.value"
+            @click="taskTab = tab.value"
+            class="px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+            :class="taskTab === tab.value
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+          >
+            {{ tab.label }}
+            <span class="ml-0.5 opacity-70">({{ getTabCount(tab.value) }})</span>
+          </button>
+        </div>
       </div>
       <table class="w-full">
         <thead>
@@ -110,7 +124,7 @@
         </thead>
         <tbody class="divide-y divide-gray-50">
           <tr
-            v-for="task in project.tasks"
+            v-for="task in filteredTasks"
             :key="task.id"
             class="hover:bg-gray-50 transition-colors"
           >
@@ -167,7 +181,7 @@
                 <span class="text-xs text-gray-400 w-7 text-right">{{ task.progress }}%</span>
               </div>
             </td>
-            <td class="px-4 py-3" v-if="auth.isManager">
+            <td class="px-4 py-3" v-if="auth.canManageMembers">
               <div class="flex gap-1">
                 <button
                   @click="openEditTask(task)"
@@ -181,9 +195,15 @@
             </td>
             <td class="px-4 py-3" v-else></td>
           </tr>
-          <tr v-if="project.tasks.length === 0">
+          <tr v-if="filteredTasks.length === 0">
             <td colspan="8" class="px-4 py-10 text-center text-sm text-gray-400">
-              目前沒有任務
+              {{
+                taskTab === 'overdue' ? '沒有逾期任務' :
+                taskTab === 'completed' ? '尚無已完成任務' :
+                taskTab === 'pending' ? '沒有待處理任務' :
+                taskTab === 'in_progress' ? '沒有進行中任務' :
+                '目前沒有任務'
+              }}
             </td>
           </tr>
         </tbody>
@@ -207,6 +227,33 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+
+const taskTab = ref('all')
+const taskTabs = [
+  { label: '全部', value: 'all' },
+  { label: '待處理', value: 'pending' },
+  { label: '進行中', value: 'in_progress' },
+  { label: '已完成', value: 'completed' },
+  { label: '逾期', value: 'overdue' },
+]
+
+const filteredTasks = computed(() => {
+  const tasks = project.value?.tasks ?? []
+  if (taskTab.value === 'completed') return tasks.filter(t => t.is_completed)
+  if (taskTab.value === 'overdue') return tasks.filter(t => isTaskOverdue(t))
+  if (taskTab.value === 'pending') return tasks.filter(t => t.progress === 0 && !t.is_completed)
+  if (taskTab.value === 'in_progress') return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed)
+  return tasks
+})
+
+function getTabCount(tab: string) {
+  const tasks = project.value?.tasks ?? []
+  if (tab === 'completed') return tasks.filter(t => t.is_completed).length
+  if (tab === 'overdue') return tasks.filter(t => isTaskOverdue(t)).length
+  if (tab === 'pending') return tasks.filter(t => t.progress === 0 && !t.is_completed).length
+  if (tab === 'in_progress') return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length
+  return tasks.length
+}
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type Task } from '@/stores/project'

@@ -70,7 +70,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Manager — member approval
     Route::prefix('manager/members')->group(function () {
+        Route::get('/', [MemberApprovalController::class, 'members']);
         Route::get('pending', [MemberApprovalController::class, 'pending']);
+        Route::put('{user}', [MemberApprovalController::class, 'update']);
+        Route::delete('{user}', [MemberApprovalController::class, 'destroy']);
         Route::post('{user}/approve', [MemberApprovalController::class, 'approve']);
         Route::post('{user}/reject', [MemberApprovalController::class, 'reject']);
     });

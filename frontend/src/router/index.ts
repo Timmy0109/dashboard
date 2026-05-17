@@ -59,12 +59,6 @@ const router = createRouter({
           meta: { adminOnly: true },
         },
         {
-          path: 'admin/companies',
-          name: 'admin-companies',
-          component: () => import('@/views/AdminCompaniesView.vue'),
-          meta: { adminOnly: true },
-        },
-        {
           path: 'manager/approvals',
           name: 'member-approvals',
           component: () => import('@/views/MemberApprovalsView.vue'),
@@ -96,7 +90,7 @@ router.beforeEach(async (to) => {
     return { name: 'dashboard' }
   }
 
-  if (to.meta.managerOnly && !auth.isManager && !auth.isAdmin) {
+  if (to.meta.managerOnly && !auth.canManageMembers) {
     return { name: 'dashboard' }
   }
 })

@@ -1,126 +1,119 @@
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-    <div class="w-full max-w-sm">
-      <div class="bg-white rounded-xl shadow-lg p-8">
+  <v-app>
+    <v-main class="bg-grey-lighten-3">
+      <v-container class="fill-height" fluid>
+        <v-row align="center" justify="center">
+          <v-col cols="12" sm="8" md="5" lg="4" xl="3">
+            <v-card elevation="3" rounded="xl" class="pa-4">
 
-        <!-- Success state -->
-        <div v-if="success" class="text-center py-4">
-          <span class="material-icons text-5xl text-green-500 block mb-3">check_circle</span>
-          <h2 class="text-lg font-semibold text-gray-900 mb-2">註冊成功</h2>
-          <p class="text-sm text-gray-500 mb-6">{{ successMsg }}</p>
-          <RouterLink
-            to="/login"
-            class="inline-block px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >前往登入</RouterLink>
-        </div>
+              <!-- Success state -->
+              <v-card-text v-if="success" class="text-center py-8">
+                <v-icon icon="mdi-check-circle" color="success" size="56" class="mb-4" />
+                <div class="text-h6 font-weight-bold mb-2">註冊成功</div>
+                <p class="text-body-2 text-grey mb-6">{{ successMsg }}</p>
+                <v-btn color="primary" :to="'/login'" rounded="lg">前往登入</v-btn>
+              </v-card-text>
 
-        <template v-else>
-          <div class="text-center mb-7">
-            <h1 class="text-2xl font-bold text-gray-900">申請加入</h1>
-            <p class="text-sm text-gray-500 mt-1">使用邀請碼申請成為成員</p>
-          </div>
+              <template v-else>
+                <v-card-title class="text-center pt-4 pb-2">
+                  <div class="d-flex flex-column align-center">
+                    <v-icon icon="mdi-account-plus" color="primary" size="40" class="mb-3" />
+                    <span class="text-h6 font-weight-bold">申請加入</span>
+                    <span class="text-body-2 text-grey mt-1">使用邀請碼申請成為成員</span>
+                  </div>
+                </v-card-title>
 
-          <!-- Step 1: invite code -->
-          <div v-if="step === 1" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">邀請碼</label>
-              <input
-                v-model="inviteCode"
-                type="text"
-                placeholder="請輸入邀請碼"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase tracking-widest"
-                @keyup.enter="verifyCode"
-              />
-            </div>
+                <v-card-text class="pt-2">
+                  <!-- Step indicator -->
+                  <v-stepper :model-value="step" alt-labels flat class="mb-4 elevation-0 bg-transparent">
+                    <v-stepper-header>
+                      <v-stepper-item title="驗證邀請碼" value="1" :complete="step === 2" color="primary" />
+                      <v-divider />
+                      <v-stepper-item title="填寫資料" value="2" color="primary" />
+                    </v-stepper-header>
+                  </v-stepper>
 
-            <div v-if="codeError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-              {{ codeError }}
-            </div>
+                  <!-- Step 1 -->
+                  <div v-if="step === 1">
+                    <v-text-field
+                      v-model="inviteCode"
+                      label="邀請碼"
+                      prepend-inner-icon="mdi-key-variant"
+                      placeholder="請輸入邀請碼"
+                      class="mb-2"
+                      style="text-transform: uppercase"
+                      @keyup.enter="verifyCode"
+                    />
 
-            <button
-              @click="verifyCode"
-              :disabled="verifying || !inviteCode.trim()"
-              class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {{ verifying ? '驗證中...' : '驗證邀請碼' }}
-            </button>
+                    <v-alert v-if="codeError" type="error" variant="tonal" density="compact" class="mb-3 text-body-2">
+                      {{ codeError }}
+                    </v-alert>
 
-            <p class="text-center text-sm text-gray-400">
-              已有帳號？
-              <RouterLink to="/login" class="text-blue-600 hover:underline">登入</RouterLink>
-            </p>
-          </div>
+                    <v-btn
+                      color="primary"
+                      block
+                      size="large"
+                      :loading="verifying"
+                      :disabled="!inviteCode.trim()"
+                      @click="verifyCode"
+                    >
+                      驗證邀請碼
+                    </v-btn>
 
-          <!-- Step 2: registration form -->
-          <div v-else class="space-y-4">
-            <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-sm text-blue-700">
-              <span class="material-icons text-base leading-none">business</span>
-              加入 <strong>{{ companyName }}</strong>
-            </div>
+                    <p class="text-center text-body-2 text-grey mt-4">
+                      已有帳號？
+                      <RouterLink to="/login" class="text-primary text-decoration-none font-weight-medium">登入</RouterLink>
+                    </p>
+                  </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
-              <input
-                v-model="form.name"
-                type="text"
-                placeholder="您的姓名"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                  <!-- Step 2 -->
+                  <div v-else>
+                    <v-alert type="info" variant="tonal" density="compact" icon="mdi-domain" class="mb-4 text-body-2">
+                      加入 <strong>{{ companyName }}</strong>
+                    </v-alert>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                v-model="form.email"
-                type="email"
-                placeholder="your@email.com"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                    <v-text-field v-model="form.name" label="姓名" prepend-inner-icon="mdi-account-outline" placeholder="您的姓名" class="mb-2" />
+                    <v-text-field v-model="form.email" label="Email" type="email" prepend-inner-icon="mdi-email-outline" placeholder="your@email.com" class="mb-2" />
+                    <v-text-field
+                      v-model="form.password"
+                      label="密碼"
+                      :type="showPwd ? 'text' : 'password'"
+                      prepend-inner-icon="mdi-lock-outline"
+                      :append-inner-icon="showPwd ? 'mdi-eye-off' : 'mdi-eye'"
+                      @click:append-inner="showPwd = !showPwd"
+                      placeholder="至少 8 個字元"
+                      class="mb-2"
+                    />
+                    <v-text-field
+                      v-model="form.password_confirmation"
+                      label="確認密碼"
+                      :type="showPwd ? 'text' : 'password'"
+                      prepend-inner-icon="mdi-lock-check-outline"
+                      placeholder="再輸入一次密碼"
+                      class="mb-2"
+                      @keyup.enter="handleRegister"
+                    />
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-              <input
-                v-model="form.password"
-                type="password"
-                placeholder="至少 8 個字元"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                    <v-alert v-if="formError" type="error" variant="tonal" density="compact" class="mb-3 text-body-2">
+                      {{ formError }}
+                    </v-alert>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">確認密碼</label>
-              <input
-                v-model="form.password_confirmation"
-                type="password"
-                placeholder="再輸入一次密碼"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                @keyup.enter="handleRegister"
-              />
-            </div>
+                    <div class="d-flex gap-3">
+                      <v-btn variant="outlined" color="grey" @click="step = 1; codeError = ''">返回</v-btn>
+                      <v-btn color="primary" flex-grow-1 :loading="submitting" @click="handleRegister" class="flex-grow-1">
+                        送出申請
+                      </v-btn>
+                    </div>
+                  </div>
+                </v-card-text>
+              </template>
 
-            <div v-if="formError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-              {{ formError }}
-            </div>
-
-            <div class="flex gap-3">
-              <button
-                @click="step = 1; codeError = ''"
-                class="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
-              >返回</button>
-              <button
-                @click="handleRegister"
-                :disabled="submitting"
-                class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {{ submitting ? '提交中...' : '送出申請' }}
-              </button>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-  </div>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
 <script setup lang="ts">
@@ -138,6 +131,7 @@ const inviteCode = ref('')
 const companyName = ref('')
 const verifying = ref(false)
 const codeError = ref('')
+const showPwd = ref(false)
 
 const form = reactive({
   name: '',

@@ -37,7 +37,6 @@
       <table v-else class="w-full">
         <thead>
           <tr class="border-b border-gray-100 bg-gray-50">
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 w-8"></th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">任務名稱</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">所屬專案</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">負責人</th>
@@ -55,14 +54,6 @@
             class="hover:bg-gray-50 transition-colors cursor-pointer"
             @click="openEdit(task)"
           >
-            <td class="px-4 py-3" @click.stop="toggleComplete(task)">
-              <div
-                class="w-4 h-4 rounded border-2 cursor-pointer transition-colors"
-                :class="task.is_completed ? 'border-green-500 bg-green-500' : 'border-gray-300 hover:border-blue-400'"
-              >
-                <span v-if="task.is_completed" class="material-icons text-white text-xs leading-none flex items-center justify-center h-full">check</span>
-              </div>
-            </td>
             <td class="px-4 py-3">
               <span class="text-sm text-gray-800 font-medium">{{ task.name }}</span>
             </td>
@@ -269,17 +260,6 @@ function openEdit(task: TodoTask) {
   editingTask.value = todoTaskToTask(task)
   activeProjectId.value = task.project_id
   showTaskModal.value = true
-}
-
-async function toggleComplete(task: TodoTask) {
-  try {
-    await import('@/lib/axios').then(({ default: api }) =>
-      api.put(`/projects/${task.project_id}/tasks/${task.id}`, { is_completed: !task.is_completed })
-    )
-    await store.fetch()
-  } catch {
-    toast.error('操作失敗')
-  }
 }
 
 async function handleDelete(task: TodoTask) {

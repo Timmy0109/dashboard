@@ -13,11 +13,14 @@ class ProjectController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        $companyId = $request->query('company_id');
 
         $projects = match ($user->role) {
-            'admin' => Project::with(['owner', 'category', 'priority', 'status'])->latest()->get(),
+            'admin' => Project::with(['owner', 'category', 'priority', 'status'])
+                ->when($companyId, fn($q) => $q->where('company_id', $companyId))
+                ->latest()->get(),
             'manager' => Project::with(['owner', 'category', 'priority', 'status'])
-                ->where('owner_id', $user->id)
+                ->where('company_id', $user->company_id)
                 ->latest()->get(),
             default => Project::with(['owner', 'category', 'priority', 'status'])
                 ->whereHas('members', fn($q) => $q->where('user_id', $user->id))
@@ -40,11 +43,14 @@ class ProjectController extends Controller
             'status_id' => 'required|exists:status_rules,id',
             'start_date' => 'required|date',
             'due_date' => 'nullable|date|after_or_equal:start_date',
+            'company_id' => 'sometimes|nullable|exists:companies,id',
         ]);
 
+        $creator = $request->user();
         $project = Project::create(array_merge($validated, [
-            'owner_id' => $request->user()->id,
-            'created_by' => $request->user()->id,
+            'owner_id' => $creator->id,
+            'created_by' => $creator->id,
+            'company_id' => $validated['company_id'] ?? $creator->company_id,
         ]));
 
         ProjectMember::create([

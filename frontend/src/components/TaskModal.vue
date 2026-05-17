@@ -185,10 +185,10 @@ onMounted(async () => {
     form.progress = props.task.progress
     form.note = props.task.note ?? ''
   } else {
-    form.start_date = new Date().toISOString().slice(0, 10)
+    form.start_date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date())
     const end = new Date()
     end.setDate(end.getDate() + 7)
-    form.end_date = end.toISOString().slice(0, 10)
+    form.end_date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(end)
     if (lookup.statuses.length) form.status_id = lookup.statuses[0]!.id
     if (lookup.priorities.length) {
       const mid = lookup.priorities.find(p => p.sort_order === 2)

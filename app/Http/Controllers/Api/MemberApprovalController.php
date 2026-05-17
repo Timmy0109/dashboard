@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class MemberApprovalController extends Controller
 {
@@ -15,10 +18,33 @@ class MemberApprovalController extends Controller
         if (! $user->isManager() && ! $user->isAdmin()) {
             return response()->json(['message' => '權限不足'], 403);
         }
-        if (! $user->company_id) {
+        if (! $user->isAdmin() && ! $user->company_id) {
             return response()->json(['message' => '無公司歸屬'], 403);
         }
         return null;
+    }
+
+    // GET /api/manager/members
+    public function members(Request $request): JsonResponse
+    {
+        if ($err = $this->managerGuard($request)) return $err;
+
+        $actor = $request->user();
+        $query = User::where('role', 'member');
+
+        if (! $actor->isAdmin()) {
+            $query->where('company_id', $actor->company_id);
+        }
+
+        $members = $query->orderBy('name')->get()->map(fn($u) => [
+            'id'         => $u->id,
+            'name'       => $u->name,
+            'email'      => $u->email,
+            'status'     => $u->status,
+            'created_at' => $u->created_at?->format('Y-m-d'),
+        ]);
+
+        return response()->json($members);
     }
 
     // GET /api/manager/members/pending
@@ -26,20 +52,72 @@ class MemberApprovalController extends Controller
     {
         if ($err = $this->managerGuard($request)) return $err;
 
-        $companyId = $request->user()->company_id;
+        $actor = $request->user();
+        $query = User::where('status', 'pending')->where('role', 'member');
 
-        $pending = User::where('company_id', $companyId)
-            ->where('status', 'pending')
-            ->where('role', 'member')
-            ->get()
-            ->map(fn($u) => [
-                'id'         => $u->id,
-                'name'       => $u->name,
-                'email'      => $u->email,
-                'created_at' => $u->created_at?->format('Y-m-d H:i'),
-            ]);
+        if (! $actor->isAdmin()) {
+            $query->where('company_id', $actor->company_id);
+        }
+
+        $pending = $query->with('company')->get()->map(fn($u) => [
+            'id'           => $u->id,
+            'name'         => $u->name,
+            'email'        => $u->email,
+            'company_name' => $u->company?->name,
+            'created_at'   => $u->created_at?->format('Y-m-d H:i'),
+        ]);
 
         return response()->json($pending);
+    }
+
+    // PUT /api/manager/members/{user}
+    public function update(Request $request, User $user): JsonResponse
+    {
+        if ($err = $this->managerGuard($request)) return $err;
+
+        $actor = $request->user();
+        if ($user->role !== 'member' || (! $actor->isAdmin() && $user->company_id !== $actor->company_id)) {
+            return response()->json(['message' => '無權限操作此成員'], 403);
+        }
+
+        $data = $request->validate([
+            'name'     => 'sometimes|string|max:100',
+            'email'    => 'sometimes|email|unique:users,email,' . $user->id,
+            'password' => ['sometimes', Password::min(8)],
+            'status'   => 'sometimes|in:active,inactive',
+        ]);
+
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
+
+        $wasActive = $user->status === 'active';
+        $user->update($data);
+
+        if ($wasActive && ($data['status'] ?? null) === 'inactive') {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+        }
+
+        return response()->json([
+            'id'     => $user->id,
+            'name'   => $user->name,
+            'email'  => $user->email,
+            'status' => $user->status,
+        ]);
+    }
+
+    // DELETE /api/manager/members/{user}
+    public function destroy(Request $request, User $user): JsonResponse
+    {
+        if ($err = $this->managerGuard($request)) return $err;
+
+        $actor = $request->user();
+        if ($user->role !== 'member' || (! $actor->isAdmin() && $user->company_id !== $actor->company_id)) {
+            return response()->json(['message' => '無權限操作此成員'], 403);
+        }
+
+        $user->delete();
+        return response()->json(null, 204);
     }
 
     // POST /api/manager/members/{user}/approve
@@ -47,7 +125,8 @@ class MemberApprovalController extends Controller
     {
         if ($err = $this->managerGuard($request)) return $err;
 
-        if ($user->company_id !== $request->user()->company_id) {
+        $actor = $request->user();
+        if (! $actor->isAdmin() && $user->company_id !== $actor->company_id) {
             return response()->json(['message' => '無權限操作此成員'], 403);
         }
 
@@ -60,7 +139,8 @@ class MemberApprovalController extends Controller
     {
         if ($err = $this->managerGuard($request)) return $err;
 
-        if ($user->company_id !== $request->user()->company_id) {
+        $actor = $request->user();
+        if (! $actor->isAdmin() && $user->company_id !== $actor->company_id) {
             return response()->json(['message' => '無權限操作此成員'], 403);
         }
 

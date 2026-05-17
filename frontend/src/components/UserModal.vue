@@ -70,6 +70,7 @@ import api from '@/lib/axios'
 
 const props = defineProps<{
   user: Record<string, unknown> | null
+  companyId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -121,6 +122,7 @@ async function handleSubmit() {
     if (isEdit.value) {
       await api.put(`/users/${props.user!.id}`, payload)
     } else {
+      if (props.companyId != null) payload.company_id = props.companyId
       await api.post('/users', payload)
     }
     emit('saved')

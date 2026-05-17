@@ -1,9 +1,9 @@
 <template>
   <v-dialog :model-value="true" max-width="560" scrollable persistent @update:model-value="$emit('close')">
     <v-card rounded="xl">
-      <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
-        <span class="text-body-1 font-weight-semibold text-primary">{{ project ? '編輯專案' : '新增專案' }}</span>
-        <v-btn icon="mdi-close" variant="text" size="small" @click="$emit('close')" />
+      <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+        <span class="text-body-1 font-weight-semibold text-white">{{ project ? '編輯專案' : '新增專案' }}</span>
+        <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="$emit('close')" />
       </v-card-title>
       <v-divider />
       <v-card-text class="pa-5">
@@ -54,6 +54,7 @@
             item-title="name"
             item-value="id"
             label="指派成員"
+            variant="outlined"
             multiple
             chips
             closable-chips
@@ -70,8 +71,8 @@
             {{ errorMsg }}
           </v-alert>
 
-          <div class="d-flex gap-4 mt-2">
-            <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="$emit('close')">取消</v-btn>
+          <div class="d-flex gap-4">
+            <v-btn variant="outlined" color="grey" class="flex-grow-1 mr-3" @click="$emit('close')">取消</v-btn>
             <v-btn type="submit" color="primary" class="flex-grow-1" :loading="saving">儲存</v-btn>
           </div>
         </v-form>

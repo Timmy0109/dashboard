@@ -20,10 +20,10 @@
               <v-chip
                 v-if="project.status"
                 size="small"
+                :prepend-icon="statusIcon(project.status.icon)"
                 :style="{ backgroundColor: project.status.color + '22', color: project.status.color }"
                 class="font-weight-medium"
               >
-                <v-icon :icon="statusIcon(project.status.icon)" size="12" class="mr-1" />
                 {{ project.status.name }}
               </v-chip>
             </div>
@@ -222,10 +222,10 @@
           <v-chip
             v-if="item.status"
             size="small"
+            :prepend-icon="statusIcon(item.status.icon)"
             :style="{ backgroundColor: item.status.color + '22', color: item.status.color }"
             class="font-weight-medium"
           >
-            <v-icon :icon="statusIcon(item.status.icon)" size="12" class="mr-1" />
             {{ item.status.name }}
           </v-chip>
         </template>
@@ -365,8 +365,10 @@ function isTaskOverdue(task: Task) {
   return !task.is_completed && new Date(task.end_date) < new Date()
 }
 
-function statusIcon(icon: string) {
-  return icon.startsWith('mdi-') ? icon : `mdi-${icon}`
+function statusIcon(icon: string | null | undefined) {
+  if (!icon) return 'mdi-circle-outline'
+  const normalized = icon.replace(/_/g, '-')
+  return normalized.startsWith('mdi-') ? normalized : `mdi-${normalized}`
 }
 
 function openEditTask(task: Task) {

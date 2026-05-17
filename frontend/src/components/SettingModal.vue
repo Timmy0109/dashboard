@@ -1,11 +1,11 @@
 <template>
   <v-dialog :model-value="true" max-width="440" persistent @update:model-value="$emit('close')">
     <v-card rounded="xl">
-      <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
-        <span class="text-body-1 font-weight-semibold">{{ isEdit ? '編輯' : '新增' }}{{ typeLabel[type] }}</span>
-        <v-btn icon="mdi-close" variant="text" size="small" @click="$emit('close')" />
+      <v-card-title class="pa-5 pb-3 d-flex bg-primary align-center justify-space-between">
+        <span class="text-body-1 font-weight-semibold text-white">{{ isEdit ? '編輯' : '新增' }}{{ typeLabel[type] }}</span>
+        <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="$emit('close')" />
       </v-card-title>
-      <v-card-text class="pa-5 pt-2">
+      <v-card-text class="pa-5">
         <v-form @submit.prevent="handleSubmit">
           <v-text-field
             v-if="type === 'statuses'"
@@ -59,8 +59,12 @@
             class="mb-4"
           />
 
-          <div class="d-flex gap-3">
-            <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="$emit('close')">取消</v-btn>
+          <v-alert v-if="errorMsg" type="error" variant="tonal" density="compact" class="mb-3 text-body-2">
+            {{ errorMsg }}
+          </v-alert>
+
+          <div class="d-flex">
+            <v-btn variant="outlined" color="grey" class="flex-grow-1 mr-3" @click="$emit('close')">取消</v-btn>
             <v-btn type="submit" color="primary" class="flex-grow-1" :loading="saving">儲存</v-btn>
           </div>
         </v-form>
@@ -84,6 +88,7 @@ const emit = defineEmits<{
 }>()
 
 const saving = ref(false)
+const errorMsg = ref('')
 
 const typeLabel: Record<string, string> = {
   categories: '專案類型',
@@ -119,6 +124,7 @@ watch(() => props.item, (val) => {
 
 async function handleSubmit() {
   saving.value = true
+  errorMsg.value = ''
   try {
     const payload: Record<string, unknown> = {
       name: form.value.name,
@@ -134,6 +140,8 @@ async function handleSubmit() {
       await api.post(`/settings/${props.type}`, payload)
     }
     emit('saved')
+  } catch (err: any) {
+    errorMsg.value = err?.response?.data?.message ?? '儲存失敗，請重試'
   } finally {
     saving.value = false
   }

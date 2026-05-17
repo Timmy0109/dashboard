@@ -163,8 +163,10 @@ const summaryCards = computed(() => {
   ]
 })
 
-function statusIcon(icon: string) {
-  return icon.startsWith('mdi-') ? icon : `mdi-${icon}`
+function statusIcon(icon: string | null | undefined) {
+  if (!icon) return 'mdi-circle-outline'
+  const normalized = icon.replace(/_/g, '-')
+  return normalized.startsWith('mdi-') ? normalized : `mdi-${normalized}`
 }
 
 onMounted(async () => {

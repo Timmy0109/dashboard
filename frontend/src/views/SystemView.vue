@@ -72,7 +72,7 @@
         </v-card-text>
         <v-card-actions class="pa-4 pt-0 gap-2">
           <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="showCreate = false">取消</v-btn>
-          <v-btn color="primary" class="flex-grow-1" :disabled="!newName.trim()" :loading="creating" @click="createCompany">建立</v-btn>
+          <v-btn color="white" class="flex-grow-1 bg-primary" :disabled="!newName.trim()" :loading="creating" @click="createCompany">建立</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

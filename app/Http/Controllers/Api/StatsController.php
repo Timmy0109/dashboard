@@ -10,13 +10,19 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 
 class StatsController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+
+        if (! $user->isAdmin()) {
+            $company = $user->company;
+            if (! $company || ! $company->hasFeature('report.stats_dashboard')) {
+                abort(403, '您的公司尚未開放統計分析功能');
+            }
+        }
 
         $projectQuery = match ($user->role) {
             'admin' => Project::query(),

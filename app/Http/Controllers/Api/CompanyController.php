@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\CompanyFeature;
 use App\Models\Feature;
+use App\Models\FeatureChangeLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,11 +35,12 @@ class CompanyController extends Controller
             'id'             => $c->id,
             'name'           => $c->name,
             'status'         => $c->status,
-            'invite_code'    => $c->invite_code,
-            'managers_count' => $c->managers_count,
-            'members_count'  => $c->members_count,
-            'created_at'     => $c->created_at?->format('Y-m-d'),
-            'deleted_at'     => $c->deleted_at?->format('Y-m-d'),
+            'invite_code'            => $c->invite_code,
+            'invite_code_expires_at' => $c->invite_code_expires_at?->format('Y-m-d'),
+            'managers_count'         => $c->managers_count,
+            'members_count'          => $c->members_count,
+            'created_at'             => $c->created_at?->format('Y-m-d'),
+            'deleted_at'             => $c->deleted_at?->format('Y-m-d'),
         ]);
 
         return response()->json($companies);
@@ -131,6 +133,12 @@ class CompanyController extends Controller
 
         $data = $request->validate(['enabled' => 'required|boolean']);
 
+        $existing = CompanyFeature::where('company_id', $company->id)
+            ->where('feature_key', $key)
+            ->first();
+
+        $oldValue = $existing ? (bool) $existing->enabled : false;
+
         CompanyFeature::updateOrCreate(
             ['company_id' => $company->id, 'feature_key' => $key],
             [
@@ -140,6 +148,14 @@ class CompanyController extends Controller
             ]
         );
 
+        FeatureChangeLog::create([
+            'company_id'  => $company->id,
+            'feature_key' => $key,
+            'old_value'   => $oldValue,
+            'new_value'   => $data['enabled'],
+            'changed_by'  => $request->user()->id,
+        ]);
+
         return response()->json(['key' => $key, 'enabled' => $data['enabled']]);
     }
 
@@ -148,8 +164,16 @@ class CompanyController extends Controller
     {
         if ($err = $this->adminOnly($request)) return $err;
 
-        $code = $company->regenerateInviteCode();
-        return response()->json(['invite_code' => $code]);
+        try {
+            $code = $company->regenerateInviteCode();
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => '邀請碼產生失敗，請稍後再試'], 422);
+        }
+
+        return response()->json([
+            'invite_code'            => $code,
+            'invite_code_expires_at' => $company->invite_code_expires_at?->format('Y-m-d'),
+        ]);
     }
 
     // DELETE /api/admin/companies/{company}

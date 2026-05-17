@@ -18,7 +18,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'status', 'last_login_at',
-        'company_id', 'invited_by', 'avatar',
+        'company_id', 'invited_by', 'avatar', 'suspended_by_company_delete',
     ];
 
     public function getAvatarUrlAttribute(): ?string

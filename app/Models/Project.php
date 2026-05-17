@@ -14,7 +14,7 @@ class Project extends Model
         'project_no', 'name', 'note',
         'category_id', 'owner_id', 'priority_id', 'status_id',
         'start_date', 'due_date', 'completed_date',
-        'progress_percent', 'is_completed', 'created_by',
+        'progress_percent', 'is_completed', 'created_by', 'company_id',
     ];
 
     protected function casts(): array

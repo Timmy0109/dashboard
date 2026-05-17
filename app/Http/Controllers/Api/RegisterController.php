@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\MemberApprovalRequired;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class RegisterController extends Controller
@@ -56,6 +58,13 @@ class RegisterController extends Controller
             'status'     => $requiresApproval ? 'pending' : 'active',
             'company_id' => $company->id,
         ]);
+
+        if ($requiresApproval) {
+            $managers = $company->managers()->get();
+            foreach ($managers as $manager) {
+                Mail::to($manager->email)->queue(new MemberApprovalRequired($user, $company->name));
+            }
+        }
 
         return response()->json([
             'message'          => $requiresApproval

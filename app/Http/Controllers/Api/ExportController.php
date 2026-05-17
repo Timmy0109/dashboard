@@ -19,6 +19,15 @@ class ExportController extends Controller
 
     public function allProjects(Request $request)
     {
-        return $this->service->exportAllProjects($request->user());
+        $user = $request->user();
+
+        if (! $user->isAdmin()) {
+            $company = $user->company;
+            if (! $company || ! $company->hasFeature('report.export')) {
+                abort(403, '您的公司尚未開放匯出功能');
+            }
+        }
+
+        return $this->service->exportAllProjects($user);
     }
 }

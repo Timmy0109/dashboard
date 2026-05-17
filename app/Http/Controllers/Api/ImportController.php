@@ -30,17 +30,16 @@ class ImportController extends Controller
             'errors'        => $preview['errors'],
             'projects'      => array_map(fn ($p) => ['name' => $p['name'], 'start_date' => $p['start_date'], 'due_date' => $p['due_date']], $preview['projects']),
             'tasks'         => array_map(fn ($t) => ['name' => $t['name'], 'project_name' => $t['project_name']], $preview['tasks']),
-            '_raw'          => $preview,
         ]);
     }
 
     public function confirm(Request $request): JsonResponse
     {
+        $this->authorize('create', \App\Models\Project::class);
+
         $request->validate([
             'file' => 'required|file|mimes:xlsx,csv|max:10240',
         ]);
-
-        $this->authorize('create', \App\Models\Project::class);
 
         $preview = $this->service->preview($request->file('file'), $request->user());
         $result  = $this->service->import($preview, $request->user());

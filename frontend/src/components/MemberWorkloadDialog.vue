@@ -24,7 +24,7 @@
         <template v-else-if="data">
           <!-- Summary stat cards -->
           <div class="pa-5 pb-4">
-            <v-row dense>
+            <v-row dense class="mb-1">
               <v-col v-for="card in summaryCards" :key="card.label" cols="6" sm="4">
                 <v-card rounded="xl" variant="tonal" :color="card.color" class="text-center pa-3">
                   <div class="text-h5 font-weight-bold">{{ card.value }}</div>
@@ -37,9 +37,9 @@
           <!-- Health indicators -->
           <div class="px-5 pb-4">
             <div class="text-caption text-grey font-weight-bold text-uppercase mb-3">工作健康指標</div>
-            <v-row dense>
+            <v-row dense align="stretch">
               <v-col cols="12" sm="4">
-                <div class="d-flex flex-column align-center pa-3 rounded-xl bg-grey-lighten-5">
+                <div class="d-flex flex-column align-center justify-center pa-3 rounded-xl bg-grey-lighten-5 h-100">
                   <div class="position-relative mb-2" style="width:72px;height:72px">
                     <svg width="72" height="72" viewBox="0 0 36 36" style="transform:rotate(-90deg)">
                       <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e0e0e0" stroke-width="3" />
@@ -68,7 +68,7 @@
                 </div>
               </v-col>
               <v-col cols="12" sm="4">
-                <div class="d-flex flex-column align-center pa-3 rounded-xl bg-grey-lighten-5">
+                <div class="d-flex flex-column align-center justify-center pa-3 rounded-xl bg-grey-lighten-5 h-100">
                   <div class="text-h4 font-weight-bold text-primary mb-1">{{ data.summary.avg_progress }}%</div>
                   <v-progress-linear
                     :model-value="data.summary.avg_progress"

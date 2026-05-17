@@ -26,7 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const ganttEl = ref<HTMLElement | null>(null)
-const currentMode = ref<'Day' | 'Week' | 'Month'>('Week')
+const currentMode = ref<'Day' | 'Week' | 'Month'>('Day')
 let ganttInstance: InstanceType<typeof Gantt> | null = null
 
 const modes = [
@@ -57,6 +57,7 @@ function initGantt() {
       const original = props.tasks.find(t => String(t.id) === task.id)
       if (original) emit('taskClick', original)
     },
+
     on_date_change: (task: { id: string }, start: Date, end: Date) => {
       const fmt = (d: Date) => d.toISOString().slice(0, 10)
       emit('taskDateChange', Number(task.id), fmt(start), fmt(end))
@@ -96,17 +97,9 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(0,0,0,.12);
   background: #fff;
 }
-.gantt-outer .gantt-container {
-  border-radius: 0;
-  border: none;
-}
-.gantt-outer {
-  --g-bar-color: #00897B;
-  --g-bar-border: #00695C;
-  --g-progress-color: #004D40;
-}
-.gantt .bar-wrapper .bar        { fill: #00897B; stroke: #00695C; }
-.gantt .bar-wrapper.done .bar   { fill: #43A047; stroke: #388E3C; }
-.gantt .bar-progress            { fill: #004D40; }
-.gantt .bar-wrapper.done .bar-progress { fill: #1B5E20; }
+
+.gantt .bar-wrapper .bar        { fill: #ffe1ba; outline: none;}
+.gantt .bar-wrapper.done .bar   { fill: #43A047; }
+.gantt .bar-progress            { fill: #fda150; }
+.gantt .bar-wrapper.done .bar-progress { fill: rgb(16, 185, 129);}
 </style>

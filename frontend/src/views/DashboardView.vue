@@ -11,7 +11,7 @@
 
     <template v-else-if="store.stats">
       <!-- Stat Cards -->
-      <v-row class="mb-6" dense>
+      <v-row class="mb-5">
         <v-col v-for="card in statCards" :key="card.label" cols="6" sm="4" md="2">
           <v-card rounded="xl" height="100%">
             <v-card-text class="pa-4">
@@ -26,7 +26,7 @@
       </v-row>
 
       <!-- Progress ring + Project list -->
-      <v-row>
+      <v-row class="mb-2">
         <!-- Overall progress -->
         <v-col cols="12" lg="4">
           <v-card rounded="xl" height="100%">

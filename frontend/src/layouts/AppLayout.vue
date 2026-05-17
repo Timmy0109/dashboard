@@ -29,7 +29,7 @@
         :title="item.label"
         :to="item.to"
         :active="isActive(item.to)"
-        active-color="primary"
+        color="primary"
         rounded="lg"
         class="mb-0.5"
       />

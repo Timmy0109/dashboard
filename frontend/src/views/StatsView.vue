@@ -11,7 +11,7 @@
 
     <template v-else-if="data">
       <!-- Summary Cards -->
-      <v-row class="mb-6" dense>
+      <v-row class="mb-5">
         <v-col v-for="card in summaryCards" :key="card.label" cols="6" sm="4" md="">
           <v-card rounded="xl" height="100%">
             <v-card-text class="pa-4 text-center">
@@ -22,7 +22,7 @@
         </v-col>
       </v-row>
 
-      <v-row class="mb-6" dense>
+      <v-row class="mb-5">
         <!-- Status Distribution -->
         <v-col cols="12" md="6">
           <v-card rounded="xl" height="100%">
@@ -163,8 +163,10 @@ const summaryCards = computed(() => {
   ]
 })
 
-function statusIcon(icon: string) {
-  return icon.startsWith('mdi-') ? icon : `mdi-${icon}`
+function statusIcon(icon: string | null | undefined) {
+  if (!icon) return 'mdi-circle-outline'
+  const normalized = icon.replace(/_/g, '-')
+  return normalized.startsWith('mdi-') ? normalized : `mdi-${normalized}`
 }
 
 onMounted(async () => {

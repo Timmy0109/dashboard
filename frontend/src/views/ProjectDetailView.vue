@@ -9,8 +9,8 @@
       <v-btn
         variant="text" color="grey" prepend-icon="mdi-arrow-left"
         size="small" class="mb-3 px-0"
-        @click="router.push('/projects')"
-      >返回專案列表</v-btn>
+        @click="router.back()"
+      >返回</v-btn>
 
       <v-card rounded="xl" class="pa-5" elevation="1">
         <div class="d-flex align-start justify-space-between gap-4 flex-wrap">
@@ -20,10 +20,10 @@
               <v-chip
                 v-if="project.status"
                 size="small"
+                :prepend-icon="statusIcon(project.status.icon)"
                 :style="{ backgroundColor: project.status.color + '22', color: project.status.color }"
                 class="font-weight-medium"
               >
-                <v-icon :icon="statusIcon(project.status.icon)" size="12" class="mr-1" />
                 {{ project.status.name }}
               </v-chip>
             </div>
@@ -68,7 +68,7 @@
     </div>
 
     <!-- ── Info Cards ──────────────────────────────────────────────────── -->
-    <v-row class="mb-5" dense>
+    <v-row class="mb-5">
       <v-col cols="6" sm="3">
         <v-card rounded="xl" height="100%">
           <v-card-text class="pa-4">
@@ -222,10 +222,10 @@
           <v-chip
             v-if="item.status"
             size="small"
+            :prepend-icon="statusIcon(item.status.icon)"
             :style="{ backgroundColor: item.status.color + '22', color: item.status.color }"
             class="font-weight-medium"
           >
-            <v-icon :icon="statusIcon(item.status.icon)" size="12" class="mr-1" />
             {{ item.status.name }}
           </v-chip>
         </template>
@@ -365,8 +365,10 @@ function isTaskOverdue(task: Task) {
   return !task.is_completed && new Date(task.end_date) < new Date()
 }
 
-function statusIcon(icon: string) {
-  return icon.startsWith('mdi-') ? icon : `mdi-${icon}`
+function statusIcon(icon: string | null | undefined) {
+  if (!icon) return 'mdi-circle-outline'
+  const normalized = icon.replace(/_/g, '-')
+  return normalized.startsWith('mdi-') ? normalized : `mdi-${normalized}`
 }
 
 function openEditTask(task: Task) {

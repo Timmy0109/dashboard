@@ -41,7 +41,7 @@
             {{ errorMsg }}
           </v-alert>
           <div class="d-flex gap-3">
-            <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="$emit('close')">取消</v-btn>
+            <v-btn variant="outlined" color="grey" class="flex-grow-1 mr-3" @click="$emit('close')">取消</v-btn>
             <v-btn type="submit" color="primary" class="flex-grow-1" :loading="saving">儲存</v-btn>
           </div>
         </v-form>

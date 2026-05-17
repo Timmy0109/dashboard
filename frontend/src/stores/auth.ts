@@ -16,7 +16,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
-  const isManager = computed(() => user.value?.role === 'admin' || user.value?.role === 'manager')
+  const isManager = computed(() => user.value?.role === 'manager')
+  const canManageMembers = computed(() => user.value?.role === 'admin' || user.value?.role === 'manager')
 
   async function fetchUser() {
     try {
@@ -43,5 +44,5 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, loading, isLoggedIn, isAdmin, isManager, fetchUser, login, logout }
+  return { user, loading, isLoggedIn, isAdmin, isManager, canManageMembers, fetchUser, login, logout }
 })

@@ -1,144 +1,325 @@
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 d-flex align-center justify-space-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-bold text-gray-900">系統管理</h2>
-        <p class="text-sm text-gray-500 mt-0.5">管理系統使用者帳號</p>
+        <h2 class="text-h6 font-weight-bold">系統管理</h2>
+        <p class="text-body-2 text-grey">管理所有公司帳戶與功能權限</p>
       </div>
-      <button
-        @click="openAdd"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+      <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="showCreate = true">新增公司</v-btn>
+    </div>
+
+    <!-- Company list -->
+    <v-card rounded="xl">
+      <v-data-table
+        :headers="companyHeaders"
+        :items="store.list"
+        :loading="store.loading"
+        :search="search"
+        hover
+        item-value="id"
+        @click:row="(_e: Event, { item }: any) => openEmployees(item)"
       >
-        <span class="material-icons text-base leading-none">add</span> 新增使用者
-      </button>
-    </div>
+        <template #top>
+          <v-toolbar flat rounded="t-xl">
+            <v-text-field
+              v-model="search"
+              prepend-inner-icon="mdi-magnify"
+              placeholder="搜尋公司..."
+              variant="outlined"
+              density="compact"
+              hide-details
+              rounded="lg"
+              class="mx-4 my-2"
+              style="max-width:300px"
+            />
+          </v-toolbar>
+        </template>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div v-if="loading" class="py-16 text-center text-sm text-gray-400">載入中...</div>
+        <template #item.status="{ item }">
+          <v-chip :color="item.status === 'active' ? 'success' : 'error'" size="small" variant="tonal">
+            {{ item.status === 'active' ? '運作中' : '已停用' }}
+          </v-chip>
+        </template>
 
-      <table v-else class="w-full">
-        <thead>
-          <tr class="border-b border-gray-100 bg-gray-50">
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">名稱</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Email</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">角色</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">狀態</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">最後登入</th>
-            <th class="px-4 py-3 w-24"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-50">
-          <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50 transition-colors">
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-medium">
-                  {{ user.name.charAt(0) }}
-                </div>
-                <span class="text-sm font-medium text-gray-800">{{ user.name }}</span>
+        <template #item.managers_count="{ item }">{{ item.managers_count }} 人</template>
+        <template #item.members_count="{ item }">{{ item.members_count }} 人</template>
+
+        <template #item.actions="{ item }">
+          <div class="d-flex gap-1" @click.stop>
+            <v-btn icon="mdi-tune" size="small" variant="text" color="grey" title="功能設定" @click="openFeatures(item)" />
+            <v-btn
+              :icon="item.status === 'active' ? 'mdi-domain-off' : 'mdi-domain'"
+              size="small" variant="text"
+              :color="item.status === 'active' ? 'warning' : 'success'"
+              :title="item.status === 'active' ? '停用' : '啟用'"
+              @click="toggleStatus(item)"
+            />
+          </div>
+        </template>
+
+        <template #no-data>
+          <div class="text-center py-8 text-grey">尚無公司，點擊新增</div>
+        </template>
+      </v-data-table>
+    </v-card>
+
+    <!-- Create company dialog -->
+    <v-dialog v-model="showCreate" max-width="400" persistent>
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3">新增公司</v-card-title>
+        <v-card-text class="pa-5 pt-0">
+          <v-text-field v-model="newName" label="公司名稱" autofocus @keyup.enter="createCompany" />
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0 gap-2">
+          <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="showCreate = false">取消</v-btn>
+          <v-btn color="primary" class="flex-grow-1" :disabled="!newName.trim()" :loading="creating" @click="createCompany">建立</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Feature matrix dialog -->
+    <v-dialog v-model="showFeatures" max-width="680" scrollable>
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
+          <span class="text-body-1 font-weight-semibold">功能設定 — {{ featureCompany?.name }}</span>
+          <div class="d-flex align-center gap-2">
+            <v-btn variant="text" color="primary" prepend-icon="mdi-content-copy" size="small" @click="copyInviteCode">邀請碼</v-btn>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="showFeatures = false" />
+          </div>
+        </v-card-title>
+        <v-divider />
+        <v-card-text>
+          <div v-if="featuresLoading" class="d-flex justify-center py-8">
+            <v-progress-circular indeterminate color="primary" />
+          </div>
+          <div v-else>
+            <div v-for="cat in categories" :key="cat.key" class="mb-5">
+              <div class="text-caption text-grey font-weight-bold text-uppercase mb-2">{{ cat.label }}</div>
+              <v-list rounded="lg" bg-color="grey-lighten-5" class="pa-0">
+                <template v-for="(f, idx) in featuresByCategory(cat.key)" :key="f.key">
+                  <v-list-item class="px-4 py-2">
+                    <template #title>
+                      <span class="text-body-2 font-weight-medium">{{ f.name }}</span>
+                    </template>
+                    <template #subtitle>
+                      <span class="text-caption text-grey">{{ f.description }}</span>
+                    </template>
+                    <template #append>
+                      <v-switch
+                        :model-value="f.enabled"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        @update:model-value="toggleFeature(f)"
+                      />
+                    </template>
+                  </v-list-item>
+                  <v-divider v-if="idx < featuresByCategory(cat.key).length - 1" />
+                </template>
+              </v-list>
+            </div>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- Employee panel dialog -->
+    <v-dialog v-model="showEmployees" max-width="720" scrollable>
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
+          <div>
+            <div class="text-body-1 font-weight-semibold">{{ employeeCompany?.name }}</div>
+            <div class="text-caption text-grey">公司成員管理</div>
+          </div>
+          <div class="d-flex align-center gap-2">
+            <v-btn color="primary" prepend-icon="mdi-account-plus" size="small" rounded="lg" @click="showUserModal = true">新增使用者</v-btn>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="showEmployees = false" />
+          </div>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-0">
+          <div v-if="employeesLoading" class="d-flex justify-center py-8">
+            <v-progress-circular indeterminate color="primary" />
+          </div>
+          <v-data-table
+            v-else
+            :headers="employeeHeaders"
+            :items="employees"
+            density="compact"
+            hide-default-footer
+            item-value="id"
+          >
+            <template #item.name="{ item }">
+              <div class="d-flex align-center gap-2 py-1">
+                <v-avatar color="primary" size="28">
+                  <span class="text-caption text-white font-weight-bold">{{ item.name.charAt(0) }}</span>
+                </v-avatar>
+                <span class="text-body-2 font-weight-medium">{{ item.name }}</span>
               </div>
-            </td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ user.email }}</td>
-            <td class="px-4 py-3">
-              <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium" :class="roleStyle[user.role]">
-                {{ roleLabel[user.role] }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <span class="inline-flex items-center gap-1 text-xs"
-                :class="user.status === 'active' ? 'text-green-600' : 'text-gray-400'">
-                <span class="w-1.5 h-1.5 rounded-full inline-block"
-                  :class="user.status === 'active' ? 'bg-green-500' : 'bg-gray-300'"></span>
-                {{ user.status === 'active' ? '啟用' : '停用' }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-xs text-gray-400">
-              {{ user.last_login_at ? user.last_login_at.slice(0, 10) : '從未' }}
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex gap-1">
-                <button @click="openEdit(user)"
-                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
-                  <span class="material-icons text-base leading-none">edit</span>
-                </button>
-                <button @click="handleDelete(user)"
-                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
-                  <span class="material-icons text-base leading-none">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="users.length === 0">
-            <td colspan="6" class="px-4 py-12 text-center text-sm text-gray-400">無使用者</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            </template>
+            <template #item.role="{ item }">
+              <v-chip
+                size="x-small"
+                :color="item.role === 'admin' ? 'deep-purple' : item.role === 'manager' ? 'primary' : 'default'"
+                variant="tonal"
+              >
+                {{ roleLabel[item.role] ?? item.role }}
+              </v-chip>
+            </template>
+            <template #item.status="{ item }">
+              <v-chip :color="item.status === 'active' ? 'success' : 'default'" size="x-small" variant="tonal">
+                {{ item.status === 'active' ? '啟用' : '停用' }}
+              </v-chip>
+            </template>
+          </v-data-table>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
 
     <!-- User Modal -->
     <UserModal
-      v-if="showModal"
-      :user="editingUser"
-      @close="showModal = false"
-      @saved="onSaved"
+      v-if="showUserModal"
+      :user="null"
+      :company-id="employeeCompany?.id ?? null"
+      @close="showUserModal = false"
+      @saved="onUserSaved"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import api from '@/lib/axios'
+import { useCompanyStore, type Company, type CompanyFeature } from '@/stores/company'
 import { useToast } from '@/composables/useToast'
 import UserModal from '@/components/UserModal.vue'
+import api from '@/lib/axios'
 
+const store = useCompanyStore()
 const toast = useToast()
-const loading = ref(false)
-const showModal = ref(false)
-const editingUser = ref<any>(null)
-const users = ref<any[]>([])
+const search = ref('')
+
+const showCreate = ref(false)
+const newName = ref('')
+const creating = ref(false)
+
+const showFeatures = ref(false)
+const featureCompany = ref<Company | null>(null)
+const featureList = ref<CompanyFeature[]>([])
+const featuresLoading = ref(false)
+
+const showEmployees = ref(false)
+const employeeCompany = ref<Company | null>(null)
+const employees = ref<any[]>([])
+const employeesLoading = ref(false)
+const showUserModal = ref(false)
 
 const roleLabel: Record<string, string> = { admin: '管理員', manager: '經理', member: '成員' }
-const roleStyle: Record<string, string> = {
-  admin: 'bg-purple-100 text-purple-700',
-  manager: 'bg-blue-100 text-blue-700',
-  member: 'bg-gray-100 text-gray-600',
+
+const companyHeaders = [
+  { title: '公司名稱', key: 'name',           sortable: true },
+  { title: '狀態',    key: 'status',          sortable: true },
+  { title: 'Manager', key: 'managers_count',  sortable: true },
+  { title: '成員數',   key: 'members_count',   sortable: true },
+  { title: '建立日期', key: 'created_at',      sortable: true },
+  { title: '',       key: 'actions',          sortable: false, width: '100px' },
+]
+
+const employeeHeaders = [
+  { title: '名稱',   key: 'name',       sortable: true },
+  { title: 'Email', key: 'email',      sortable: true },
+  { title: '角色',   key: 'role',       sortable: true },
+  { title: '狀態',   key: 'status',     sortable: true },
+  { title: '加入日期', key: 'created_at', sortable: true },
+]
+
+const categories = [
+  { key: 'member',  label: '成員管理' },
+  { key: 'project', label: '專案功能' },
+  { key: 'report',  label: '報表分析' },
+  { key: 'system',  label: '系統設定' },
+]
+
+function featuresByCategory(cat: string) {
+  return featureList.value.filter(f => f.category === cat)
 }
 
-async function fetchUsers() {
-  loading.value = true
+onMounted(() => store.fetchList())
+
+async function createCompany() {
+  if (!newName.value.trim() || creating.value) return
+  creating.value = true
   try {
-    const res = await api.get('/users')
-    users.value = res.data
+    await store.create(newName.value.trim())
+    toast.success('公司已建立')
+    newName.value = ''
+    showCreate.value = false
+  } catch {
+    toast.error('建立失敗')
   } finally {
-    loading.value = false
+    creating.value = false
   }
 }
 
-function openAdd() {
-  editingUser.value = null
-  showModal.value = true
-}
-
-function openEdit(user: any) {
-  editingUser.value = user
-  showModal.value = true
-}
-
-async function handleDelete(user: any) {
-  if (!confirm(`確定要刪除「${user.name}」？`)) return
+async function toggleStatus(company: Company) {
+  const next = company.status === 'active' ? 'suspended' : 'active'
   try {
-    await api.delete(`/users/${user.id}`)
-    users.value = users.value.filter(u => u.id !== user.id)
-    toast.success('已刪除使用者')
-  } catch (err: any) {
-    toast.error(err?.response?.data?.message ?? '刪除失敗')
+    await store.update(company.id, { status: next })
+    toast.success(next === 'active' ? '已啟用' : '已停用')
+  } catch {
+    toast.error('操作失敗')
   }
 }
 
-function onSaved() {
-  showModal.value = false
-  fetchUsers()
-  toast.success('儲存成功')
+async function openFeatures(company: Company) {
+  featureCompany.value = company
+  showFeatures.value = true
+  featuresLoading.value = true
+  try {
+    featureList.value = await store.fetchFeatures(company.id)
+  } finally {
+    featuresLoading.value = false
+  }
 }
 
-onMounted(() => fetchUsers())
+async function toggleFeature(f: CompanyFeature) {
+  if (!featureCompany.value) return
+  const prev = f.enabled
+  f.enabled = !f.enabled
+  try {
+    await store.toggleFeature(featureCompany.value.id, f.key, f.enabled)
+  } catch {
+    f.enabled = prev
+    toast.error('操作失敗')
+  }
+}
+
+async function copyInviteCode() {
+  if (!featureCompany.value) return
+  let code = featureCompany.value.invite_code
+  if (!code) code = await store.regenerateInviteCode(featureCompany.value.id)
+  await navigator.clipboard.writeText(code)
+  toast.success(`邀請碼已複製：${code}`)
+}
+
+async function openEmployees(company: Company) {
+  employeeCompany.value = company
+  showEmployees.value = true
+  employeesLoading.value = true
+  employees.value = []
+  try {
+    const { data } = await api.get(`/admin/companies/${company.id}/users`)
+    employees.value = data
+  } finally {
+    employeesLoading.value = false
+  }
+}
+
+async function onUserSaved() {
+  showUserModal.value = false
+  toast.success('使用者已新增')
+  if (employeeCompany.value) {
+    await openEmployees(employeeCompany.value)
+    await store.fetchList()
+  }
+}
 </script>

@@ -64,6 +64,10 @@ class TaskController extends Controller
             'is_completed' => 'sometimes|boolean',
         ]);
 
+        if (isset($validated['is_completed']) && $validated['is_completed'] === true && ! $task->is_completed) {
+            $validated['end_date'] = now()->toDateString();
+        }
+
         $task->update($validated);
 
         return response()->json($task->load(['assignee', 'status', 'priority']));

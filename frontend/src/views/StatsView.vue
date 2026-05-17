@@ -1,110 +1,133 @@
 <template>
   <div>
     <div class="mb-6">
-      <h2 class="text-xl font-bold text-gray-900">統計分析</h2>
-      <p class="text-sm text-gray-500 mt-0.5">專案與任務整體數據</p>
+      <h2 class="text-h6 font-weight-bold">統計分析</h2>
+      <p class="text-body-2 text-grey">專案與任務整體數據</p>
     </div>
 
-    <div v-if="loading" class="flex items-center justify-center py-20">
-      <div class="text-gray-400 text-sm">載入中...</div>
+    <div v-if="loading" class="d-flex justify-center align-center py-16">
+      <v-progress-circular indeterminate color="primary" />
     </div>
 
     <template v-else-if="data">
       <!-- Summary Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div v-for="card in summaryCards" :key="card.label"
-          class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-          <div class="text-2xl font-bold" :class="card.color">{{ card.value }}</div>
-          <div class="text-xs text-gray-400 mt-1">{{ card.label }}</div>
-        </div>
-      </div>
+      <v-row class="mb-6" dense>
+        <v-col v-for="card in summaryCards" :key="card.label" cols="6" sm="4" md="">
+          <v-card rounded="xl" height="100%">
+            <v-card-text class="pa-4 text-center">
+              <div class="text-h5 font-weight-bold" :class="card.color">{{ card.value }}</div>
+              <div class="text-caption text-grey mt-1">{{ card.label }}</div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <v-row class="mb-6" dense>
         <!-- Status Distribution -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">專案狀態分佈</h3>
-          <div v-if="data.status_distribution.length === 0" class="py-8 text-center text-sm text-gray-400">無資料</div>
-          <div v-else class="space-y-3">
-            <div v-for="item in data.status_distribution" :key="item.status.name"
-              class="flex items-center gap-3">
-              <span class="material-icons text-base leading-none w-4" :style="{ color: item.status.color }">{{ item.status.icon }}</span>
-              <span class="text-sm text-gray-600 w-20">{{ item.status.name }}</span>
-              <div class="flex-1 bg-gray-100 rounded-full h-2">
-                <div
-                  class="h-2 rounded-full transition-all"
-                  :style="{ width: (item.count / totalProjects * 100) + '%', backgroundColor: item.status.color }"
-                />
+        <v-col cols="12" md="6">
+          <v-card rounded="xl" height="100%">
+            <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3">專案狀態分佈</v-card-title>
+            <v-card-text class="pt-0">
+              <div v-if="data.status_distribution.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
+              <div v-else class="d-flex flex-column gap-3">
+                <div v-for="item in data.status_distribution" :key="item.status.name" class="d-flex align-center gap-3">
+                  <v-icon size="16" :style="{ color: item.status.color }" :icon="statusIcon(item.status.icon)" />
+                  <span class="text-body-2 text-grey-darken-1" style="width:80px">{{ item.status.name }}</span>
+                  <v-progress-linear
+                    :model-value="item.count / totalProjects * 100"
+                    :color="item.status.color"
+                    bg-color="grey-lighten-3"
+                    rounded
+                    height="6"
+                    class="flex-grow-1"
+                  />
+                  <span class="text-caption text-grey" style="width:24px;text-align:right">{{ item.count }}</span>
+                </div>
               </div>
-              <span class="text-xs text-gray-500 w-8 text-right">{{ item.count }}</span>
-            </div>
-          </div>
-        </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
 
-        <!-- Task Workload per Member -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">成員任務負載（未完成）</h3>
-          <div v-if="data.task_workload.length === 0" class="py-8 text-center text-sm text-gray-400">無資料</div>
-          <div v-else class="space-y-3">
-            <div v-for="item in data.task_workload" :key="item.name"
-              class="flex items-center gap-3">
-              <div class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-medium shrink-0">
-                {{ item.name.charAt(0) }}
+        <!-- Task Workload -->
+        <v-col cols="12" md="6">
+          <v-card rounded="xl" height="100%">
+            <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3">成員任務負載（未完成）</v-card-title>
+            <v-card-text class="pt-0">
+              <div v-if="data.task_workload.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
+              <div v-else class="d-flex flex-column gap-3">
+                <div v-for="item in data.task_workload" :key="item.name" class="d-flex align-center gap-3">
+                  <v-avatar color="primary" size="26">
+                    <span class="text-caption text-white font-weight-bold">{{ item.name.charAt(0) }}</span>
+                  </v-avatar>
+                  <span class="text-body-2 text-grey-darken-1 text-truncate" style="width:64px">{{ item.name }}</span>
+                  <v-progress-linear
+                    :model-value="item.task_count / maxWorkload * 100"
+                    color="primary"
+                    bg-color="grey-lighten-3"
+                    rounded
+                    height="6"
+                    class="flex-grow-1"
+                  />
+                  <span class="text-caption text-grey" style="width:24px;text-align:right">{{ item.task_count }}</span>
+                </div>
               </div>
-              <span class="text-sm text-gray-600 w-16 truncate">{{ item.name }}</span>
-              <div class="flex-1 bg-gray-100 rounded-full h-2">
-                <div
-                  class="h-2 rounded-full bg-blue-500 transition-all"
-                  :style="{ width: (item.task_count / maxWorkload * 100) + '%' }"
-                />
-              </div>
-              <span class="text-xs text-gray-500 w-6 text-right">{{ item.task_count }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
 
       <!-- Project Progress Ranking -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">專案進度排行（前 10）</h3>
-        <div v-if="data.project_progress.length === 0" class="py-8 text-center text-sm text-gray-400">無資料</div>
-        <div v-else class="space-y-2.5">
-          <div v-for="(p, idx) in data.project_progress" :key="p.id"
-            class="flex items-center gap-3">
-            <span class="text-xs text-gray-400 w-5 text-right">{{ idx + 1 }}</span>
-            <span class="text-sm text-gray-700 w-48 truncate">{{ p.name }}</span>
-            <div class="flex-1 bg-gray-100 rounded-full h-2">
-              <div
-                class="h-2 rounded-full transition-all"
-                :class="p.is_completed ? 'bg-green-500' : 'bg-blue-500'"
-                :style="{ width: p.progress_percent + '%' }"
+      <v-card rounded="xl" class="mb-6">
+        <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3">專案進度排行（前 10）</v-card-title>
+        <v-card-text class="pt-0">
+          <div v-if="data.project_progress.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
+          <div v-else class="d-flex flex-column gap-2">
+            <div v-for="(p, idx) in data.project_progress" :key="p.id" class="d-flex align-center gap-3">
+              <span class="text-caption text-grey" style="width:20px;text-align:right">{{ idx + 1 }}</span>
+              <span class="text-body-2 text-truncate" style="width:180px">{{ p.name }}</span>
+              <v-progress-linear
+                :model-value="p.progress_percent"
+                :color="p.is_completed ? 'success' : 'primary'"
+                bg-color="grey-lighten-3"
+                rounded
+                height="6"
+                class="flex-grow-1"
               />
+              <span class="text-caption font-weight-medium text-grey-darken-1" style="width:36px;text-align:right">
+                {{ p.progress_percent }}%
+              </span>
             </div>
-            <span class="text-xs font-medium text-gray-600 w-8 text-right">{{ p.progress_percent }}%</span>
           </div>
-        </div>
-      </div>
+        </v-card-text>
+      </v-card>
 
       <!-- Completion Trend -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h3 class="text-sm font-semibold text-gray-700 mb-4">任務完成趨勢（近 6 個月）</h3>
-        <div v-if="data.completion_trend.length === 0" class="py-8 text-center text-sm text-gray-400">
-          近 6 個月無已完成任務
-        </div>
-        <div v-else class="flex items-end gap-3 h-32">
-          <div
-            v-for="item in data.completion_trend"
-            :key="item.month"
-            class="flex-1 flex flex-col items-center gap-1"
-          >
-            <span class="text-xs text-gray-500">{{ item.count }}</span>
-            <div
-              class="w-full rounded-t bg-blue-500 transition-all"
-              :style="{ height: (item.count / maxTrend * 96) + 'px', minHeight: '4px' }"
-            />
-            <span class="text-xs text-gray-400">{{ item.month.slice(5) }}月</span>
+      <v-card rounded="xl">
+        <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3">任務完成趨勢（近 6 個月）</v-card-title>
+        <v-card-text class="pt-0">
+          <div v-if="data.completion_trend.length === 0" class="py-8 text-center text-body-2 text-grey">
+            近 6 個月無已完成任務
           </div>
-        </div>
-      </div>
+          <div v-else class="d-flex align-end gap-3" style="height:128px">
+            <div
+              v-for="item in data.completion_trend"
+              :key="item.month"
+              class="d-flex flex-column align-center gap-1 flex-grow-1"
+            >
+              <span class="text-caption text-grey">{{ item.count }}</span>
+              <div
+                class="rounded-t w-100"
+                :style="{
+                  height: (item.count / maxTrend * 96) + 'px',
+                  minHeight: '4px',
+                  backgroundColor: '#00897B',
+                }"
+              />
+              <span class="text-caption text-grey">{{ item.month.slice(5) }}月</span>
+            </div>
+          </div>
+        </v-card-text>
+      </v-card>
     </template>
   </div>
 </template>
@@ -125,20 +148,24 @@ const data = ref<StatsData | null>(null)
 const loading = ref(false)
 
 const totalProjects = computed(() => data.value?.status_distribution.reduce((s, i) => s + i.count, 0) || 1)
-const maxWorkload = computed(() => Math.max(...(data.value?.task_workload.map(i => i.task_count) ?? [1]), 1))
-const maxTrend = computed(() => Math.max(...(data.value?.completion_trend.map(i => i.count) ?? [1]), 1))
+const maxWorkload   = computed(() => Math.max(...(data.value?.task_workload.map(i => i.task_count) ?? [1]), 1))
+const maxTrend      = computed(() => Math.max(...(data.value?.completion_trend.map(i => i.count) ?? [1]), 1))
 
 const summaryCards = computed(() => {
   if (!data.value) return []
   const t = data.value.totals
   return [
-    { label: '總專案', value: t.projects, color: 'text-gray-900' },
-    { label: '總任務', value: t.tasks, color: 'text-gray-900' },
-    { label: '已完成任務', value: t.completed_tasks, color: 'text-green-600' },
-    { label: '逾期任務', value: t.overdue_tasks, color: t.overdue_tasks > 0 ? 'text-red-600' : 'text-gray-400' },
-    { label: '活躍成員', value: t.members, color: 'text-blue-600' },
+    { label: '總專案',   value: t.projects,       color: '' },
+    { label: '總任務',   value: t.tasks,           color: '' },
+    { label: '已完成任務', value: t.completed_tasks, color: 'text-success' },
+    { label: '逾期任務',  value: t.overdue_tasks,   color: t.overdue_tasks > 0 ? 'text-error' : 'text-grey' },
+    { label: '活躍成員',  value: t.members,         color: 'text-primary' },
   ]
 })
+
+function statusIcon(icon: string) {
+  return icon.startsWith('mdi-') ? icon : `mdi-${icon}`
+}
 
 onMounted(async () => {
   loading.value = true

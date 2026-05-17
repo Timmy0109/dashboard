@@ -1,185 +1,127 @@
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 d-flex align-center justify-space-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-bold text-gray-900">今日待辦</h2>
-        <p class="text-sm text-gray-500 mt-0.5">所有未完成任務，依截止日期排序</p>
+        <h2 class="text-h6 font-weight-bold">今日待辦</h2>
+        <p class="text-body-2 text-grey">所有未完成任務，依截止日期排序</p>
       </div>
-      <button
-        @click="openAdd"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-      >
-        <span class="material-icons text-base leading-none">add</span>
-        新增任務
-      </button>
+      <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openAdd">新增任務</v-btn>
     </div>
 
-    <!-- Filter tabs -->
-    <div class="flex gap-2 mb-4">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        @click="activeTab = tab.value"
-        class="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-        :class="activeTab === tab.value
-          ? 'bg-blue-600 text-white'
-          : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300'"
+    <v-card rounded="xl">
+      <v-data-table
+        :headers="headers"
+        :items="filteredTasks"
+        :loading="store.loading"
+        hover
+        item-value="id"
+        @click:row="(_e: Event, { item }: any) => openEdit(item)"
       >
-        {{ tab.label }}
-        <span class="ml-1 text-xs opacity-70">({{ getTabCount(tab.value) }})</span>
-      </button>
-    </div>
+        <template #top>
+          <v-toolbar flat rounded="t-xl">
+            <div class="d-flex align-center gap-3 pa-3 w-100 flex-wrap">
+              <v-chip-group v-model="activeTab" mandatory selected-class="bg-primary text-white">
+                <v-chip v-for="tab in tabs" :key="tab.value" :value="tab.value" size="small" filter>
+                  {{ tab.label }}（{{ getTabCount(tab.value) }}）
+                </v-chip>
+              </v-chip-group>
+            </div>
+          </v-toolbar>
+        </template>
 
-    <!-- Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div v-if="store.loading" class="py-16 text-center text-sm text-gray-400">載入中...</div>
+        <template #item.assignee="{ item }">
+          <div v-if="item.assignee" class="d-flex align-center gap-2">
+            <v-avatar color="primary" size="26">
+              <span class="text-caption text-white font-weight-bold">{{ item.assignee.name.charAt(0) }}</span>
+            </v-avatar>
+            <span class="text-body-2">{{ item.assignee.name }}</span>
+          </div>
+          <span v-else class="text-grey text-body-2">未指派</span>
+        </template>
 
-      <table v-else class="w-full">
-        <thead>
-          <tr class="border-b border-gray-100 bg-gray-50">
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 w-8"></th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">任務名稱</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">所屬專案</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">負責人</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">截止日期</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">優先級</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">狀態</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 w-24">進度</th>
-            <th class="px-4 py-3 w-20"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-50">
-          <tr
-            v-for="task in filteredTasks"
-            :key="task.id"
-            class="hover:bg-gray-50 transition-colors cursor-pointer"
-            @click="openEdit(task)"
+        <template #item.end_date="{ item }">
+          <span :class="item.is_overdue ? 'text-error font-weight-medium' : 'text-body-2'">
+            <v-icon v-if="item.is_overdue" icon="mdi-alert-circle" size="14" color="error" class="mr-1" />
+            {{ item.end_date }}
+          </span>
+        </template>
+
+        <template #item.priority="{ item }">
+          <v-chip
+            v-if="item.priority"
+            size="small"
+            :style="{ backgroundColor: item.priority.color + '22', color: item.priority.color }"
+            class="font-weight-medium"
           >
-            <td class="px-4 py-3" @click.stop="toggleComplete(task)">
-              <div
-                class="w-4 h-4 rounded border-2 cursor-pointer transition-colors"
-                :class="task.is_completed ? 'border-green-500 bg-green-500' : 'border-gray-300 hover:border-blue-400'"
-              >
-                <span v-if="task.is_completed" class="material-icons text-white text-xs leading-none flex items-center justify-center h-full">check</span>
-              </div>
-            </td>
-            <td class="px-4 py-3">
-              <span class="text-sm text-gray-800 font-medium">{{ task.name }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <span class="text-xs text-gray-500">{{ task.project_name }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <div v-if="task.assignee" class="flex items-center gap-1.5">
-                <div class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-medium shrink-0">
-                  {{ task.assignee.name.charAt(0) }}
-                </div>
-                <span class="text-xs text-gray-600">{{ task.assignee.name }}</span>
-              </div>
-              <span v-else class="text-xs text-gray-400">未指派</span>
-            </td>
-            <td class="px-4 py-3">
-              <span
-                class="text-xs font-medium"
-                :class="task.is_overdue ? 'text-red-600' : 'text-gray-600'"
-              >
-                <span v-if="task.is_overdue" class="material-icons text-sm leading-none align-middle mr-0.5">warning</span>{{ task.end_date }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <span
-                v-if="task.priority"
-                class="inline-flex px-2 py-0.5 rounded text-xs font-medium"
-                :style="{ backgroundColor: task.priority.color + '20', color: task.priority.color }"
-              >
-                {{ task.priority.name }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <span
-                v-if="task.status"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
-                :style="{ backgroundColor: task.status.color + '20', color: task.status.color }"
-              >
-                <span class="material-icons text-xs leading-none">{{ task.status.icon }}</span>
-                {{ task.status.name }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-1.5">
-                <div class="flex-1 bg-gray-100 rounded-full h-1.5">
-                  <div
-                    class="h-1.5 rounded-full"
-                    :class="task.is_overdue ? 'bg-red-400' : 'bg-blue-500'"
-                    :style="{ width: task.progress + '%' }"
-                  />
-                </div>
-                <span class="text-xs text-gray-400 w-7 text-right">{{ task.progress }}%</span>
-              </div>
-            </td>
-            <td class="px-4 py-3" @click.stop>
-              <div class="flex gap-1">
-                <button
-                  @click="openEdit(task)"
-                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                  title="編輯"
-                >
-                  <span class="material-icons text-base leading-none">edit</span>
-                </button>
-                <button
-                  @click="handleDelete(task)"
-                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                  title="刪除"
-                >
-                  <span class="material-icons text-base leading-none">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
+            {{ item.priority.name }}
+          </v-chip>
+        </template>
 
-          <tr v-if="filteredTasks.length === 0">
-            <td colspan="9" class="px-4 py-12 text-center text-sm text-gray-400">
-              {{
-                activeTab === 'overdue' ? '沒有逾期任務' :
-                activeTab === 'completed' ? '尚無已完成任務' :
-                '目前沒有待辦任務'
-              }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <template #item.status="{ item }">
+          <v-chip
+            v-if="item.status"
+            size="small"
+            :style="{ backgroundColor: item.status.color + '22', color: item.status.color }"
+            class="font-weight-medium"
+          >
+            <v-icon :icon="statusIcon(item.status.icon)" size="12" class="mr-1" />
+            {{ item.status.name }}
+          </v-chip>
+        </template>
 
-      <!-- Legend -->
-      <div class="px-4 py-3 border-t border-gray-100 bg-gray-50 flex gap-4 text-xs text-gray-400">
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span> 逾期</span>
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> 高優先級</span>
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span> 進行中</span>
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> 已完成</span>
-      </div>
-    </div>
+        <template #item.progress="{ item }">
+          <div class="d-flex align-center gap-2" style="min-width:100px">
+            <v-progress-linear
+              :model-value="item.progress"
+              :color="item.is_overdue ? 'error' : item.is_completed ? 'success' : 'primary'"
+              bg-color="grey-lighten-3"
+              rounded
+              height="5"
+              class="flex-grow-1"
+            />
+            <span class="text-caption text-grey-darken-1">{{ item.progress }}%</span>
+          </div>
+        </template>
 
-    <!-- Project picker dialog (before adding a task) -->
-    <div v-if="showProjectPicker" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/50" @click="showProjectPicker = false" />
-      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-        <h3 class="text-base font-semibold text-gray-900 mb-4">選擇所屬專案</h3>
-        <select
-          v-model="selectedProjectId"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-        >
-          <option value="">請選擇專案</option>
-          <option v-for="p in projectStore.list" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
-        <div class="flex gap-3">
-          <button @click="showProjectPicker = false"
-            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">取消</button>
-          <button @click="confirmProjectPick" :disabled="!selectedProjectId"
-            class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">繼續</button>
-        </div>
-      </div>
-    </div>
+        <template #item.actions="{ item }">
+          <div class="d-flex gap-1" @click.stop>
+            <v-btn icon="mdi-pencil" size="small" variant="text" color="grey" @click="openEdit(item)" />
+            <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="handleDelete(item)" />
+          </div>
+        </template>
 
-    <!-- Task Modal -->
+        <template #no-data>
+          <div class="text-center py-8 text-grey">
+            {{
+              activeTab === 'overdue'     ? '沒有逾期任務' :
+              activeTab === 'completed'   ? '尚無已完成任務' :
+              activeTab === 'pending'     ? '沒有待處理任務' :
+              activeTab === 'in_progress' ? '沒有進行中任務' :
+              '目前沒有待辦任務'
+            }}
+          </div>
+        </template>
+      </v-data-table>
+    </v-card>
+
+    <!-- Project picker dialog -->
+    <v-dialog v-model="showProjectPicker" max-width="360">
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3">選擇所屬專案</v-card-title>
+        <v-card-text class="pa-5 pt-0">
+          <v-select
+            v-model="selectedProjectId"
+            label="專案"
+            :items="projectStore.list.map(p => ({ title: p.name, value: p.id }))"
+          />
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0 gap-2">
+          <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="showProjectPicker = false">取消</v-btn>
+          <v-btn color="primary" class="flex-grow-1" :disabled="!selectedProjectId" @click="confirmProjectPick">繼續</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <TaskModal
       v-if="showTaskModal && activeProjectId !== null"
       :task="editingTask"
@@ -201,35 +143,53 @@ import type { Task } from '@/stores/project'
 const store = useTodoStore()
 const projectStore = useProjectStore()
 const toast = useToast()
+
 const activeTab = ref('all')
 const showProjectPicker = ref(false)
 const showTaskModal = ref(false)
 const editingTask = ref<Task | null>(null)
 const activeProjectId = ref<number | null>(null)
-const selectedProjectId = ref<number | ''>('')
+const selectedProjectId = ref<number | null>(null)
 
 const tabs = [
-  { label: '全部', value: 'all' },
+  { label: '全部',   value: 'all' },
   { label: '待處理', value: 'pending' },
   { label: '進行中', value: 'in_progress' },
   { label: '已完成', value: 'completed' },
-  { label: '逾期', value: 'overdue' },
+  { label: '逾期',   value: 'overdue' },
+]
+
+const headers = [
+  { title: '任務名稱', key: 'name',        sortable: true },
+  { title: '所屬專案', key: 'project_name', sortable: true },
+  { title: '負責人',  key: 'assignee',     sortable: false },
+  { title: '截止日期', key: 'end_date',     sortable: true },
+  { title: '優先級',  key: 'priority',     sortable: false },
+  { title: '狀態',   key: 'status',       sortable: false },
+  { title: '進度',   key: 'progress',     sortable: true, width: '140px' },
+  { title: '',      key: 'actions',      sortable: false, width: '80px' },
 ]
 
 const filteredTasks = computed(() => {
-  if (activeTab.value === 'completed') return store.tasks.filter(t => t.is_completed)
-  if (activeTab.value === 'overdue') return store.tasks.filter(t => t.is_overdue && !t.is_completed)
-  if (activeTab.value === 'pending') return store.tasks.filter(t => t.progress === 0 && !t.is_completed)
-  if (activeTab.value === 'in_progress') return store.tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed)
-  return store.tasks
+  const tasks = store.tasks
+  if (activeTab.value === 'completed')   return tasks.filter(t => t.is_completed)
+  if (activeTab.value === 'overdue')     return tasks.filter(t => t.is_overdue && !t.is_completed)
+  if (activeTab.value === 'pending')     return tasks.filter(t => t.progress === 0 && !t.is_completed)
+  if (activeTab.value === 'in_progress') return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed)
+  return tasks
 })
 
 function getTabCount(tab: string) {
-  if (tab === 'completed') return store.tasks.filter(t => t.is_completed).length
-  if (tab === 'overdue') return store.tasks.filter(t => t.is_overdue && !t.is_completed).length
-  if (tab === 'pending') return store.tasks.filter(t => t.progress === 0 && !t.is_completed).length
-  if (tab === 'in_progress') return store.tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length
-  return store.tasks.length
+  const tasks = store.tasks
+  if (tab === 'completed')   return tasks.filter(t => t.is_completed).length
+  if (tab === 'overdue')     return tasks.filter(t => t.is_overdue && !t.is_completed).length
+  if (tab === 'pending')     return tasks.filter(t => t.progress === 0 && !t.is_completed).length
+  if (tab === 'in_progress') return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length
+  return tasks.length
+}
+
+function statusIcon(icon: string) {
+  return icon.startsWith('mdi-') ? icon : `mdi-${icon}`
 }
 
 function todoTaskToTask(t: TodoTask): Task {
@@ -253,13 +213,13 @@ function openAdd() {
     toast.error('請先建立專案')
     return
   }
-  selectedProjectId.value = ''
+  selectedProjectId.value = null
   showProjectPicker.value = true
 }
 
 function confirmProjectPick() {
   if (!selectedProjectId.value) return
-  activeProjectId.value = selectedProjectId.value as number
+  activeProjectId.value = selectedProjectId.value
   editingTask.value = null
   showProjectPicker.value = false
   showTaskModal.value = true
@@ -269,17 +229,6 @@ function openEdit(task: TodoTask) {
   editingTask.value = todoTaskToTask(task)
   activeProjectId.value = task.project_id
   showTaskModal.value = true
-}
-
-async function toggleComplete(task: TodoTask) {
-  try {
-    await import('@/lib/axios').then(({ default: api }) =>
-      api.put(`/projects/${task.project_id}/tasks/${task.id}`, { is_completed: !task.is_completed })
-    )
-    await store.fetch()
-  } catch {
-    toast.error('操作失敗')
-  }
 }
 
 async function handleDelete(task: TodoTask) {

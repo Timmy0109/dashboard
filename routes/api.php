@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LookupController;
+use App\Http\Controllers\Api\MemberApprovalController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\StatsController;
@@ -13,6 +16,8 @@ use Illuminate\Support\Facades\Route;
 
 // Public
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/register/validate-code', [RegisterController::class, 'validateCode'])->middleware('throttle:20,1');
+Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:10,1');
 
 // Authenticated (Sanctum cookie session)
 Route::middleware('auth:sanctum')->group(function () {
@@ -49,6 +54,28 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('priorities', [LookupController::class, 'priorities']);
         Route::get('statuses', [LookupController::class, 'statuses']);
         Route::get('users', [LookupController::class, 'users']);
+        Route::get('features', [LookupController::class, 'myFeatures']);
+    });
+
+    // Admin — company management
+    Route::prefix('admin/companies')->group(function () {
+        Route::get('/', [CompanyController::class, 'index']);
+        Route::post('/', [CompanyController::class, 'store']);
+        Route::put('{company}', [CompanyController::class, 'update']);
+        Route::get('{company}/features', [CompanyController::class, 'features']);
+        Route::put('{company}/features/{key}', [CompanyController::class, 'toggleFeature']);
+        Route::post('{company}/invite-code', [CompanyController::class, 'regenerateInviteCode']);
+        Route::get('{company}/users', [CompanyController::class, 'users']);
+    });
+
+    // Manager — member approval
+    Route::prefix('manager/members')->group(function () {
+        Route::get('/', [MemberApprovalController::class, 'members']);
+        Route::get('pending', [MemberApprovalController::class, 'pending']);
+        Route::put('{user}', [MemberApprovalController::class, 'update']);
+        Route::delete('{user}', [MemberApprovalController::class, 'destroy']);
+        Route::post('{user}/approve', [MemberApprovalController::class, 'approve']);
+        Route::post('{user}/reject', [MemberApprovalController::class, 'reject']);
     });
 
     Route::apiResource('projects', ProjectController::class);

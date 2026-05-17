@@ -11,6 +11,12 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/RegisterView.vue'),
+      meta: { guest: true },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
       meta: { requiresAuth: true },
@@ -52,6 +58,12 @@ const router = createRouter({
           component: () => import('@/views/SystemView.vue'),
           meta: { adminOnly: true },
         },
+        {
+          path: 'manager/approvals',
+          name: 'member-approvals',
+          component: () => import('@/views/MemberApprovalsView.vue'),
+          meta: { requiresAuth: true, managerOnly: true },
+        },
       ],
     },
   ],
@@ -60,7 +72,9 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  if (!auth.isLoggedIn) {
+  // Guest pages (login/register) don't need a session check.
+  // Only fetch user state for protected routes where we need to verify auth.
+  if (!to.meta.guest && !auth.isLoggedIn) {
     await auth.fetchUser()
   }
 
@@ -73,6 +87,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.adminOnly && !auth.isAdmin) {
+    return { name: 'dashboard' }
+  }
+
+  if (to.meta.managerOnly && !auth.canManageMembers) {
     return { name: 'dashboard' }
   }
 })

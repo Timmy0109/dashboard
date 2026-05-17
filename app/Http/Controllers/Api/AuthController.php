@@ -23,7 +23,14 @@ class AuthController extends Controller
             ]);
         }
 
-        if (Auth::user()->status !== 'active') {
+        $status = Auth::user()->status;
+        if ($status === 'pending') {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => ['您的帳號尚待主管審核，請稍後再試'],
+            ]);
+        }
+        if ($status !== 'active') {
             Auth::logout();
             throw ValidationException::withMessages([
                 'email' => ['此帳號已停用，請聯絡管理員'],

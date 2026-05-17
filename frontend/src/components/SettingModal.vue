@@ -1,59 +1,72 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="$emit('close')">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-800">{{ isEdit ? '編輯' : '新增' }}{{ typeLabel[type] }}</h3>
-        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
-      </div>
+  <v-dialog :model-value="true" max-width="440" persistent @update:model-value="$emit('close')">
+    <v-card rounded="xl">
+      <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
+        <span class="text-body-1 font-weight-semibold">{{ isEdit ? '編輯' : '新增' }}{{ typeLabel[type] }}</span>
+        <v-btn icon="mdi-close" variant="text" size="small" @click="$emit('close')" />
+      </v-card-title>
+      <v-card-text class="pa-5 pt-2">
+        <v-form @submit.prevent="handleSubmit">
+          <v-text-field
+            v-if="type === 'statuses'"
+            v-model="form.icon"
+            label="圖示（MDI 名稱）"
+            placeholder="如 clock-outline, check-circle"
+            maxlength="60"
+            class="mb-3"
+          />
+          <v-text-field
+            v-model="form.name"
+            label="名稱"
+            required
+            autofocus
+            class="mb-3"
+          />
 
-      <form @submit.prevent="handleSubmit" class="p-5 space-y-4">
-        <div v-if="type === 'statuses'">
-          <label class="block text-xs font-medium text-gray-600 mb-1">圖示</label>
-          <input v-model="form.icon" type="text" placeholder="如 pending, check_circle" maxlength="40"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">名稱 <span class="text-red-400">*</span></label>
-          <input v-model="form.name" type="text" required placeholder="請輸入名稱"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">顏色</label>
-          <div class="flex items-center gap-3">
-            <input v-model="form.color" type="color"
-              class="w-10 h-9 rounded border border-gray-200 cursor-pointer p-0.5" />
-            <input v-model="form.color" type="text" placeholder="#3b82f6"
-              class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+          <!-- Color picker row -->
+          <div class="mb-3">
+            <div class="text-caption text-grey mb-1">顏色</div>
+            <div class="d-flex align-center gap-3">
+              <input
+                v-model="form.color"
+                type="color"
+                style="width:40px;height:40px;border:1px solid rgba(0,0,0,.2);border-radius:8px;cursor:pointer;padding:2px"
+              />
+              <v-text-field
+                v-model="form.color"
+                placeholder="#3b82f6"
+                hide-details
+                density="compact"
+              />
+            </div>
           </div>
-        </div>
 
-        <div v-if="type !== 'categories'">
-          <label class="block text-xs font-medium text-gray-600 mb-1">排序</label>
-          <input v-model.number="form.sort_order" type="number" min="0"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-        </div>
+          <v-text-field
+            v-if="type !== 'categories'"
+            v-model.number="form.sort_order"
+            label="排序"
+            type="number"
+            min="0"
+            class="mb-3"
+          />
 
-        <div class="flex items-center gap-2">
-          <input v-model="form.is_active" type="checkbox" id="is_active"
-            class="w-4 h-4 rounded border-gray-300 text-blue-600" />
-          <label for="is_active" class="text-sm text-gray-700">啟用</label>
-        </div>
+          <v-switch
+            v-model="form.is_active"
+            label="啟用"
+            color="primary"
+            hide-details
+            density="compact"
+            class="mb-4"
+          />
 
-        <div class="flex gap-3 pt-1">
-          <button type="button" @click="$emit('close')"
-            class="flex-1 px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
-            取消
-          </button>
-          <button type="submit" :disabled="saving"
-            class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-            {{ saving ? '儲存中...' : '儲存' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+          <div class="d-flex gap-3">
+            <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="$emit('close')">取消</v-btn>
+            <v-btn type="submit" color="primary" class="flex-grow-1" :loading="saving">儲存</v-btn>
+          </div>
+        </v-form>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -83,7 +96,7 @@ const isEdit = computed(() => !!props.item?.id)
 const defaultForm = () => ({
   icon: '',
   name: '',
-  color: '#3b82f6',
+  color: '#00897B',
   sort_order: 0,
   is_active: true,
 })
@@ -95,7 +108,7 @@ watch(() => props.item, (val) => {
     form.value = {
       icon: String(val.icon ?? ''),
       name: String(val.name ?? ''),
-      color: String(val.color ?? '#3b82f6'),
+      color: String(val.color ?? '#00897B'),
       sort_order: Number(val.sort_order ?? 0),
       is_active: Boolean(val.is_active ?? true),
     }

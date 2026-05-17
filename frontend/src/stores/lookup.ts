@@ -14,19 +14,25 @@ export const useLookupStore = defineStore('lookup', () => {
   const users = ref<UserOption[]>([])
   const loaded = ref(false)
 
-  async function fetch() {
-    if (loaded.value) return
-    const [cat, pri, sta, usr] = await Promise.all([
+  async function fetch(companyId?: number | null) {
+    const params = companyId ? { company_id: companyId } : {}
+    const fetchUsers = api.get('/lookups/users', { params }).then(r => { users.value = r.data })
+
+    if (loaded.value) {
+      await fetchUsers
+      return
+    }
+
+    const [cat, pri, sta] = await Promise.all([
       api.get('/lookups/categories'),
       api.get('/lookups/priorities'),
       api.get('/lookups/statuses'),
-      api.get('/lookups/users'),
     ])
     categories.value = cat.data
     priorities.value = pri.data
     statuses.value = sta.data
-    users.value = usr.data
     loaded.value = true
+    await fetchUsers
   }
 
   return { categories, priorities, statuses, users, loaded, fetch }

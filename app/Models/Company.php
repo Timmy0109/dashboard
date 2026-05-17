@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
 
 class Company extends Model
 {
+    use SoftDeletes;
     protected $fillable = ['name', 'invite_code', 'status', 'created_by'];
 
     public function creator(): BelongsTo

@@ -26,16 +26,20 @@ class CompanyController extends Controller
     {
         if ($err = $this->adminOnly($request)) return $err;
 
-        $companies = Company::with(['creator'])->withCount(['managers', 'members'])->get()
-            ->map(fn($c) => [
-                'id'             => $c->id,
-                'name'           => $c->name,
-                'status'         => $c->status,
-                'invite_code'    => $c->invite_code,
-                'managers_count' => $c->managers_count,
-                'members_count'  => $c->members_count,
-                'created_at'     => $c->created_at?->format('Y-m-d'),
-            ]);
+        $query = $request->boolean('with_trashed')
+            ? Company::withTrashed()->with(['creator'])->withCount(['managers', 'members'])
+            : Company::with(['creator'])->withCount(['managers', 'members']);
+
+        $companies = $query->get()->map(fn($c) => [
+            'id'             => $c->id,
+            'name'           => $c->name,
+            'status'         => $c->status,
+            'invite_code'    => $c->invite_code,
+            'managers_count' => $c->managers_count,
+            'members_count'  => $c->members_count,
+            'created_at'     => $c->created_at?->format('Y-m-d'),
+            'deleted_at'     => $c->deleted_at?->format('Y-m-d'),
+        ]);
 
         return response()->json($companies);
     }
@@ -146,6 +150,25 @@ class CompanyController extends Controller
 
         $code = $company->regenerateInviteCode();
         return response()->json(['invite_code' => $code]);
+    }
+
+    // DELETE /api/admin/companies/{company}
+    public function destroy(Request $request, Company $company): JsonResponse
+    {
+        if ($err = $this->adminOnly($request)) return $err;
+
+        $company->delete();
+        return response()->json(['message' => '公司已刪除']);
+    }
+
+    // POST /api/admin/companies/{company}/restore
+    public function restore(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->adminOnly($request)) return $err;
+
+        $company = Company::withTrashed()->findOrFail($id);
+        $company->restore();
+        return response()->json(['message' => '公司已還原']);
     }
 
     // GET /api/admin/companies/{company}/users

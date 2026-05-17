@@ -52,6 +52,7 @@
         <template #item.name="{ item }">
           <div class="d-flex align-center gap-2 py-1">
             <v-avatar
+              class="mr-2"
               size="32"
               :color="item.status === 'active' ? 'primary' : item.status === 'pending' ? 'warning' : 'grey'"
             >

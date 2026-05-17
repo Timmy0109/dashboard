@@ -62,6 +62,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [CompanyController::class, 'index']);
         Route::post('/', [CompanyController::class, 'store']);
         Route::put('{company}', [CompanyController::class, 'update']);
+        Route::delete('{company}', [CompanyController::class, 'destroy']);
+        Route::post('{id}/restore', [CompanyController::class, 'restore']);
         Route::get('{company}/features', [CompanyController::class, 'features']);
         Route::put('{company}/features/{key}', [CompanyController::class, 'toggleFeature']);
         Route::post('{company}/invite-code', [CompanyController::class, 'regenerateInviteCode']);

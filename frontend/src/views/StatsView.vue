@@ -56,7 +56,7 @@
               <div v-if="data.task_workload.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
               <div v-else class="d-flex flex-column gap-3">
                 <div v-for="item in data.task_workload" :key="item.name" class="d-flex align-center gap-3">
-                  <v-avatar color="primary" size="26">
+                  <v-avatar color="primary" size="26" class="mr-2">
                     <span class="text-caption text-white font-weight-bold">{{ item.name.charAt(0) }}</span>
                   </v-avatar>
                   <span class="text-body-2 text-grey-darken-1 text-truncate" style="width:64px">{{ item.name }}</span>

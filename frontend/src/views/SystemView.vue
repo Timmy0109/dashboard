@@ -212,7 +212,7 @@
           >
             <template #item.name="{ item }">
               <div class="d-flex align-center gap-2 py-1">
-                <v-avatar color="primary" size="30">
+                <v-avatar color="primary" size="30" class="mr-2">
                   <span class="text-caption text-white font-weight-bold">{{ item.name.charAt(0) }}</span>
                 </v-avatar>
                 <div>

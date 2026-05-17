@@ -103,35 +103,108 @@
     </v-card>
 
     <!-- Edit member dialog -->
-    <v-dialog v-model="showEdit" max-width="440" persistent>
+    <v-dialog v-model="showEdit" max-width="480" persistent>
       <v-card rounded="xl">
-        <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
-          <span class="text-body-1 font-weight-semibold">編輯成員</span>
-          <v-btn icon="mdi-close" variant="text" size="small" @click="showEdit = false" />
+        <!-- Header -->
+        <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+          <span class="text-body-1 font-weight-semibold text-white">編輯成員資料</span>
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="showEdit = false" />
         </v-card-title>
-        <v-card-text class="pa-5 pt-2">
+
+        <!-- Member identity strip -->
+        <div class="d-flex align-center gap-4 px-6 py-4 bg-grey-lighten-5">
+          <v-avatar
+            size="52"
+            :color="editingMember?.status === 'active' ? 'primary' : editingMember?.status === 'pending' ? 'warning' : 'grey'"
+            class="mr-2"
+          >
+            <span class="text-h6 font-weight-bold text-white">{{ editingMember?.name?.charAt(0)?.toUpperCase() }}</span>
+          </v-avatar>
+          <div>
+            <div class="text-body-1 font-weight-semibold">{{ editingMember?.name }}</div>
+            <div class="text-caption text-grey">{{ editingMember?.email }}</div>
+            <v-chip
+              size="x-small"
+              :color="editingMember?.status === 'active' ? 'success' : editingMember?.status === 'pending' ? 'warning' : 'default'"
+              variant="tonal"
+              class="mt-1"
+            >
+              {{ statusLabel[editingMember?.status ?? ''] ?? editingMember?.status }}
+            </v-chip>
+          </div>
+        </div>
+        <v-divider />
+
+        <v-card-text class="pa-6">
           <v-form @submit.prevent="saveEdit">
-            <v-text-field v-model="editForm.name"  label="姓名" required class="mb-3" />
-            <v-text-field v-model="editForm.email" label="Email" type="email" required class="mb-3" />
+            <div class="text-caption text-grey font-weight-bold text-uppercase mb-3">基本資訊</div>
+
+            <v-text-field
+              v-model="editForm.name"
+              label="顯示名稱"
+              prepend-inner-icon="mdi-account"
+              variant="outlined"
+              density="comfortable"
+              required
+              class="mb-3"
+            />
+            <v-text-field
+              v-model="editForm.email"
+              label="Email"
+              type="email"
+              prepend-inner-icon="mdi-email-outline"
+              variant="outlined"
+              density="comfortable"
+              required
+              class="mb-4"
+            />
+
+            <v-divider class="mb-4" />
+            <div class="text-caption text-grey font-weight-bold text-uppercase mb-3">帳號設定</div>
+
+            <v-row dense class="mb-1">
+              <v-col cols="6">
+                <v-select
+                  v-model="editForm.role"
+                  label="角色"
+                  prepend-inner-icon="mdi-shield-account"
+                  variant="outlined"
+                  density="comfortable"
+                  :items="[{ title: '成員', value: 'member' }, { title: '經理', value: 'manager' }]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-select
+                  v-model="editForm.status"
+                  label="狀態"
+                  prepend-inner-icon="mdi-toggle-switch"
+                  variant="outlined"
+                  density="comfortable"
+                  :items="[{ title: '啟用', value: 'active' }, { title: '停用', value: 'inactive' }]"
+                />
+              </v-col>
+            </v-row>
+
             <v-text-field
               v-model="editForm.password"
               label="新密碼（留空則不變更）"
               type="password"
+              prepend-inner-icon="mdi-lock-outline"
+              variant="outlined"
+              density="comfortable"
               autocomplete="new-password"
-              class="mb-3"
+              class="mb-4"
+              hint="至少 8 個字元"
+              persistent-hint
             />
-            <v-select
-              v-model="editForm.status"
-              label="狀態"
-              :items="[{ title: '啟用', value: 'active' }, { title: '停用', value: 'inactive' }]"
-              class="mb-3"
-            />
-            <v-alert v-if="editError" type="error" variant="tonal" density="compact" class="mb-3 text-body-2">
+
+            <v-alert v-if="editError" type="error" variant="tonal" density="compact" class="mb-4 text-body-2">
               {{ editError }}
             </v-alert>
-            <div class="d-flex gap-3">
-              <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="showEdit = false">取消</v-btn>
-              <v-btn type="submit" color="primary" class="flex-grow-1" :loading="editSaving">儲存</v-btn>
+
+            <div class="d-flex gap-4">
+              <v-btn variant="outlined" color="grey" style="flex:1" @click="showEdit = false">取消</v-btn>
+              <v-btn type="submit" color="primary" style="flex:1" :loading="editSaving">儲存變更</v-btn>
             </div>
           </v-form>
         </v-card-text>
@@ -229,7 +302,7 @@ const pendingCount = computed(() => pending.value.length)
 
 const showEdit = ref(false)
 const editingMember = ref<Member | null>(null)
-const editForm = reactive({ name: '', email: '', password: '', status: 'active' })
+const editForm = reactive({ name: '', email: '', password: '', status: 'active', role: 'member' })
 const editSaving = ref(false)
 const editError = ref('')
 
@@ -318,6 +391,7 @@ function openEdit(m: Member) {
   editForm.email = m.email
   editForm.password = ''
   editForm.status = m.status === 'pending' ? 'active' : m.status
+  editForm.role = (m as any).role ?? 'member'
   editError.value = ''
   showEdit.value = true
 }
@@ -331,6 +405,7 @@ async function saveEdit() {
       name: editForm.name,
       email: editForm.email,
       status: editForm.status,
+      role: editForm.role,
     }
     if (editForm.password) payload.password = editForm.password
     const { data } = await api.put(`/manager/members/${editingMember.value.id}`, payload)

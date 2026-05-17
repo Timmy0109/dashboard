@@ -18,8 +18,13 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'status', 'last_login_at',
-        'company_id', 'invited_by',
+        'company_id', 'invited_by', 'avatar',
     ];
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+    }
 
     protected $hidden = ['password', 'remember_token'];
 

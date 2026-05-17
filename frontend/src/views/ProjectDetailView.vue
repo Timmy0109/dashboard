@@ -200,7 +200,7 @@
 
         <template #item.assignee="{ item }">
           <div v-if="item.assignee" class="d-flex align-center gap-2">
-            <v-avatar color="primary" size="26">
+            <v-avatar color="primary" size="26" class="mr-2">
               <span class="text-caption text-white font-weight-bold">{{ item.assignee.name.charAt(0) }}</span>
             </v-avatar>
             <span class="text-body-2">{{ item.assignee.name }}</span>

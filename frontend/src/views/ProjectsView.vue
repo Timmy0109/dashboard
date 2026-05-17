@@ -198,7 +198,7 @@
                   size="small"
                   :style="{ backgroundColor: item.status.color + '22', color: item.status.color }"
                 >
-                  <v-icon :icon="`mdi-${item.status.icon}`" size="12" class="mr-1" />
+                  <v-icon :icon="statusIcon(item.status.icon)" size="12" class="mr-1" />
                   {{ item.status.name }}
                 </v-chip>
               </template>
@@ -351,6 +351,10 @@ const filteredTasks = computed(() => {
   if (taskTab.value === 'in_progress')return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed)
   return tasks
 })
+
+function statusIcon(icon: string) {
+  return icon.startsWith('mdi-') ? icon : `mdi-${icon}`
+}
 
 function getTaskCount(tab: string) {
   const tasks = todoStore.tasks

@@ -9,8 +9,8 @@
       <v-btn
         variant="text" color="grey" prepend-icon="mdi-arrow-left"
         size="small" class="mb-3 px-0"
-        @click="router.push('/projects')"
-      >返回專案列表</v-btn>
+        @click="router.back()"
+      >返回</v-btn>
 
       <v-card rounded="xl" class="pa-5" elevation="1">
         <div class="d-flex align-start justify-space-between gap-4 flex-wrap">
@@ -68,7 +68,7 @@
     </div>
 
     <!-- ── Info Cards ──────────────────────────────────────────────────── -->
-    <v-row class="mb-5" dense>
+    <v-row class="mb-5">
       <v-col cols="6" sm="3">
         <v-card rounded="xl" height="100%">
           <v-card-text class="pa-4">

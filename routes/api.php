@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\ImportController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\DashboardController;
@@ -84,8 +86,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{user}/reject', [MemberApprovalController::class, 'reject']);
     });
 
+    // Import / Export
+    Route::get('projects/export',           [ExportController::class, 'allProjects']);
+    Route::get('projects/import/template',  [ImportController::class, 'template']);
+    Route::post('projects/import/preview',  [ImportController::class, 'preview']);
+    Route::post('projects/import/confirm',  [ImportController::class, 'confirm']);
+
     Route::apiResource('projects', ProjectController::class);
     Route::prefix('projects/{project}')->group(function () {
+        Route::get('export', [ExportController::class, 'project']);
         Route::get('members', [ProjectController::class, 'members']);
         Route::post('members', [ProjectController::class, 'addMember']);
         Route::delete('members/{userId}', [ProjectController::class, 'removeMember']);

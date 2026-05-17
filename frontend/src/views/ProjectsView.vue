@@ -78,7 +78,11 @@
             <h2 class="text-h6 font-weight-bold">{{ selectedCompany.name }}</h2>
             <p class="text-body-2 text-grey">專案列表</p>
           </div>
-          <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate">新增專案</v-btn>
+          <div class="d-flex gap-2 flex-wrap">
+            <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
+            <v-btn variant="outlined" color="grey" prepend-icon="mdi-download" rounded="lg" :loading="exporting" @click="exportAll">匯出全部</v-btn>
+            <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate">新增專案</v-btn>
+          </div>
         </div>
 
         <ProjectDataTable
@@ -94,24 +98,22 @@
     <template v-else>
       <div class="mb-5 d-flex align-center justify-space-between flex-wrap gap-3">
         <h2 class="text-h6 font-weight-bold">專案管理</h2>
-        <v-btn
-          v-if="auth.canManageMembers && activeTab === 'projects'"
-          color="primary"
-          prepend-icon="mdi-plus"
-          rounded="lg"
-          @click="openCreate"
-        >
-          新增專案
-        </v-btn>
-        <v-btn
-          v-if="activeTab === 'tasks'"
-          color="primary"
-          prepend-icon="mdi-plus"
-          rounded="lg"
-          @click="openAddTask"
-        >
-          新增任務
-        </v-btn>
+        <div class="d-flex gap-2 flex-wrap">
+          <template v-if="auth.canManageMembers && activeTab === 'projects'">
+            <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
+            <v-btn variant="outlined" color="grey" prepend-icon="mdi-download" rounded="lg" :loading="exporting" @click="exportAll">匯出全部</v-btn>
+            <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate">新增專案</v-btn>
+          </template>
+          <v-btn
+            v-if="activeTab === 'tasks'"
+            color="primary"
+            prepend-icon="mdi-plus"
+            rounded="lg"
+            @click="openAddTask"
+          >
+            新增任務
+          </v-btn>
+        </div>
       </div>
 
       <v-tabs v-model="activeTab" color="primary" class="mb-4">
@@ -235,6 +237,9 @@
       </v-tabs-window>
     </template>
 
+    <!-- Import Dialog -->
+    <ImportDialog v-if="showImport" @close="showImport = false" @done="onImportDone" />
+
     <!-- Project Modal -->
     <ProjectModal
       v-if="showModal"
@@ -285,6 +290,7 @@ import { useToast } from '@/composables/useToast'
 import ProjectModal from '@/components/ProjectModal.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import ProjectDataTable from '@/components/ProjectDataTable.vue'
+import ImportDialog from '@/components/ImportDialog.vue'
 import api from '@/lib/axios'
 
 interface Company {
@@ -313,6 +319,35 @@ const companyHeaders = [
   { title: '狀態',   key: 'status',         sortable: false },
   { title: '',      key: 'action',          sortable: false, width: '48px' },
 ]
+
+// Import / Export
+const showImport = ref(false)
+const exporting = ref(false)
+
+async function exportAll() {
+  exporting.value = true
+  try {
+    const res = await api.get('/projects/export', { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `全部專案_${new Date().toISOString().slice(0, 10)}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+  } finally {
+    exporting.value = false
+  }
+}
+
+async function onImportDone() {
+  showImport.value = false
+  if (auth.isAdmin && selectedCompany.value) {
+    await store.fetchList(selectedCompany.value.id)
+  } else {
+    await store.fetchList()
+  }
+  toast.success('匯入完成，專案列表已更新')
+}
 
 // Shared modal state
 const showModal = ref(false)

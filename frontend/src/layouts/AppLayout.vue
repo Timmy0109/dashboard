@@ -69,17 +69,26 @@
     </v-container>
   </v-main>
 
-  <!-- Global toast -->
+  <!-- Global toast queue -->
   <v-snackbar
     v-model="toast.visible"
-    :color="toast.color"
+    :color="toast.current?.color"
+    :timeout="toast.current?.timeout ?? 3000"
     location="bottom right"
-    :timeout="3000"
     rounded="lg"
+    @update:model-value="v => { if (!v) toast.dismiss() }"
   >
-    <span class="text-body-2">{{ toast.message }}</span>
+    <div class="d-flex align-center gap-2">
+      <v-icon
+        :icon="toast.current?.color === 'success' ? 'mdi-check-circle' :
+               toast.current?.color === 'error'   ? 'mdi-alert-circle' :
+               toast.current?.color === 'warning'  ? 'mdi-alert' : 'mdi-information'"
+        size="18"
+      />
+      <span class="text-body-2">{{ toast.current?.message }}</span>
+    </div>
     <template #actions>
-      <v-btn variant="text" icon="mdi-close" size="small" @click="toast.visible = false" />
+      <v-btn variant="text" icon="mdi-close" size="small" @click="toast.dismiss()" />
     </template>
   </v-snackbar>
 </template>

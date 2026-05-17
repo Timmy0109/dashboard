@@ -3,21 +3,41 @@ import { ref } from 'vue'
 
 export type ToastColor = 'success' | 'error' | 'info' | 'warning'
 
-export const useToastStore = defineStore('toast', () => {
-  const visible = ref(false)
-  const message = ref('')
-  const color = ref<ToastColor>('success')
+export interface ToastItem {
+  id: number
+  message: string
+  color: ToastColor
+  timeout: number
+}
 
-  function show(msg: string, c: ToastColor = 'success') {
-    message.value = msg
-    color.value = c
+let _seq = 0
+
+export const useToastStore = defineStore('toast', () => {
+  const queue   = ref<ToastItem[]>([])
+  const current = ref<ToastItem | null>(null)
+  const visible = ref(false)
+
+  function enqueue(msg: string, color: ToastColor = 'success', timeout = 3000) {
+    queue.value.push({ id: ++_seq, message: msg, color, timeout })
+    if (!visible.value) _next()
+  }
+
+  function _next() {
+    const item = queue.value.shift()
+    if (!item) { current.value = null; return }
+    current.value = item
     visible.value = true
   }
 
-  const success = (msg: string) => show(msg, 'success')
-  const error   = (msg: string) => show(msg, 'error')
-  const info    = (msg: string) => show(msg, 'info')
-  const warning = (msg: string) => show(msg, 'warning')
+  function dismiss() {
+    visible.value = false
+    setTimeout(_next, 300)
+  }
 
-  return { visible, message, color, success, error, info, warning }
+  const success = (msg: string) => enqueue(msg, 'success')
+  const error   = (msg: string) => enqueue(msg, 'error')
+  const info    = (msg: string) => enqueue(msg, 'info')
+  const warning = (msg: string) => enqueue(msg, 'warning')
+
+  return { current, visible, dismiss, success, error, info, warning }
 })

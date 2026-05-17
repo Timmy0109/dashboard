@@ -1,187 +1,193 @@
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 d-flex align-center justify-space-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-bold text-gray-900">成員管理</h2>
-        <p class="text-sm text-gray-500 mt-0.5">查看公司所有成員</p>
+        <h2 class="text-h6 font-weight-bold">成員管理</h2>
+        <p class="text-body-2 text-grey">查看公司所有成員</p>
       </div>
-      <button
+      <v-btn
+        variant="outlined"
+        color="warning"
+        prepend-icon="mdi-account-clock"
+        rounded="lg"
         @click="openPendingDialog"
-        class="relative inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 shadow-sm transition-colors"
       >
-        <span class="material-icons text-base leading-none text-orange-500">how_to_reg</span>
         待審核申請
-        <span
+        <v-badge
           v-if="pendingCount > 0"
-          class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
-        >{{ pendingCount }}</span>
-      </button>
+          :content="pendingCount"
+          color="error"
+          inline
+          class="ml-1"
+        />
+      </v-btn>
     </div>
 
     <!-- All members table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div v-if="loading" class="py-16 text-center text-sm text-gray-400">載入中...</div>
-      <table v-else class="w-full">
-        <thead>
-          <tr class="border-b border-gray-100 bg-gray-50">
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">姓名</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Email</th>
-            <th v-if="auth.isAdmin" class="px-4 py-3 text-left text-xs font-medium text-gray-500">公司</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">狀態</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">加入日期</th>
-            <th class="px-4 py-3 w-28"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-50">
-          <tr v-for="m in members" :key="m.id" class="hover:bg-gray-50">
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-full text-sm flex items-center justify-center font-medium shrink-0"
-                  :class="m.status === 'active' ? 'bg-blue-100 text-blue-600' : m.status === 'pending' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'">
-                  {{ m.name.charAt(0) }}
-                </div>
-                <span class="text-sm font-medium text-gray-800">{{ m.name }}</span>
-              </div>
-            </td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ m.email }}</td>
-            <td v-if="auth.isAdmin" class="px-4 py-3 text-sm text-gray-600">{{ m.company_name ?? '—' }}</td>
-            <td class="px-4 py-3">
-              <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                :class="{
-                  'bg-green-50 text-green-700': m.status === 'active',
-                  'bg-orange-50 text-orange-600': m.status === 'pending',
-                  'bg-gray-100 text-gray-400': m.status === 'inactive',
-                }">
-                {{ statusLabel[m.status] ?? m.status }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-xs text-gray-400">{{ m.created_at }}</td>
-            <td class="px-4 py-3">
-              <div class="flex gap-1">
-                <button
-                  v-if="m.status !== 'pending'"
-                  @click="toggleStatus(m)"
-                  class="p-1.5 rounded transition-colors"
-                  :class="m.status === 'active'
-                    ? 'text-gray-400 hover:text-orange-600 hover:bg-orange-50'
-                    : 'text-gray-400 hover:text-green-600 hover:bg-green-50'"
-                  :title="m.status === 'active' ? '停用' : '啟用'"
-                >
-                  <span class="material-icons text-base leading-none">{{ m.status === 'active' ? 'block' : 'check_circle' }}</span>
-                </button>
-                <button
-                  @click="openEdit(m)"
-                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                  title="編輯"
-                >
-                  <span class="material-icons text-base leading-none">edit</span>
-                </button>
-                <button
-                  @click="deleteMember(m)"
-                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                  title="刪除"
-                >
-                  <span class="material-icons text-base leading-none">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="members.length === 0">
-            <td :colspan="auth.isAdmin ? 6 : 5" class="px-4 py-12 text-center text-sm text-gray-400">此公司尚無成員</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <v-card rounded="xl">
+      <v-data-table
+        :headers="headers"
+        :items="members"
+        :loading="loading"
+        :search="search"
+        hover
+        item-value="id"
+      >
+        <template #top>
+          <v-toolbar flat rounded="t-xl">
+            <v-text-field
+              v-model="search"
+              prepend-inner-icon="mdi-magnify"
+              placeholder="搜尋成員..."
+              variant="outlined"
+              density="compact"
+              hide-details
+              rounded="lg"
+              class="mx-4 my-2"
+              style="max-width:300px"
+            />
+          </v-toolbar>
+        </template>
+
+        <template #item.name="{ item }">
+          <div class="d-flex align-center gap-2 py-1">
+            <v-avatar
+              size="32"
+              :color="item.status === 'active' ? 'primary' : item.status === 'pending' ? 'warning' : 'grey'"
+            >
+              <span class="text-caption text-white font-weight-bold">{{ item.name.charAt(0) }}</span>
+            </v-avatar>
+            <span class="text-body-2 font-weight-medium">{{ item.name }}</span>
+          </div>
+        </template>
+
+        <template #item.status="{ item }">
+          <v-chip
+            :color="item.status === 'active' ? 'success' : item.status === 'pending' ? 'warning' : 'default'"
+            size="small"
+            variant="tonal"
+          >
+            {{ statusLabel[item.status] ?? item.status }}
+          </v-chip>
+        </template>
+
+        <template #item.company_name="{ item }">
+          <span class="text-body-2">{{ item.company_name ?? '—' }}</span>
+        </template>
+
+        <template #item.created_at="{ item }">
+          <span class="text-caption text-grey">{{ item.created_at }}</span>
+        </template>
+
+        <template #item.actions="{ item }">
+          <div class="d-flex gap-1" @click.stop>
+            <v-btn
+              v-if="item.status !== 'pending'"
+              :icon="item.status === 'active' ? 'mdi-account-off' : 'mdi-account-check'"
+              size="small"
+              variant="text"
+              :color="item.status === 'active' ? 'warning' : 'success'"
+              :title="item.status === 'active' ? '停用' : '啟用'"
+              @click="toggleStatus(item)"
+            />
+            <v-btn icon="mdi-pencil" size="small" variant="text" color="grey" title="編輯" @click="openEdit(item)" />
+            <v-btn icon="mdi-delete" size="small" variant="text" color="error" title="刪除" @click="deleteMember(item)" />
+          </div>
+        </template>
+
+        <template #no-data>
+          <div class="text-center py-8 text-grey">此公司尚無成員</div>
+        </template>
+      </v-data-table>
+    </v-card>
 
     <!-- Edit member dialog -->
-    <div v-if="editingMember" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/50" @click="editingMember = null" />
-      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-sm">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-gray-800">編輯成員</h3>
-          <button @click="editingMember = null" class="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
-        </div>
-        <form @submit.prevent="saveEdit" class="p-5 space-y-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">姓名 <span class="text-red-400">*</span></label>
-            <input v-model="editForm.name" type="text" required placeholder="請輸入姓名"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Email <span class="text-red-400">*</span></label>
-            <input v-model="editForm.email" type="email" required placeholder="請輸入 Email"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">新密碼（留空則不變更）</label>
-            <input v-model="editForm.password" type="password" placeholder="至少 8 個字元" autocomplete="new-password"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">狀態</label>
-            <select v-model="editForm.status"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
-              <option value="active">啟用</option>
-              <option value="inactive">停用</option>
-            </select>
-          </div>
-          <div v-if="editError" class="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{{ editError }}</div>
-          <div class="flex gap-3 pt-1">
-            <button type="button" @click="editingMember = null"
-              class="flex-1 px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">取消</button>
-            <button type="submit" :disabled="editSaving"
-              class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-              {{ editSaving ? '儲存中...' : '儲存' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <v-dialog v-model="showEdit" max-width="440" persistent>
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
+          <span class="text-body-1 font-weight-semibold">編輯成員</span>
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showEdit = false" />
+        </v-card-title>
+        <v-card-text class="pa-5 pt-2">
+          <v-form @submit.prevent="saveEdit">
+            <v-text-field v-model="editForm.name"  label="姓名" required class="mb-3" />
+            <v-text-field v-model="editForm.email" label="Email" type="email" required class="mb-3" />
+            <v-text-field
+              v-model="editForm.password"
+              label="新密碼（留空則不變更）"
+              type="password"
+              autocomplete="new-password"
+              class="mb-3"
+            />
+            <v-select
+              v-model="editForm.status"
+              label="狀態"
+              :items="[{ title: '啟用', value: 'active' }, { title: '停用', value: 'inactive' }]"
+              class="mb-3"
+            />
+            <v-alert v-if="editError" type="error" variant="tonal" density="compact" class="mb-3 text-body-2">
+              {{ editError }}
+            </v-alert>
+            <div class="d-flex gap-3">
+              <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="showEdit = false">取消</v-btn>
+              <v-btn type="submit" color="primary" class="flex-grow-1" :loading="editSaving">儲存</v-btn>
+            </div>
+          </v-form>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
 
     <!-- Pending approvals dialog -->
-    <div v-if="showPending" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/50" @click="showPending = false" />
-      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+    <v-dialog v-model="showPending" max-width="540" scrollable>
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
           <div>
-            <h3 class="text-base font-semibold text-gray-900">待審核申請</h3>
-            <p class="text-xs text-gray-400 mt-0.5">透過邀請碼申請加入的成員</p>
+            <div class="text-body-1 font-weight-semibold">待審核申請</div>
+            <div class="text-caption text-grey">透過邀請碼申請加入的成員</div>
           </div>
-          <button @click="showPending = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
-        </div>
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showPending = false" />
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-0">
+          <div v-if="pendingLoading" class="d-flex justify-center align-center py-12">
+            <v-progress-circular indeterminate color="primary" size="32" />
+          </div>
 
-        <div class="overflow-y-auto flex-1">
-          <div v-if="pendingLoading" class="py-12 text-center text-sm text-gray-400">載入中...</div>
-          <div v-else-if="pending.length === 0" class="py-12 text-center text-sm text-gray-400">
-            <span class="material-icons text-3xl text-gray-200 block mb-2">check_circle</span>
-            目前沒有待審核的申請
+          <div v-else-if="pending.length === 0" class="text-center py-12">
+            <v-icon icon="mdi-check-circle-outline" size="48" color="grey-lighten-1" class="mb-3" />
+            <div class="text-body-2 text-grey">目前沒有待審核的申請</div>
           </div>
-          <div v-else class="divide-y divide-gray-50">
-            <div v-for="p in pending" :key="p.id" class="px-6 py-4 flex items-center gap-3">
-              <div class="w-9 h-9 rounded-full bg-orange-100 text-orange-600 text-sm flex items-center justify-center font-medium shrink-0">
-                {{ p.name.charAt(0) }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-800 truncate">{{ p.name }}</p>
-                <p class="text-xs text-gray-400 truncate">{{ p.email }}</p>
-                <p v-if="auth.isAdmin && p.company_name" class="text-xs text-blue-500 mt-0.5">{{ p.company_name }}</p>
-                <p class="text-xs text-gray-300 mt-0.5">{{ p.created_at }}</p>
-              </div>
-              <div class="flex gap-2 shrink-0">
-                <button
-                  @click="approve(p)"
-                  class="px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
-                >核准</button>
-                <button
-                  @click="reject(p)"
-                  class="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-                >拒絕</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+
+          <v-list v-else lines="two" class="pa-0">
+            <template v-for="(p, idx) in pending" :key="p.id">
+              <v-list-item class="px-5 py-3">
+                <template #prepend>
+                  <v-avatar color="warning" size="36">
+                    <span class="text-body-2 font-weight-bold text-white">{{ p.name.charAt(0) }}</span>
+                  </v-avatar>
+                </template>
+                <template #title>
+                  <span class="text-body-2 font-weight-medium">{{ p.name }}</span>
+                  <v-chip v-if="auth.isAdmin && p.company_name" size="x-small" color="primary" variant="tonal" class="ml-2">
+                    {{ p.company_name }}
+                  </v-chip>
+                </template>
+                <template #subtitle>
+                  <span class="text-caption text-grey">{{ p.email }} · {{ p.created_at }}</span>
+                </template>
+                <template #append>
+                  <div class="d-flex gap-2">
+                    <v-btn size="small" color="success" variant="tonal" rounded="lg" @click="approve(p)">核准</v-btn>
+                    <v-btn size="small" color="error"   variant="tonal" rounded="lg" @click="reject(p)">拒絕</v-btn>
+                  </div>
+                </template>
+              </v-list-item>
+              <v-divider v-if="idx < pending.length - 1" />
+            </template>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -210,6 +216,7 @@ interface PendingMember {
 
 const auth = useAuthStore()
 const toast = useToast()
+const search = ref('')
 
 const loading = ref(false)
 const members = ref<Member[]>([])
@@ -217,19 +224,29 @@ const members = ref<Member[]>([])
 const showPending = ref(false)
 const pendingLoading = ref(false)
 const pending = ref<PendingMember[]>([])
-
 const pendingCount = computed(() => pending.value.length)
 
+const showEdit = ref(false)
 const editingMember = ref<Member | null>(null)
 const editForm = reactive({ name: '', email: '', password: '', status: 'active' })
 const editSaving = ref(false)
 const editError = ref('')
 
 const statusLabel: Record<string, string> = {
-  active: '啟用',
-  pending: '待審核',
-  inactive: '停用',
+  active: '啟用', pending: '待審核', inactive: '停用',
 }
+
+const headers = computed(() => {
+  const base = [
+    { title: '姓名',   key: 'name',       sortable: true },
+    { title: 'Email', key: 'email',      sortable: true },
+    ...(auth.isAdmin ? [{ title: '公司', key: 'company_name', sortable: true }] : []),
+    { title: '狀態',   key: 'status',     sortable: true },
+    { title: '加入日期', key: 'created_at', sortable: true },
+    { title: '',      key: 'actions',    sortable: false, width: '120px' },
+  ]
+  return base
+})
 
 async function fetchMembers() {
   loading.value = true
@@ -301,6 +318,7 @@ function openEdit(m: Member) {
   editForm.password = ''
   editForm.status = m.status === 'pending' ? 'active' : m.status
   editError.value = ''
+  showEdit.value = true
 }
 
 async function saveEdit() {
@@ -317,7 +335,7 @@ async function saveEdit() {
     const { data } = await api.put(`/manager/members/${editingMember.value.id}`, payload)
     const idx = members.value.findIndex(m => m.id === data.id)
     if (idx !== -1) Object.assign(members.value[idx]!, data)
-    editingMember.value = null
+    showEdit.value = false
     toast.success('成員資料已更新')
   } catch (err: any) {
     const errors = err?.response?.data?.errors

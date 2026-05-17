@@ -1,67 +1,53 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="$emit('close')">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-800">{{ isEdit ? '編輯使用者' : '新增使用者' }}</h3>
-        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
-      </div>
-
-      <form @submit.prevent="handleSubmit" class="p-5 space-y-4">
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">名稱 <span class="text-red-400">*</span></label>
-          <input v-model="form.name" type="text" required placeholder="請輸入名稱"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Email <span class="text-red-400">*</span></label>
-          <input v-model="form.email" type="email" required placeholder="請輸入 Email"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">
-            密碼{{ isEdit ? '（留空則不變更）' : '' }} {{ !isEdit ? '*' : '' }}
-          </label>
-          <input v-model="form.password" type="password" :required="!isEdit" placeholder="請輸入密碼"
+  <v-dialog :model-value="true" max-width="440" persistent @update:model-value="$emit('close')">
+    <v-card rounded="xl">
+      <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
+        <span class="text-body-1 font-weight-semibold">{{ isEdit ? '編輯使用者' : '新增使用者' }}</span>
+        <v-btn icon="mdi-close" variant="text" size="small" @click="$emit('close')" />
+      </v-card-title>
+      <v-card-text class="pa-5 pt-2">
+        <v-form @submit.prevent="handleSubmit">
+          <v-text-field v-model="form.name" label="名稱" required autofocus class="mb-3" />
+          <v-text-field v-model="form.email" label="Email" type="email" required class="mb-3" />
+          <v-text-field
+            v-model="form.password"
+            :label="isEdit ? '新密碼（留空則不變更）' : '密碼'"
+            type="password"
+            :required="!isEdit"
             autocomplete="new-password"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">角色 <span class="text-red-400">*</span></label>
-          <select v-model="form.role" required
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
-            <option value="admin">管理員</option>
-            <option value="manager">經理</option>
-            <option value="member">成員</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">狀態</label>
-          <select v-model="form.status"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
-            <option value="active">啟用</option>
-            <option value="inactive">停用</option>
-          </select>
-        </div>
-
-        <div v-if="errorMsg" class="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{{ errorMsg }}</div>
-
-        <div class="flex gap-3 pt-1">
-          <button type="button" @click="$emit('close')"
-            class="flex-1 px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
-            取消
-          </button>
-          <button type="submit" :disabled="saving"
-            class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-            {{ saving ? '儲存中...' : '儲存' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+            class="mb-3"
+          />
+          <v-select
+            v-model="form.role"
+            label="角色"
+            :items="[
+              { title: '管理員', value: 'admin' },
+              { title: '經理',   value: 'manager' },
+              { title: '成員',   value: 'member' },
+            ]"
+            required
+            class="mb-3"
+          />
+          <v-select
+            v-model="form.status"
+            label="狀態"
+            :items="[
+              { title: '啟用', value: 'active' },
+              { title: '停用', value: 'inactive' },
+            ]"
+            class="mb-3"
+          />
+          <v-alert v-if="errorMsg" type="error" variant="tonal" density="compact" class="mb-3 text-body-2">
+            {{ errorMsg }}
+          </v-alert>
+          <div class="d-flex gap-3">
+            <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="$emit('close')">取消</v-btn>
+            <v-btn type="submit" color="primary" class="flex-grow-1" :loading="saving">儲存</v-btn>
+          </div>
+        </v-form>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -73,10 +59,7 @@ const props = defineProps<{
   companyId?: number | null
 }>()
 
-const emit = defineEmits<{
-  close: []
-  saved: []
-}>()
+const emit = defineEmits<{ close: []; saved: [] }>()
 
 const saving = ref(false)
 const errorMsg = ref('')
@@ -93,17 +76,13 @@ const defaultForm = () => ({
 const form = ref(defaultForm())
 
 watch(() => props.user, (val) => {
-  if (val) {
-    form.value = {
-      name: String(val.name ?? ''),
-      email: String(val.email ?? ''),
-      password: '',
-      role: String(val.role ?? 'member'),
-      status: String(val.status ?? 'active'),
-    }
-  } else {
-    form.value = defaultForm()
-  }
+  form.value = val ? {
+    name: String(val.name ?? ''),
+    email: String(val.email ?? ''),
+    password: '',
+    role: String(val.role ?? 'member'),
+    status: String(val.status ?? 'active'),
+  } : defaultForm()
   errorMsg.value = ''
 }, { immediate: true })
 

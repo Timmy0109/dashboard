@@ -29,10 +29,14 @@ class LookupController extends Controller
     public function users(\Illuminate\Http\Request $request): JsonResponse
     {
         $user = $request->user();
-
         $query = User::where('status', 'active');
 
-        if (! $user->isAdmin() && $user->company_id) {
+        if ($user->isAdmin()) {
+            // Admin can scope to a specific company via ?company_id=
+            if ($request->filled('company_id')) {
+                $query->where('company_id', (int) $request->company_id);
+            }
+        } elseif ($user->company_id) {
             $query->where('company_id', $user->company_id);
         }
 

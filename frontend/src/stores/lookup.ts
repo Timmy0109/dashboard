@@ -14,10 +14,9 @@ export const useLookupStore = defineStore('lookup', () => {
   const users = ref<UserOption[]>([])
   const loaded = ref(false)
 
-  async function fetch() {
-    // Users are company-scoped — always fetch fresh.
-    // Categories/priorities/statuses are global and safe to cache.
-    const fetchUsers = api.get('/lookups/users').then(r => { users.value = r.data })
+  async function fetch(companyId?: number | null) {
+    const params = companyId ? { company_id: companyId } : {}
+    const fetchUsers = api.get('/lookups/users', { params }).then(r => { users.value = r.data })
 
     if (loaded.value) {
       await fetchUsers

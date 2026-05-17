@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/todo', [TodoController::class, 'index']);
     Route::get('/stats', [StatsController::class, 'index']);
+    Route::get('/stats/member/{userId}', [StatsController::class, 'memberDetail']);
 
     // User management (admin only)
     Route::apiResource('users', UserController::class)->except(['show']);

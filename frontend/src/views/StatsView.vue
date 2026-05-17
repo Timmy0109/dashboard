@@ -55,7 +55,16 @@
             <v-card-text class="pt-0">
               <div v-if="data.task_workload.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
               <div v-else class="d-flex flex-column gap-3">
-                <div v-for="item in data.task_workload" :key="item.name" class="d-flex align-center gap-3">
+                <div
+                  v-for="item in data.task_workload"
+                  :key="item.name"
+                  class="d-flex align-center gap-3 pa-1 rounded-lg"
+                  style="cursor:pointer;transition:background .15s"
+                  :class="item.user_id ? 'clickable-row' : ''"
+                  @click="item.user_id && openMemberDetail(item.user_id)"
+                  @mouseenter="item.user_id && ($event.currentTarget as HTMLElement).classList.add('bg-grey-lighten-4')"
+                  @mouseleave="item.user_id && ($event.currentTarget as HTMLElement).classList.remove('bg-grey-lighten-4')"
+                >
                   <v-avatar color="primary" size="26" class="mr-2">
                     <span class="text-caption text-white font-weight-bold">{{ item.name.charAt(0) }}</span>
                   </v-avatar>
@@ -69,6 +78,7 @@
                     class="flex-grow-1"
                   />
                   <span class="text-caption text-grey" style="width:24px;text-align:right">{{ item.task_count }}</span>
+                  <v-icon v-if="item.user_id" icon="mdi-chevron-right" size="16" color="grey" />
                 </div>
               </div>
             </v-card-text>
@@ -130,22 +140,34 @@
       </v-card>
     </template>
   </div>
+
+  <MemberWorkloadDialog
+    v-if="selectedMemberId"
+    :user-id="selectedMemberId"
+    @close="selectedMemberId = null"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '@/lib/axios'
+import MemberWorkloadDialog from '@/components/MemberWorkloadDialog.vue'
 
 interface StatsData {
   status_distribution: { status: { name: string; color: string; icon: string }; count: number }[]
   project_progress: { id: number; name: string; progress_percent: number; is_completed: boolean }[]
-  task_workload: { name: string; task_count: number }[]
+  task_workload: { user_id: number | null; name: string; task_count: number }[]
   completion_trend: { month: string; count: number }[]
   totals: { projects: number; tasks: number; completed_tasks: number; overdue_tasks: number; members: number }
 }
 
 const data = ref<StatsData | null>(null)
 const loading = ref(false)
+const selectedMemberId = ref<number | null>(null)
+
+function openMemberDetail(userId: number) {
+  selectedMemberId.value = userId
+}
 
 const totalProjects = computed(() => data.value?.status_distribution.reduce((s, i) => s + i.count, 0) || 1)
 const maxWorkload   = computed(() => Math.max(...(data.value?.task_workload.map(i => i.task_count) ?? [1]), 1))

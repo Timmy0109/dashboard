@@ -132,6 +132,7 @@ const navItems = computed(() => {
   const items = [
     { to: '/', icon: 'mdi-view-dashboard', label: '首頁總覽' },
     { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
+    { to: '/todo', icon: 'mdi-checkbox-marked-outline', label: '每日任務' },
   ]
 
   if (feature.has('report.stats_dashboard')) {
@@ -149,6 +150,7 @@ const pageTitles: Record<string, string> = {
   dashboard: '首頁總覽',
   projects: '專案管理',
   'project-detail': '專案詳情',
+  todo: '每日任務',
   stats: '統計分析',
   settings: '設定管理',
   system: '系統管理',

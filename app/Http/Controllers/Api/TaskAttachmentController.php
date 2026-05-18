@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskActivity;
 use App\Models\TaskAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,14 @@ class TaskAttachmentController extends Controller
 
         $attachment->load('uploader:id,name');
 
+        TaskActivity::create([
+            'task_id'    => $task->id,
+            'actor_id'   => $request->user()->id,
+            'event'      => 'attached',
+            'payload'    => ['filename' => $file->getClientOriginalName()],
+            'created_at' => now(),
+        ]);
+
         return response()->json($this->formatAttachment($attachment), 201);
     }
 
@@ -71,8 +80,17 @@ class TaskAttachmentController extends Controller
             return response()->json(['message' => '無權限刪除此附件'], 403);
         }
 
+        $filename = $attachment->original_name;
         Storage::disk('local')->delete($attachment->disk_path);
         $attachment->delete();
+
+        TaskActivity::create([
+            'task_id'    => $task->id,
+            'actor_id'   => $request->user()->id,
+            'event'      => 'detached',
+            'payload'    => ['filename' => $filename],
+            'created_at' => now(),
+        ]);
 
         return response()->json(null, 204);
     }

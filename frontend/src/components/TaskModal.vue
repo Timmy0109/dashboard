@@ -217,7 +217,7 @@
                   size="small"
                   color="primary"
                   variant="flat"
-                  :disabled="!uploadFile.length"
+                  :disabled="!uploadFile"
                   :loading="uploadSaving"
                   @click="uploadAttachment"
                 >上傳</v-btn>
@@ -305,6 +305,8 @@ function activityIcon(event: string) {
     completed: 'mdi-check-circle-outline',
     reopened: 'mdi-restore',
     commented: 'mdi-comment-outline',
+    attached: 'mdi-paperclip',
+    detached: 'mdi-paperclip-off',
   }
   return map[event] ?? 'mdi-circle-small'
 }
@@ -318,6 +320,8 @@ function activityColor(event: string) {
     completed: 'green',
     reopened: 'grey',
     commented: 'teal',
+    attached: 'blue-grey',
+    detached: 'blue-grey',
   }
   return map[event] ?? 'grey'
 }
@@ -332,6 +336,8 @@ function activityLabel(a: Activity): string {
     case 'completed': return '標記為<b>已完成</b>'
     case 'reopened': return '重新開啟任務'
     case 'commented': return '新增了留言'
+    case 'attached': return `上傳了附件 <b>${p.filename ?? ''}</b>`
+    case 'detached': return `刪除了附件 <b>${p.filename ?? ''}</b>`
     default: return a.event
   }
 }
@@ -340,7 +346,7 @@ function activityLabel(a: Activity): string {
 interface Attachment { id: number; original_name: string; mime_type: string; size_human: string; download_url: string; is_previewable: boolean; uploader_id: number }
 const attachments = ref<Attachment[]>([])
 const attachmentsLoading = ref(false)
-const uploadFile = ref<File[]>([])
+const uploadFile = ref<File | null>(null)
 const uploadSaving = ref(false)
 const uploadError = ref('')
 
@@ -353,15 +359,14 @@ async function loadAttachments() {
 }
 
 async function uploadAttachment() {
-  const file = uploadFile.value[0]
-  if (!file || !props.task) return
+  if (!uploadFile.value || !props.task) return
   uploadError.value = ''
   uploadSaving.value = true
   const fd = new FormData()
-  fd.append('file', file)
+  fd.append('file', uploadFile.value)
   try {
     await axios.post(`/api/projects/${props.projectId}/tasks/${props.task.id}/attachments`, fd)
-    uploadFile.value = []
+    uploadFile.value = null
     await loadAttachments()
   } catch (err: any) {
     uploadError.value = err?.response?.data?.message ?? '上傳失敗'

@@ -105,6 +105,8 @@ class TaskController extends Controller
             'completed'        => '標記完成',
             'reopened'         => '重新開啟',
             'commented'        => '新增留言',
+            'attached'         => '上傳附件',
+            'detached'         => '刪除附件',
         ];
 
         $activities = $task->activities()

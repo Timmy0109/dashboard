@@ -138,8 +138,9 @@ async function handleDelete(type: string, item: Record<string, unknown>) {
     await api.delete(`/settings/${type}/${item.id}`)
     await fetchAll()
     toast.success('已刪除')
-  } catch {
-    toast.error('刪除失敗')
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? '刪除失敗'
+    toast.error(msg)
   }
 }
 

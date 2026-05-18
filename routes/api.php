@@ -2,16 +2,18 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\ImportController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\RegisterController;
-use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LookupController;
 use App\Http\Controllers\Api\MemberApprovalController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\StatsController;
+use App\Http\Controllers\Api\TaskAttachmentController;
+use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TodoController;
 use App\Http\Controllers\Api\UserController;
@@ -100,5 +102,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('members/{userId}', [ProjectController::class, 'removeMember']);
         Route::apiResource('tasks', TaskController::class)->except(['index']);
         Route::get('tasks', [TaskController::class, 'index']);
+        Route::get('tasks/{task}/activities', [TaskController::class, 'activities']);
+        Route::get('tasks/{task}/comments', [TaskCommentController::class, 'index']);
+        Route::post('tasks/{task}/comments', [TaskCommentController::class, 'store']);
+        Route::delete('tasks/{task}/comments/{comment}', [TaskCommentController::class, 'destroy']);
+        Route::get('tasks/{task}/attachments', [TaskAttachmentController::class, 'index']);
+        Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store']);
+        Route::delete('tasks/{task}/attachments/{attachment}', [TaskAttachmentController::class, 'destroy']);
     });
 });

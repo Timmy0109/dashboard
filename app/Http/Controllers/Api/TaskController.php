@@ -8,6 +8,9 @@ use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+// Event label map used by activities()
+// Maps DB event keys to Chinese display strings (kept close to usage)
+
 class TaskController extends Controller
 {
     public function index(Request $request, Project $project): JsonResponse
@@ -62,10 +65,17 @@ class TaskController extends Controller
             'status_id' => 'sometimes|exists:status_rules,id',
             'priority_id' => 'sometimes|exists:priorities,id',
             'is_completed' => 'sometimes|boolean',
+            'completed_at' => 'sometimes|nullable|date',
         ]);
 
-        if (isset($validated['is_completed']) && $validated['is_completed'] === true && ! $task->is_completed) {
-            $validated['end_date'] = now()->toDateString();
+        if (isset($validated['is_completed'])) {
+            if ($validated['is_completed'] === true && ! $task->is_completed) {
+                $validated['progress']     = 100;
+                $validated['completed_at'] = now();
+            } elseif ($validated['is_completed'] === false && $task->is_completed) {
+                $validated['progress']     = 0;
+                $validated['completed_at'] = null;
+            }
         }
 
         $task->update($validated);
@@ -80,5 +90,49 @@ class TaskController extends Controller
         $task->delete();
 
         return response()->json(null, 204);
+    }
+
+    // GET /projects/{project}/tasks/{task}/activities
+    public function activities(Request $request, Project $project, Task $task): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $labelMap = [
+            'created'          => '建立任務',
+            'assignee_changed' => '指派負責人',
+            'status_changed'   => '狀態更新',
+            'progress_updated' => '進度更新',
+            'completed'        => '標記完成',
+            'reopened'         => '重新開啟',
+            'commented'        => '新增留言',
+        ];
+
+        $activities = $task->activities()
+            ->with('actor:id,name,avatar')
+            ->get()
+            ->map(function ($a) use ($labelMap) {
+                $payload = $a->payload ?? [];
+                $description = match ($a->event) {
+                    'assignee_changed' => "從「{$payload['from']}」變更為「{$payload['to']}」",
+                    'status_changed'   => "從「{$payload['from']}」變更為「{$payload['to']}」",
+                    'progress_updated' => "從「{$payload['from']}%」調整為「{$payload['to']}%」",
+                    default            => null,
+                };
+
+                return [
+                    'id'          => $a->id,
+                    'event'       => $a->event,
+                    'label'       => $labelMap[$a->event] ?? $a->event,
+                    'description' => $description,
+                    'actor'       => [
+                        'id'         => $a->actor->id,
+                        'name'       => $a->actor->name,
+                        'avatar_url' => $a->actor->avatar_url,
+                    ],
+                    'created_at'  => $a->created_at->format('Y/m/d H:i'),
+                ];
+            });
+
+        return response()->json($activities);
     }
 }

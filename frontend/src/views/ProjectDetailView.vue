@@ -52,12 +52,24 @@
               下載報告
             </v-btn>
             <v-btn
-              v-if="auth.canManageMembers"
+              v-if="canEdit"
               color="primary" prepend-icon="mdi-plus" rounded="lg"
               @click="showTaskModal = true; editingTask = null"
             >新增任務</v-btn>
           </div>
         </div>
+
+        <!-- Read-only banner for managers viewing other managers' projects -->
+        <v-alert
+          v-if="auth.canManageMembers && !canEdit"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mt-3"
+          icon="mdi-eye-outline"
+        >
+          你是此專案的觀察者，僅能查看，無法新增或修改任務
+        </v-alert>
 
         <!-- Progress bar spanning full width -->
         <div class="mt-4">
@@ -267,7 +279,7 @@
         </template>
 
         <template #item.actions="{ item }">
-          <div v-if="auth.canManageMembers" class="d-flex gap-1" @click.stop>
+          <div v-if="canEdit" class="d-flex gap-1" @click.stop>
             <v-btn icon="mdi-pencil" size="small" variant="text" color="grey" @click="openEditTask(item)" />
             <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="handleDeleteTask(item)" />
           </div>
@@ -339,6 +351,13 @@ async function exportProject() {
 
 const project        = computed(() => store.current)
 const completedCount = computed(() => project.value?.tasks.filter(t => t.is_completed).length ?? 0)
+
+// Manager 是否有此專案的編輯權（自己是 owner，或是 admin）
+const canEdit = computed(() => {
+  if (!project.value) return false
+  if (auth.isAdmin) return true
+  return project.value.owner?.id === auth.user?.id
+})
 const overdueCount   = computed(() => project.value?.tasks.filter(t => isTaskOverdue(t)).length ?? 0)
 
 const dueDateClass = computed(() => {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Task extends Model
 {
@@ -11,15 +12,16 @@ class Task extends Model
         'project_id', 'name', 'note',
         'start_date', 'end_date', 'progress',
         'assignee_id', 'status_id', 'priority_id',
-        'is_completed', 'created_by',
+        'is_completed', 'completed_at', 'created_by',
     ];
 
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
+            'start_date'   => 'date',
+            'end_date'     => 'date',
             'is_completed' => 'boolean',
+            'completed_at' => 'datetime',
         ];
     }
 
@@ -41,6 +43,21 @@ class Task extends Model
     public function priority(): BelongsTo
     {
         return $this->belongsTo(Priority::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(TaskComment::class);
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(TaskActivity::class)->orderBy('created_at');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TaskAttachment::class);
     }
 
     public function isOverdue(): bool

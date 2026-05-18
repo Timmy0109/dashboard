@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Priority;
+use App\Models\Project;
 use App\Models\StatusRule;
+use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -46,6 +48,9 @@ class SettingController extends Controller
     public function categoriesDestroy(Request $request, Category $category): JsonResponse
     {
         $this->adminOnly($request);
+        if (Project::where('category_id', $category->id)->exists()) {
+            return response()->json(['message' => '此分類已被專案使用，無法刪除'], 422);
+        }
         $category->delete();
         return response()->json(null, 204);
     }
@@ -85,6 +90,11 @@ class SettingController extends Controller
     public function prioritiesDestroy(Request $request, Priority $priority): JsonResponse
     {
         $this->adminOnly($request);
+        $inUse = Project::where('priority_id', $priority->id)->exists()
+               || Task::where('priority_id', $priority->id)->exists();
+        if ($inUse) {
+            return response()->json(['message' => '此優先級已被專案或任務使用，無法刪除'], 422);
+        }
         $priority->delete();
         return response()->json(null, 204);
     }
@@ -128,6 +138,11 @@ class SettingController extends Controller
     public function statusesDestroy(Request $request, StatusRule $status): JsonResponse
     {
         $this->adminOnly($request);
+        $inUse = Project::where('status_id', $status->id)->exists()
+               || Task::where('status_id', $status->id)->exists();
+        if ($inUse) {
+            return response()->json(['message' => '此狀態已被專案或任務使用，無法刪除'], 422);
+        }
         $status->delete();
         return response()->json(null, 204);
     }

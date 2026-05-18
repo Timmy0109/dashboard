@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'avatar']);
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/my-tasks', [DashboardController::class, 'myTasks']);
     Route::get('/todo', [TodoController::class, 'index']);
     Route::get('/stats', [StatsController::class, 'index']);
     Route::get('/stats/member/{userId}', [StatsController::class, 'memberDetail']);

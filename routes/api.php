@@ -19,10 +19,14 @@ use App\Http\Controllers\Api\TodoController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\Api\PasswordResetController;
+
 // Public
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/register/validate-code', [RegisterController::class, 'validateCode'])->middleware('throttle:20,1');
 Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])->middleware('throttle:5,1');
+Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:5,1');
 
 // Authenticated (Sanctum cookie session)
 Route::middleware('auth:sanctum')->group(function () {

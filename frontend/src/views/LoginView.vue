@@ -52,10 +52,13 @@
                   </v-btn>
                 </v-form>
 
-                <p class="text-center text-body-2 text-grey mt-4">
-                  沒有帳號？
-                  <RouterLink to="/register" class="text-primary text-decoration-none font-weight-medium">使用邀請碼申請</RouterLink>
-                </p>
+                <div class="d-flex justify-space-between align-center mt-4">
+                  <p class="text-body-2 text-grey mb-0">
+                    沒有帳號？
+                    <RouterLink to="/register" class="text-primary text-decoration-none font-weight-medium">使用邀請碼申請</RouterLink>
+                  </p>
+                  <RouterLink to="/forgot-password" class="text-body-2 text-primary text-decoration-none">忘記密碼？</RouterLink>
+                </div>
 
                 <!-- Demo accounts -->
                 <v-divider class="my-4" />

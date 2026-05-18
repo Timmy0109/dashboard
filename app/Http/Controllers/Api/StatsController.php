@@ -17,6 +17,13 @@ class StatsController extends Controller
     {
         $user = $request->user();
 
+        if (! $user->isAdmin()) {
+            $company = $user->company;
+            if (! $company || ! $company->hasFeature('report.stats_dashboard')) {
+                abort(403, '您的公司尚未開放統計分析功能');
+            }
+        }
+
         $projectQuery = match ($user->role) {
             'admin' => Project::query(),
             'manager' => Project::where('owner_id', $user->id),
@@ -46,11 +53,13 @@ class StatsController extends Controller
         // Task assignee workload
         $taskWorkload = Task::whereIn('project_id', $projectIds)
             ->where('is_completed', false)
+            ->whereNotNull('assignee_id')
             ->select('assignee_id', DB::raw('count(*) as task_count'))
             ->groupBy('assignee_id')
             ->with('assignee:id,name')
             ->get()
             ->map(fn ($row) => [
+                'user_id' => $row->assignee_id,
                 'name' => $row->assignee?->name ?? '未指派',
                 'task_count' => $row->task_count,
             ]);
@@ -91,6 +100,81 @@ class StatsController extends Controller
                                      ->count(),
                 },
             ],
+        ]);
+    }
+
+    public function memberDetail(Request $request, int $userId): JsonResponse
+    {
+        $viewer = $request->user();
+        $target = User::findOrFail($userId);
+
+        // Permission: admin sees everyone; manager sees own company members
+        if (!$viewer->isAdmin() && $viewer->company_id !== $target->company_id) {
+            abort(403);
+        }
+
+        $today = now()->toDateString();
+        $weekEnd = now()->addDays(7)->toDateString();
+
+        $tasks = Task::with(['project:id,name', 'status:id,name,color,icon', 'priority:id,name,color'])
+            ->where('assignee_id', $userId)
+            ->get();
+
+        $total      = $tasks->count();
+        $completed  = $tasks->where('is_completed', true)->count();
+        $overdue    = $tasks->where('is_completed', false)->filter(fn ($t) => $t->end_date && $t->end_date->toDateString() < $today)->count();
+        $pending    = $tasks->where('is_completed', false)->where('progress', 0)->count();
+        $inProgress = $tasks->where('is_completed', false)->filter(fn ($t) => $t->progress > 0)->count();
+        $dueSoon    = $tasks->where('is_completed', false)->filter(fn ($t) => $t->end_date && $t->end_date->toDateString() >= $today && $t->end_date->toDateString() <= $weekEnd)->count();
+
+        $avgProgress = $total > 0
+            ? (int) round($tasks->where('is_completed', false)->avg('progress') ?? 0)
+            : 0;
+
+        // Per-project breakdown
+        $byProject = $tasks->groupBy('project_id')->map(function ($group) use ($today) {
+            $proj = $group->first()->project;
+            return [
+                'project_id'   => $proj->id,
+                'project_name' => $proj->name,
+                'total'        => $group->count(),
+                'completed'    => $group->where('is_completed', true)->count(),
+                'overdue'      => $group->where('is_completed', false)->filter(fn ($t) => $t->end_date && $t->end_date->toDateString() < $today)->count(),
+            ];
+        })->values();
+
+        // Task list (most actionable first: overdue → pending → in_progress → completed)
+        $taskList = $tasks->sortBy([
+            fn ($a, $b) => $a->is_completed <=> $b->is_completed,
+            fn ($a, $b) => ($b->end_date?->toDateString() ?? '') <=> ($a->end_date?->toDateString() ?? ''),
+        ])->values()->map(fn ($t) => [
+            'id'           => $t->id,
+            'name'         => $t->name,
+            'project_id'   => $t->project_id,
+            'project_name' => $t->project?->name,
+            'end_date'     => $t->end_date?->toDateString(),
+            'progress'     => $t->progress,
+            'is_completed' => $t->is_completed,
+            'is_overdue'   => !$t->is_completed && $t->end_date && $t->end_date->toDateString() < $today,
+            'status'       => $t->status ? ['id' => $t->status->id, 'name' => $t->status->name, 'color' => $t->status->color, 'icon' => $t->status->icon] : null,
+            'priority'     => $t->priority ? ['id' => $t->priority->id, 'name' => $t->priority->name, 'color' => $t->priority->color] : null,
+        ]);
+
+        return response()->json([
+            'member' => ['id' => $target->id, 'name' => $target->name, 'email' => $target->email],
+            'summary' => [
+                'total'        => $total,
+                'completed'    => $completed,
+                'pending'      => $pending,
+                'in_progress'  => $inProgress,
+                'overdue'      => $overdue,
+                'due_soon'     => $dueSoon,
+                'overdue_rate' => $total > 0 ? (int) round($overdue / max($total - $completed, 1) * 100) : 0,
+                'avg_progress' => $avgProgress,
+                'project_count' => $byProject->count(),
+            ],
+            'by_project' => $byProject,
+            'tasks'      => $taskList,
         ]);
     }
 }

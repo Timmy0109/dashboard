@@ -13,7 +13,13 @@
       <!-- Stat Cards -->
       <v-row class="mb-5">
         <v-col v-for="card in statCards" :key="card.label" cols="6" sm="4" md="2">
-          <v-card rounded="xl" height="100%">
+          <v-card
+            rounded="xl"
+            height="100%"
+            :to="card.to"
+            :style="card.to ? 'cursor:pointer' : ''"
+            :hover="!!card.to"
+          >
             <v-card-text class="pa-4">
               <div class="d-flex align-center gap-2 mb-2">
                 <v-icon :icon="card.icon" :color="card.iconColor" size="20" />
@@ -152,17 +158,18 @@ const store = useDashboardStore()
 const statCards = computed(() => {
   if (!store.stats) return []
   return [
-    { label: '全部專案',   icon: 'mdi-folder-multiple',   iconColor: 'grey',    value: store.stats.total_projects,    color: '' },
-    { label: '進行中',     icon: 'mdi-progress-clock',    iconColor: 'primary', value: store.stats.active_projects,   color: 'text-primary' },
-    { label: '已完成',     icon: 'mdi-check-circle',      iconColor: 'success', value: store.stats.completed_projects,color: 'text-success' },
-    { label: '全部任務',   icon: 'mdi-clipboard-list',    iconColor: 'grey',    value: store.stats.total_tasks,       color: '' },
-    { label: '已完成任務', icon: 'mdi-clipboard-check',   iconColor: 'success', value: store.stats.completed_tasks,   color: 'text-success' },
+    { label: '全部專案',   icon: 'mdi-folder-multiple',   iconColor: 'grey',    value: store.stats.total_projects,    color: '',             to: '/projects' },
+    { label: '進行中',     icon: 'mdi-progress-clock',    iconColor: 'primary', value: store.stats.active_projects,   color: 'text-primary', to: '/projects' },
+    { label: '已完成',     icon: 'mdi-check-circle',      iconColor: 'success', value: store.stats.completed_projects,color: 'text-success', to: '/projects' },
+    { label: '全部任務',   icon: 'mdi-clipboard-list',    iconColor: 'grey',    value: store.stats.total_tasks,       color: '',             to: '/todo' },
+    { label: '已完成任務', icon: 'mdi-clipboard-check',   iconColor: 'success', value: store.stats.completed_tasks,   color: 'text-success', to: '/todo' },
     {
       label: '逾期任務',
       icon: 'mdi-alert-circle',
       iconColor: store.stats.overdue_tasks > 0 ? 'error' : 'grey',
       value: store.stats.overdue_tasks,
       color: store.stats.overdue_tasks > 0 ? 'text-error' : 'text-grey',
+      to: '/todo',
     },
   ]
 })

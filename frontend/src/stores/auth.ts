@@ -8,6 +8,7 @@ interface User {
   name: string
   email: string
   role: 'admin' | 'manager' | 'member'
+  avatar_url: string | null
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -44,5 +45,22 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, loading, isLoggedIn, isAdmin, isManager, canManageMembers, fetchUser, login, logout }
+  async function updateProfile(name: string) {
+    const { data } = await api.put('/profile', { name })
+    if (user.value) {
+      user.value.name = data.name
+      user.value.avatar_url = data.avatar_url
+    }
+  }
+
+  async function updateAvatar(file: File) {
+    const form = new FormData()
+    form.append('avatar', file)
+    const { data } = await api.post('/profile/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    if (user.value) user.value.avatar_url = data.avatar_url
+  }
+
+  return { user, loading, isLoggedIn, isAdmin, isManager, canManageMembers, fetchUser, login, logout, updateProfile, updateAvatar }
 })

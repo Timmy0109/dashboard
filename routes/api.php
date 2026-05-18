@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\ImportController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LookupController;
@@ -23,10 +26,13 @@ Route::post('/register', [RegisterController::class, 'register'])->middleware('t
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/avatar', [ProfileController::class, 'avatar']);
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/todo', [TodoController::class, 'index']);
     Route::get('/stats', [StatsController::class, 'index']);
+    Route::get('/stats/member/{userId}', [StatsController::class, 'memberDetail']);
 
     // User management (admin only)
     Route::apiResource('users', UserController::class)->except(['show']);
@@ -62,6 +68,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [CompanyController::class, 'index']);
         Route::post('/', [CompanyController::class, 'store']);
         Route::put('{company}', [CompanyController::class, 'update']);
+        Route::delete('{company}', [CompanyController::class, 'destroy']);
+        Route::post('{id}/restore', [CompanyController::class, 'restore']);
         Route::get('{company}/features', [CompanyController::class, 'features']);
         Route::put('{company}/features/{key}', [CompanyController::class, 'toggleFeature']);
         Route::post('{company}/invite-code', [CompanyController::class, 'regenerateInviteCode']);
@@ -78,8 +86,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{user}/reject', [MemberApprovalController::class, 'reject']);
     });
 
+    // Import / Export
+    Route::get('projects/export',           [ExportController::class, 'allProjects']);
+    Route::get('projects/import/template',  [ImportController::class, 'template']);
+    Route::post('projects/import/preview',  [ImportController::class, 'preview']);
+    Route::post('projects/import/confirm',  [ImportController::class, 'confirm']);
+
     Route::apiResource('projects', ProjectController::class);
     Route::prefix('projects/{project}')->group(function () {
+        Route::get('export', [ExportController::class, 'project']);
         Route::get('members', [ProjectController::class, 'members']);
         Route::post('members', [ProjectController::class, 'addMember']);
         Route::delete('members/{userId}', [ProjectController::class, 'removeMember']);

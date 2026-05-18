@@ -54,11 +54,13 @@
     </v-app-bar-title>
 
     <template #append>
-      <div class="d-flex align-center gap-2 pr-4">
-        <v-avatar color="primary" size="32">
-          <span class="text-caption font-weight-bold text-white">{{ auth.user?.name?.charAt(0) }}</span>
+      <div class="d-flex align-center gap-2 pr-4" style="cursor:pointer" @click="showProfile = true">
+        <v-avatar color="primary" size="32" class="mr-1">
+          <v-img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" cover />
+          <span v-else class="text-caption font-weight-bold text-white">{{ auth.user?.name?.charAt(0) }}</span>
         </v-avatar>
         <span class="text-body-2 text-grey-darken-1 d-none d-sm-inline">{{ auth.user?.name }}</span>
+        <v-icon icon="mdi-chevron-down" size="16" color="grey" />
       </div>
     </template>
   </v-app-bar>
@@ -68,6 +70,9 @@
       <RouterView />
     </v-container>
   </v-main>
+
+  <!-- Profile modal -->
+  <ProfileModal v-if="showProfile" @close="showProfile = false" />
 
   <!-- Global toast queue -->
   <v-snackbar
@@ -99,6 +104,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useFeatureStore } from '@/stores/feature'
 import { useToastStore } from '@/stores/toast'
+import ProfileModal from '@/components/ProfileModal.vue'
 
 const auth = useAuthStore()
 const feature = useFeatureStore()
@@ -107,6 +113,7 @@ const route = useRoute()
 const router = useRouter()
 const drawer = ref(true)
 const rail = ref(false)
+const showProfile = ref(false)
 
 onMounted(() => {
   if (!feature.loaded) feature.fetch()
@@ -125,6 +132,7 @@ const navItems = computed(() => {
   const items = [
     { to: '/', icon: 'mdi-view-dashboard', label: '首頁總覽' },
     { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
+    { to: '/todo', icon: 'mdi-checkbox-marked-outline', label: '每日任務' },
   ]
 
   if (feature.has('report.stats_dashboard')) {
@@ -142,6 +150,7 @@ const pageTitles: Record<string, string> = {
   dashboard: '首頁總覽',
   projects: '專案管理',
   'project-detail': '專案詳情',
+  todo: '每日任務',
   stats: '統計分析',
   settings: '設定管理',
   system: '系統管理',

@@ -30,7 +30,7 @@
             <div v-if="project.project_no" class="text-caption text-grey">{{ project.project_no }}</div>
           </div>
 
-          <div class="d-flex align-center gap-2 flex-shrink-0">
+          <div class="d-flex align-center gap-2 flex-shrink-0 flex-wrap">
             <!-- WebSocket indicator -->
             <v-chip
               size="x-small"
@@ -40,6 +40,17 @@
             >
               {{ wsConnected ? '即時連線' : '連線中...' }}
             </v-chip>
+            <v-btn
+              variant="outlined"
+              color="grey"
+              prepend-icon="mdi-download"
+              rounded="lg"
+              size="small"
+              :loading="exporting"
+              @click="exportProject"
+            >
+              下載報告
+            </v-btn>
             <v-btn
               v-if="auth.canManageMembers"
               color="primary" prepend-icon="mdi-plus" rounded="lg"
@@ -200,7 +211,7 @@
 
         <template #item.assignee="{ item }">
           <div v-if="item.assignee" class="d-flex align-center gap-2">
-            <v-avatar color="primary" size="26">
+            <v-avatar color="primary" size="26" class="mr-2">
               <span class="text-caption text-white font-weight-bold">{{ item.assignee.name.charAt(0) }}</span>
             </v-avatar>
             <span class="text-body-2">{{ item.assignee.name }}</span>
@@ -297,6 +308,7 @@ import { useProjectStore, type Task } from '@/stores/project'
 import GanttChart from '@/components/GanttChart.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import getEcho from '@/lib/echo'
+import api from '@/lib/axios'
 
 const route  = useRoute()
 const router = useRouter()
@@ -307,6 +319,23 @@ const showTaskModal = ref(false)
 const editingTask   = ref<Task | null>(null)
 const wsConnected   = ref(false)
 const taskSearch    = ref('')
+const exporting     = ref(false)
+
+async function exportProject() {
+  if (!project.value) return
+  exporting.value = true
+  try {
+    const res = await api.get(`/projects/${project.value.id}/export`, { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `專案報告_${project.value.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+  } finally {
+    exporting.value = false
+  }
+}
 
 const project        = computed(() => store.current)
 const completedCount = computed(() => project.value?.tasks.filter(t => t.is_completed).length ?? 0)

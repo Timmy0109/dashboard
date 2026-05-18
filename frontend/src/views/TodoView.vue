@@ -15,7 +15,7 @@
         :loading="store.loading"
         hover
         item-value="id"
-        @click:row="(_e: Event, { item }: any) => openEdit(item)"
+        @click:row="(_e: Event, { item }: any) => { if (canEditTask(item)) openEdit(item) }"
       >
         <template #top>
           <v-toolbar flat rounded="t-xl">
@@ -31,7 +31,7 @@
 
         <template #item.assignee="{ item }">
           <div v-if="item.assignee" class="d-flex align-center gap-2">
-            <v-avatar color="primary" size="26">
+            <v-avatar color="primary" size="26" class="mr-2">
               <span class="text-caption text-white font-weight-bold">{{ item.assignee.name.charAt(0) }}</span>
             </v-avatar>
             <span class="text-body-2">{{ item.assignee.name }}</span>
@@ -84,7 +84,7 @@
         </template>
 
         <template #item.actions="{ item }">
-          <div class="d-flex gap-1" @click.stop>
+          <div v-if="canEditTask(item)" class="d-flex gap-1" @click.stop>
             <v-btn icon="mdi-pencil" size="small" variant="text" color="grey" @click="openEdit(item)" />
             <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="handleDelete(item)" />
           </div>
@@ -136,12 +136,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTodoStore, type TodoTask } from '@/stores/todo'
 import { useProjectStore } from '@/stores/project'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import TaskModal from '@/components/TaskModal.vue'
 import type { Task } from '@/stores/project'
 
 const store = useTodoStore()
 const projectStore = useProjectStore()
+const auth = useAuthStore()
 const toast = useToast()
 
 const activeTab = ref('all')
@@ -186,6 +188,11 @@ function getTabCount(tab: string) {
   if (tab === 'pending')     return tasks.filter(t => t.progress === 0 && !t.is_completed).length
   if (tab === 'in_progress') return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length
   return tasks.length
+}
+
+function canEditTask(task: TodoTask) {
+  if (auth.isAdmin || auth.isManager) return true
+  return task.assignee?.id === auth.user?.id
 }
 
 function statusIcon(icon: string) {

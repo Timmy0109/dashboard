@@ -14,14 +14,18 @@ class TodoController extends Controller
     {
         $user = $request->user();
 
-        $projectIds = match ($user->role) {
-            'admin' => Project::pluck('id'),
-            'manager' => Project::where('owner_id', $user->id)->pluck('id'),
-            default => Project::whereHas('members', fn($q) => $q->where('user_id', $user->id))->pluck('id'),
-        };
+        if ($user->isAdmin()) {
+            $query = Task::with(['project', 'assignee', 'status', 'priority']);
+        } elseif ($user->isManager()) {
+            $projectIds = Project::where('company_id', $user->company_id)->pluck('id');
+            $query = Task::with(['project', 'assignee', 'status', 'priority'])
+                ->whereIn('project_id', $projectIds);
+        } else {
+            $query = Task::with(['project', 'assignee', 'status', 'priority'])
+                ->where('assignee_id', $user->id);
+        }
 
-        $tasks = Task::with(['project', 'assignee', 'status', 'priority'])
-            ->whereIn('project_id', $projectIds)
+        $tasks = $query
             ->orderByRaw('is_completed ASC')
             ->orderBy('end_date')
             ->get()

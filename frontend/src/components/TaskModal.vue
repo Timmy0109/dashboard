@@ -217,7 +217,7 @@
                   size="small"
                   color="primary"
                   variant="flat"
-                  :disabled="!uploadFile"
+                  :disabled="!uploadFile.length"
                   :loading="uploadSaving"
                   @click="uploadAttachment"
                 >上傳</v-btn>
@@ -284,7 +284,7 @@ function canDeleteComment(c: Comment) {
 }
 
 // ── Activities ────────────────────────────────────────────────────────────
-interface Activity { id: number; event: string; payload: Record<string, any>; created_at: string; actor?: { id: number; name: string } }
+interface Activity { id: number; event: string; payload: Record<string, any> | null; created_at: string; actor?: { id: number; name: string } | null }
 const activities = ref<Activity[]>([])
 const activitiesLoading = ref(false)
 
@@ -340,7 +340,7 @@ function activityLabel(a: Activity): string {
 interface Attachment { id: number; original_name: string; mime_type: string; size_human: string; download_url: string; is_previewable: boolean; uploader_id: number }
 const attachments = ref<Attachment[]>([])
 const attachmentsLoading = ref(false)
-const uploadFile = ref<File | null>(null)
+const uploadFile = ref<File[]>([])
 const uploadSaving = ref(false)
 const uploadError = ref('')
 
@@ -353,14 +353,15 @@ async function loadAttachments() {
 }
 
 async function uploadAttachment() {
-  if (!uploadFile.value || !props.task) return
+  const file = uploadFile.value[0]
+  if (!file || !props.task) return
   uploadError.value = ''
   uploadSaving.value = true
   const fd = new FormData()
-  fd.append('file', uploadFile.value)
+  fd.append('file', file)
   try {
     await axios.post(`/api/projects/${props.projectId}/tasks/${props.task.id}/attachments`, fd)
-    uploadFile.value = null
+    uploadFile.value = []
     await loadAttachments()
   } catch (err: any) {
     uploadError.value = err?.response?.data?.message ?? '上傳失敗'

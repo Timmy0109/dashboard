@@ -124,11 +124,12 @@ class TaskController extends Controller
                     'event'       => $a->event,
                     'label'       => $labelMap[$a->event] ?? $a->event,
                     'description' => $description,
-                    'actor'       => [
+                    'payload'     => $a->payload,
+                    'actor'       => $a->actor ? [
                         'id'         => $a->actor->id,
                         'name'       => $a->actor->name,
                         'avatar_url' => $a->actor->avatar_url,
-                    ],
+                    ] : null,
                     'created_at'  => $a->created_at->format('Y/m/d H:i'),
                 ];
             });

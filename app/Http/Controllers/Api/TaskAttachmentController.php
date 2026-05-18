@@ -109,7 +109,8 @@ class TaskAttachmentController extends Controller
             'size_human'    => $a->size_human,
             'is_previewable'=> $a->is_previewable,
             'download_url'  => $a->download_url,
-            'uploader'      => ['id' => $a->uploader->id, 'name' => $a->uploader->name],
+            'uploader_id'   => $a->uploader_id,
+            'uploader'      => $a->uploader ? ['id' => $a->uploader->id, 'name' => $a->uploader->name] : null,
             'created_at'    => $a->created_at->format('Y/m/d H:i'),
         ];
     }

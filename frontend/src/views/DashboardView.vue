@@ -31,6 +31,97 @@
         </v-col>
       </v-row>
 
+      <!-- Member: my tasks panel -->
+      <template v-if="auth.user?.role === 'member'">
+        <div class="mb-4">
+          <h3 class="text-body-1 font-weight-semibold mb-3">我的任務</h3>
+          <div v-if="myTasksLoading" class="d-flex justify-center py-6"><v-progress-circular indeterminate /></div>
+          <v-row v-else-if="myTasks" dense>
+            <!-- Overdue -->
+            <v-col cols="12" md="4">
+              <v-card rounded="xl" variant="tonal" color="error">
+                <v-card-title class="text-body-2 font-weight-semibold pa-4 pb-1 d-flex align-center gap-2">
+                  <v-icon size="16" color="error">mdi-alert-circle</v-icon>
+                  逾期任務
+                  <v-chip size="x-small" color="error" class="ml-auto">{{ myTasks.overdue.length }}</v-chip>
+                </v-card-title>
+                <v-card-text class="pa-2">
+                  <div v-if="!myTasks.overdue.length" class="text-caption text-grey text-center py-3">無逾期任務</div>
+                  <v-list density="compact" bg-color="transparent">
+                    <v-list-item
+                      v-for="t in myTasks.overdue"
+                      :key="t.id"
+                      :to="`/projects/${t.project_id}`"
+                      rounded="lg"
+                      class="px-2 py-1"
+                    >
+                      <v-list-item-title class="text-body-2">{{ t.name }}</v-list-item-title>
+                      <v-list-item-subtitle class="text-caption">{{ t.project_name }} · {{ t.end_date }}</v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <!-- Due soon -->
+            <v-col cols="12" md="4">
+              <v-card rounded="xl" variant="tonal" color="warning">
+                <v-card-title class="text-body-2 font-weight-semibold pa-4 pb-1 d-flex align-center gap-2">
+                  <v-icon size="16" color="warning">mdi-clock-alert-outline</v-icon>
+                  即將到期
+                  <v-chip size="x-small" color="warning" class="ml-auto">{{ myTasks.due_soon.length }}</v-chip>
+                </v-card-title>
+                <v-card-text class="pa-2">
+                  <div v-if="!myTasks.due_soon.length" class="text-caption text-grey text-center py-3">無即將到期任務</div>
+                  <v-list density="compact" bg-color="transparent">
+                    <v-list-item
+                      v-for="t in myTasks.due_soon"
+                      :key="t.id"
+                      :to="`/projects/${t.project_id}`"
+                      rounded="lg"
+                      class="px-2 py-1"
+                    >
+                      <v-list-item-title class="text-body-2">{{ t.name }}</v-list-item-title>
+                      <v-list-item-subtitle class="text-caption">{{ t.project_name }} · {{ t.end_date }}</v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <!-- In progress -->
+            <v-col cols="12" md="4">
+              <v-card rounded="xl" variant="tonal" color="primary">
+                <v-card-title class="text-body-2 font-weight-semibold pa-4 pb-1 d-flex align-center gap-2">
+                  <v-icon size="16" color="primary">mdi-progress-clock</v-icon>
+                  進行中
+                  <v-chip size="x-small" color="primary" class="ml-auto">{{ myTasks.in_progress.length }}</v-chip>
+                </v-card-title>
+                <v-card-text class="pa-2">
+                  <div v-if="!myTasks.in_progress.length" class="text-caption text-grey text-center py-3">無進行中任務</div>
+                  <v-list density="compact" bg-color="transparent">
+                    <v-list-item
+                      v-for="t in myTasks.in_progress"
+                      :key="t.id"
+                      :to="`/projects/${t.project_id}`"
+                      rounded="lg"
+                      class="px-2 py-1"
+                    >
+                      <v-list-item-title class="text-body-2">{{ t.name }}</v-list-item-title>
+                      <v-list-item-subtitle class="text-caption d-flex align-center gap-1">
+                        {{ t.project_name }}
+                        <v-progress-linear :model-value="t.progress" color="primary" bg-color="grey-lighten-3" rounded height="4" class="ml-1" style="max-width:60px" />
+                        <span>{{ t.progress }}%</span>
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </div>
+      </template>
+
       <!-- Progress ring + Project list -->
       <v-row class="mb-2">
         <!-- Overall progress -->
@@ -148,12 +239,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useDashboardStore } from '@/stores/dashboard'
+import axios from 'axios'
 
 const auth = useAuthStore()
 const store = useDashboardStore()
+
+interface MyTask {
+  id: number; name: string; project_id: number; project_name: string
+  end_date: string | null; progress: number; is_overdue: boolean
+  status: { name: string; color: string; icon: string } | null
+  priority: { name: string; color: string } | null
+}
+interface MyTasks { overdue: MyTask[]; due_soon: MyTask[]; in_progress: MyTask[] }
+
+const myTasks = ref<MyTasks | null>(null)
+const myTasksLoading = ref(false)
+
+async function fetchMyTasks() {
+  myTasksLoading.value = true
+  const res = await axios.get('/api/dashboard/my-tasks')
+  myTasks.value = res.data
+  myTasksLoading.value = false
+}
 
 const statCards = computed(() => {
   if (!store.stats) return []
@@ -179,5 +289,8 @@ const overallProgress = computed(() => {
   return Math.round(store.projects.reduce((s, p) => s + p.progress_percent, 0) / store.projects.length)
 })
 
-onMounted(() => store.fetch())
+onMounted(() => {
+  store.fetch()
+  if (auth.user?.role === 'member') fetchMyTasks()
+})
 </script>

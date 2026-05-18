@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->foreignId('company_id')->nullable()->after('role')
                   ->constrained()->nullOnDelete();
-            $table->enum('status', ['pending', 'active', 'inactive'])
+            $table->enum('status', ['pending', 'active', 'inactive', 'suspended'])
                   ->default('active')->change();
             $table->foreignId('invited_by')->nullable()->after('company_id')
                   ->constrained('users')->nullOnDelete();

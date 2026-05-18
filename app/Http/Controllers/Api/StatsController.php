@@ -108,69 +108,85 @@ class StatsController extends Controller
         $viewer = $request->user();
         $target = User::findOrFail($userId);
 
-        // Permission: admin sees everyone; manager sees own company members
         if (!$viewer->isAdmin() && $viewer->company_id !== $target->company_id) {
             abort(403);
         }
 
-        $today = now()->toDateString();
+        $today   = now()->toDateString();
         $weekEnd = now()->addDays(7)->toDateString();
 
-        $tasks = Task::with(['project:id,name', 'status:id,name,color,icon', 'priority:id,name,color'])
+        // --- Summary via DB aggregation (single query, no PHP-level collection filter) ---
+        $summary = Task::where('assignee_id', $userId)
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(is_completed) as completed,
+                SUM(CASE WHEN is_completed = 0 AND progress = 0 THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN is_completed = 0 AND progress > 0 THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN is_completed = 0 AND end_date < ? THEN 1 ELSE 0 END) as overdue,
+                SUM(CASE WHEN is_completed = 0 AND end_date >= ? AND end_date <= ? THEN 1 ELSE 0 END) as due_soon,
+                AVG(CASE WHEN is_completed = 0 THEN progress END) as avg_progress
+            ', [$today, $today, $weekEnd])
+            ->first();
+
+        $total       = (int) $summary->total;
+        $completed   = (int) $summary->completed;
+        $overdue     = (int) $summary->overdue;
+        $pending     = (int) $summary->pending;
+        $inProgress  = (int) $summary->in_progress;
+        $dueSoon     = (int) $summary->due_soon;
+        $avgProgress = $total > 0 ? (int) round((float) ($summary->avg_progress ?? 0)) : 0;
+
+        // --- Per-project breakdown via DB groupBy ---
+        $byProject = Task::where('assignee_id', $userId)
+            ->join('projects', 'projects.id', '=', 'tasks.project_id')
+            ->selectRaw('
+                tasks.project_id,
+                projects.name as project_name,
+                COUNT(*) as total,
+                SUM(tasks.is_completed) as completed,
+                SUM(CASE WHEN tasks.is_completed = 0 AND tasks.end_date < ? THEN 1 ELSE 0 END) as overdue
+            ', [$today])
+            ->groupBy('tasks.project_id', 'projects.name')
+            ->get()
+            ->map(fn ($row) => [
+                'project_id'   => $row->project_id,
+                'project_name' => $row->project_name,
+                'total'        => (int) $row->total,
+                'completed'    => (int) $row->completed,
+                'overdue'      => (int) $row->overdue,
+            ]);
+
+        // --- Task list: paginated, most actionable first ---
+        $taskList = Task::with(['project:id,name', 'status:id,name,color,icon', 'priority:id,name,color'])
             ->where('assignee_id', $userId)
-            ->get();
-
-        $total      = $tasks->count();
-        $completed  = $tasks->where('is_completed', true)->count();
-        $overdue    = $tasks->where('is_completed', false)->filter(fn ($t) => $t->end_date && $t->end_date->toDateString() < $today)->count();
-        $pending    = $tasks->where('is_completed', false)->where('progress', 0)->count();
-        $inProgress = $tasks->where('is_completed', false)->filter(fn ($t) => $t->progress > 0)->count();
-        $dueSoon    = $tasks->where('is_completed', false)->filter(fn ($t) => $t->end_date && $t->end_date->toDateString() >= $today && $t->end_date->toDateString() <= $weekEnd)->count();
-
-        $avgProgress = $total > 0
-            ? (int) round($tasks->where('is_completed', false)->avg('progress') ?? 0)
-            : 0;
-
-        // Per-project breakdown
-        $byProject = $tasks->groupBy('project_id')->map(function ($group) use ($today) {
-            $proj = $group->first()->project;
-            return [
-                'project_id'   => $proj->id,
-                'project_name' => $proj->name,
-                'total'        => $group->count(),
-                'completed'    => $group->where('is_completed', true)->count(),
-                'overdue'      => $group->where('is_completed', false)->filter(fn ($t) => $t->end_date && $t->end_date->toDateString() < $today)->count(),
-            ];
-        })->values();
-
-        // Task list (most actionable first: overdue → pending → in_progress → completed)
-        $taskList = $tasks->sortBy([
-            fn ($a, $b) => $a->is_completed <=> $b->is_completed,
-            fn ($a, $b) => ($b->end_date?->toDateString() ?? '') <=> ($a->end_date?->toDateString() ?? ''),
-        ])->values()->map(fn ($t) => [
-            'id'           => $t->id,
-            'name'         => $t->name,
-            'project_id'   => $t->project_id,
-            'project_name' => $t->project?->name,
-            'end_date'     => $t->end_date?->toDateString(),
-            'progress'     => $t->progress,
-            'is_completed' => $t->is_completed,
-            'is_overdue'   => !$t->is_completed && $t->end_date && $t->end_date->toDateString() < $today,
-            'status'       => $t->status ? ['id' => $t->status->id, 'name' => $t->status->name, 'color' => $t->status->color, 'icon' => $t->status->icon] : null,
-            'priority'     => $t->priority ? ['id' => $t->priority->id, 'name' => $t->priority->name, 'color' => $t->priority->color] : null,
-        ]);
+            ->orderByRaw('is_completed ASC')  // active first
+            ->orderByRaw('CASE WHEN end_date < ? THEN 0 ELSE 1 END ASC', [$today]) // overdue first
+            ->orderBy('end_date')
+            ->get()
+            ->map(fn ($t) => [
+                'id'           => $t->id,
+                'name'         => $t->name,
+                'project_id'   => $t->project_id,
+                'project_name' => $t->project?->name,
+                'end_date'     => $t->end_date?->toDateString(),
+                'progress'     => $t->progress,
+                'is_completed' => $t->is_completed,
+                'is_overdue'   => !$t->is_completed && $t->end_date && $t->end_date->toDateString() < $today,
+                'status'       => $t->status ? ['id' => $t->status->id, 'name' => $t->status->name, 'color' => $t->status->color, 'icon' => $t->status->icon] : null,
+                'priority'     => $t->priority ? ['id' => $t->priority->id, 'name' => $t->priority->name, 'color' => $t->priority->color] : null,
+            ]);
 
         return response()->json([
-            'member' => ['id' => $target->id, 'name' => $target->name, 'email' => $target->email],
+            'member'  => ['id' => $target->id, 'name' => $target->name, 'email' => $target->email],
             'summary' => [
-                'total'        => $total,
-                'completed'    => $completed,
-                'pending'      => $pending,
-                'in_progress'  => $inProgress,
-                'overdue'      => $overdue,
-                'due_soon'     => $dueSoon,
-                'overdue_rate' => $total > 0 ? (int) round($overdue / max($total - $completed, 1) * 100) : 0,
-                'avg_progress' => $avgProgress,
+                'total'         => $total,
+                'completed'     => $completed,
+                'pending'       => $pending,
+                'in_progress'   => $inProgress,
+                'overdue'       => $overdue,
+                'due_soon'      => $dueSoon,
+                'overdue_rate'  => $total > 0 ? (int) round($overdue / max($total - $completed, 1) * 100) : 0,
+                'avg_progress'  => $avgProgress,
                 'project_count' => $byProject->count(),
             ],
             'by_project' => $byProject,

@@ -48,18 +48,26 @@
     </template>
   </v-navigation-drawer>
 
-  <v-app-bar flat color="white" border="b">
-    <v-app-bar-title class="text-subtitle-1 font-weight-semibold text-grey-darken-3">
+  <v-app-bar flat :color="isDark ? 'surface' : 'white'" border="b">
+    <v-app-bar-title class="text-subtitle-1 font-weight-semibold">
       {{ currentPageTitle }}
     </v-app-bar-title>
 
     <template #append>
+      <v-btn
+        :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
+        variant="text"
+        density="comfortable"
+        :title="isDark ? '切換至淺色' : '切換至深色'"
+        class="mr-2"
+        @click="onToggleTheme"
+      />
       <div class="d-flex align-center gap-2 pr-4" style="cursor:pointer" @click="showProfile = true">
         <v-avatar color="primary" size="32" class="mr-1">
           <v-img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" cover />
           <span v-else class="text-caption font-weight-bold text-white">{{ auth.user?.name?.charAt(0) }}</span>
         </v-avatar>
-        <span class="text-body-2 text-grey-darken-1 d-none d-sm-inline">{{ auth.user?.name }}</span>
+        <span class="text-body-2 d-none d-sm-inline">{{ auth.user?.name }}</span>
         <v-icon icon="mdi-chevron-down" size="16" color="grey" />
       </div>
     </template>
@@ -101,13 +109,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
+import { useTheme } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useFeatureStore } from '@/stores/feature'
+import { useThemeStore } from '@/stores/theme'
 import { useToastStore } from '@/stores/toast'
 import ProfileModal from '@/components/ProfileModal.vue'
 
 const auth = useAuthStore()
 const feature = useFeatureStore()
+const themeStore = useThemeStore()
+const vuetifyTheme = useTheme()
 const toast = useToastStore()
 const route = useRoute()
 const router = useRouter()
@@ -115,17 +127,24 @@ const drawer = ref(true)
 const rail = ref(false)
 const showProfile = ref(false)
 
+const isDark = computed(() => themeStore.current === 'dark')
+
+function onToggleTheme() {
+  themeStore.toggle(vuetifyTheme)
+}
+
 onMounted(() => {
+  themeStore.init(vuetifyTheme)
   if (!feature.loaded) feature.fetch()
 })
 
 const navItems = computed(() => {
   if (auth.isAdmin) {
+    // 成員管理已整合進系統管理頁面，admin 側欄不再單獨列出
     return [
       { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
       { to: '/settings', icon: 'mdi-cog', label: '設定管理' },
       { to: '/system', icon: 'mdi-domain', label: '系統管理' },
-      { to: '/manager/approvals', icon: 'mdi-account-check', label: '成員管理' },
     ]
   }
 

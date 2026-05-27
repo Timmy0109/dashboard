@@ -22,103 +22,16 @@
         </div>
 
         <template v-else-if="data">
-          <!-- Summary stat cards -->
+          <!-- Summary stat cards：參與專案 / 已完成 / 未完成 / 逾期 -->
           <div class="pa-5 pb-4">
-            <v-row dense class="mb-1">
-              <v-col v-for="card in summaryCards" :key="card.label" cols="6" sm="4">
+            <v-row dense>
+              <v-col v-for="card in summaryCards" :key="card.label" cols="6" sm="3">
                 <v-card rounded="xl" variant="tonal" :color="card.color" class="text-center pa-3">
                   <div class="text-h5 font-weight-bold">{{ card.value }}</div>
                   <div class="text-caption mt-1">{{ card.label }}</div>
                 </v-card>
               </v-col>
             </v-row>
-          </div>
-
-          <!-- Health indicators -->
-          <div class="px-5 pb-4">
-            <div class="text-caption text-grey font-weight-bold text-uppercase mb-3">工作健康指標</div>
-            <v-row dense align="stretch">
-              <v-col cols="12" sm="4">
-                <div class="d-flex flex-column align-center justify-center pa-3 rounded-xl bg-grey-lighten-5 h-100">
-                  <div class="position-relative mb-2" style="width:72px;height:72px">
-                    <svg width="72" height="72" viewBox="0 0 36 36" style="transform:rotate(-90deg)">
-                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e0e0e0" stroke-width="3" />
-                      <circle
-                        cx="18" cy="18" r="15.9"
-                        fill="none"
-                        :stroke="data.summary.overdue_rate > 40 ? '#ef5350' : data.summary.overdue_rate > 20 ? '#FFA726' : '#00897B'"
-                        stroke-width="3"
-                        :stroke-dasharray="`${data.summary.overdue_rate} ${100 - data.summary.overdue_rate}`"
-                        stroke-linecap="round"
-                      />
-                    </svg>
-                    <div class="position-absolute d-flex flex-column align-center justify-center" style="top:0;left:0;right:0;bottom:0">
-                      <span class="text-caption font-weight-bold">{{ data.summary.overdue_rate }}%</span>
-                    </div>
-                  </div>
-                  <div class="text-caption text-grey text-center">逾期率</div>
-                  <v-chip
-                    size="x-small"
-                    :color="data.summary.overdue_rate > 40 ? 'error' : data.summary.overdue_rate > 20 ? 'warning' : 'success'"
-                    variant="tonal"
-                    class="mt-1"
-                  >
-                    {{ data.summary.overdue_rate > 40 ? '需關注' : data.summary.overdue_rate > 20 ? '略高' : '健康' }}
-                  </v-chip>
-                </div>
-              </v-col>
-              <v-col cols="12" sm="4">
-                <div class="d-flex flex-column align-center justify-center pa-3 rounded-xl bg-grey-lighten-5 h-100">
-                  <div class="text-h4 font-weight-bold text-primary mb-1">{{ data.summary.avg_progress }}%</div>
-                  <v-progress-linear
-                    :model-value="data.summary.avg_progress"
-                    color="primary"
-                    bg-color="grey-lighten-3"
-                    rounded
-                    height="6"
-                    class="w-100 mb-2"
-                  />
-                  <div class="text-caption text-grey text-center">未完成任務平均進度</div>
-                </div>
-              </v-col>
-              <v-col cols="12" sm="4">
-                <div class="d-flex flex-column align-center pa-3 rounded-xl bg-grey-lighten-5 h-100">
-                  <div class="d-flex align-center gap-2 mb-1">
-                    <v-icon icon="mdi-folder-multiple" color="primary" size="28" />
-                    <span class="text-h4 font-weight-bold">{{ data.summary.project_count }}</span>
-                  </div>
-                  <div class="text-caption text-grey text-center mb-2">參與專案數</div>
-                  <div class="d-flex align-center gap-1">
-                    <v-icon icon="mdi-clock-alert" color="warning" size="14" />
-                    <span class="text-caption text-warning">{{ data.summary.due_soon }} 個任務本週到期</span>
-                  </div>
-                </div>
-              </v-col>
-            </v-row>
-          </div>
-
-          <v-divider />
-
-          <!-- Per-project breakdown -->
-          <div class="pa-5 pb-3" v-if="data.by_project.length">
-            <div class="text-caption text-grey font-weight-bold text-uppercase mb-3">各專案任務分佈</div>
-            <div class="d-flex flex-column gap-2">
-              <div v-for="proj in data.by_project" :key="proj.project_id" class="d-flex align-center gap-3">
-                <span class="text-body-2 text-truncate" style="min-width:120px;max-width:160px">{{ proj.project_name }}</span>
-                <v-progress-linear
-                  :model-value="proj.total > 0 ? proj.completed / proj.total * 100 : 0"
-                  color="success"
-                  bg-color="grey-lighten-3"
-                  rounded
-                  height="6"
-                  class="flex-grow-1"
-                />
-                <div class="d-flex gap-2 text-caption" style="min-width:90px">
-                  <span class="text-success">{{ proj.completed }}/{{ proj.total }}</span>
-                  <span v-if="proj.overdue > 0" class="text-error">逾期{{ proj.overdue }}</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           <v-divider />
@@ -148,23 +61,13 @@
                   :color="task.is_completed ? 'success' : task.is_overdue ? 'error' : 'grey'"
                   size="18"
                 />
-                <div class="flex-grow-1 overflow-hidden">
+                <div class="grow overflow-hidden">
                   <div class="text-body-2 font-weight-medium text-truncate">{{ task.name }}</div>
                   <div class="text-caption text-grey">{{ task.project_name }}</div>
                 </div>
-                <div class="d-flex flex-column align-end gap-1" style="min-width:80px">
-                  <v-chip
-                    v-if="task.status"
-                    size="x-small"
-                    :style="{ backgroundColor: task.status.color + '22', color: task.status.color }"
-                    class="font-weight-medium"
-                  >
-                    {{ task.status.name }}
-                  </v-chip>
-                  <span class="text-caption" :class="task.is_overdue ? 'text-error' : 'text-grey'">
-                    {{ task.end_date ?? '—' }}
-                  </span>
-                </div>
+                <span class="text-caption" :class="task.is_overdue ? 'text-error' : 'text-grey'" style="min-width:80px; text-align:right">
+                  {{ task.end_date ?? '—' }}
+                </span>
                 <div style="min-width:50px">
                   <div class="text-caption text-right mb-1">{{ task.progress }}%</div>
                   <v-progress-linear
@@ -180,6 +83,19 @@
           </div>
         </template>
       </v-card-text>
+
+      <v-divider />
+      <v-card-actions class="pa-4">
+        <v-btn variant="text" @click="emit('close')">關閉</v-btn>
+        <v-spacer />
+        <v-btn
+          color="primary"
+          variant="flat"
+          prepend-icon="mdi-account-edit"
+          :disabled="!data"
+          @click="onEditMember"
+        >編輯成員</v-btn>
+      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
@@ -189,7 +105,12 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/lib/axios'
 
 const props = defineProps<{ userId: number }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; edit: [userId: number] }>()
+
+function onEditMember() {
+  emit('edit', props.userId)
+  emit('close')
+}
 
 interface MemberSummary {
   total: number; completed: number; pending: number; in_progress: number
@@ -225,12 +146,10 @@ const summaryCards = computed(() => {
   if (!data.value) return []
   const s = data.value.summary
   return [
-    { label: '全部任務',  value: s.total,       color: 'primary' },
-    { label: '待處理',    value: s.pending,      color: 'default' },
-    { label: '進行中',    value: s.in_progress,  color: 'info' },
-    { label: '已完成',    value: s.completed,    color: 'success' },
-    { label: '逾期',      value: s.overdue,      color: s.overdue > 0 ? 'error' : 'default' },
-    { label: '本週到期',  value: s.due_soon,     color: s.due_soon > 0 ? 'warning' : 'default' },
+    { label: '參與專案',  value: s.project_count,         color: 'primary' },
+    { label: '已完成',    value: s.completed,             color: 'success' },
+    { label: '未完成',    value: s.total - s.completed,   color: 'info' },
+    { label: '逾期',      value: s.overdue,               color: s.overdue > 0 ? 'error' : 'default' },
   ]
 })
 

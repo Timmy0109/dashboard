@@ -32,6 +32,7 @@
         :search="search"
         hover
         item-value="id"
+        @click:row="onRowClick"
       >
         <template #top>
           <v-toolbar flat rounded="t-xl">
@@ -262,6 +263,14 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <!-- Workload dialog (open on row click) -->
+    <MemberWorkloadDialog
+      v-if="workloadUserId !== null"
+      :user-id="workloadUserId"
+      @close="workloadUserId = null"
+      @edit="onWorkloadEdit"
+    />
   </div>
 </template>
 
@@ -270,6 +279,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/lib/axios'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
+import MemberWorkloadDialog from '@/components/MemberWorkloadDialog.vue'
 
 interface Member {
   id: number
@@ -305,6 +315,18 @@ const editingMember = ref<Member | null>(null)
 const editForm = reactive({ name: '', email: '', password: '', status: 'active', role: 'member' })
 const editSaving = ref(false)
 const editError = ref('')
+
+// Workload dialog state — set userId to open, null to close
+const workloadUserId = ref<number | null>(null)
+
+function onRowClick(_evt: Event, ctx: { item: Member }) {
+  workloadUserId.value = ctx.item.id
+}
+
+function onWorkloadEdit(userId: number) {
+  const m = members.value.find(x => x.id === userId)
+  if (m) openEdit(m)
+}
 
 const statusLabel: Record<string, string> = {
   active: '啟用', pending: '待審核', inactive: '停用',

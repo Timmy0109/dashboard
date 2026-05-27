@@ -94,8 +94,8 @@ onBeforeUnmount(() => {
 .gantt-outer {
   overflow-x: auto;
   border-radius: 8px;
-  border: 1px solid rgba(0,0,0,.12);
-  background: #fff;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: rgb(var(--v-theme-surface));
 }
 
 .gantt .bar-wrapper .bar        { fill: #ffe1ba; outline: none;}

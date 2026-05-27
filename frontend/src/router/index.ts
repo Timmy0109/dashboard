@@ -102,7 +102,8 @@ router.beforeEach(async (to) => {
     return { name: 'dashboard' }
   }
 
-  if (to.meta.managerOnly && !auth.canManageMembers) {
+  // managerOnly：成員審核頁面僅限 manager，admin 走「系統管理」整合入口
+  if (to.meta.managerOnly && !auth.isManager) {
     return { name: 'dashboard' }
   }
 })

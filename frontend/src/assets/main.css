@@ -6,3 +6,35 @@ html, body, #app {
   padding: 0;
   height: 100%;
 }
+
+/* ── Dark mode adjustments ─────────────────────────────────────────────
+ * 程式碼裡很多地方用 Vuetify 的 utility class（bg-grey-lighten-5 等）
+ * 當作淺色裝飾底色。Vuetify 的 utility class 是靜態顏色，深色模式下
+ * 不會自動變深，所以這裡用 theme class 對應做覆寫。
+ */
+.v-theme--dark .bg-grey-lighten-5 { background-color: rgb(var(--v-theme-surface-light)) !important; }
+.v-theme--dark .bg-grey-lighten-4 { background-color: rgb(var(--v-theme-surface-variant)) !important; }
+.v-theme--dark .bg-grey-lighten-3 { background-color: rgb(var(--v-theme-surface-variant)) !important; }
+.v-theme--dark .bg-red-lighten-5  { background-color: rgba(239, 83, 80, 0.15) !important; }
+
+/* progress bar empty track */
+.v-theme--dark .v-progress-linear__background[style*="grey-lighten-3"],
+.v-theme--dark .v-progress-linear[bg-color="grey-lighten-3"] .v-progress-linear__background {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 程式碼很多地方用 text-grey-darken-* 當作次要文字色，深色背景下會看不清 */
+.v-theme--dark .text-grey-darken-1,
+.v-theme--dark .text-grey-darken-2,
+.v-theme--dark .text-grey-darken-3,
+.v-theme--dark .text-grey-darken-4 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 邊框/分隔線在深色下用半透明白色 */
+.v-theme--dark [style*="border-left: 1px solid rgba(0,0,0"],
+.v-theme--dark [style*="border-top: 1px solid rgba(0,0,0"],
+.v-theme--dark [style*="border-bottom: 1px solid rgba(0,0,0"],
+.v-theme--dark [style*="border-right: 1px solid rgba(0,0,0"] {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}

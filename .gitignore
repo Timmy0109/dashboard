@@ -25,3 +25,6 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Design handoff package (large standalone HTML + redundant assets — kept local only)
+/handoff/

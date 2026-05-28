@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\TaskAttachmentUploaded;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskActivity;
 use App\Models\TaskAttachment;
+use App\Support\SafeBroadcast;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -64,7 +66,42 @@ class TaskAttachmentController extends Controller
             'created_at' => now(),
         ]);
 
+        SafeBroadcast::dispatch(new TaskAttachmentUploaded($attachment));
+
         return response()->json($this->formatAttachment($attachment), 201);
+    }
+
+    /**
+     * GET /api/projects/{project}/attachments
+     *
+     * Cursor-paginated list of all attachments in a project.
+     * Used by the project's AttachmentsPanel (cross-task view).
+     */
+    public function projectIndex(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $perPage = min((int) $request->query('per_page', 50), 100);
+
+        $query = TaskAttachment::query()
+            ->whereHas('task', fn ($q) => $q->where('project_id', $project->id))
+            ->with(['uploader:id,name', 'task:id,name,project_id'])
+            ->orderByDesc('created_at');
+
+        $paginated = $query->cursorPaginate($perPage);
+
+        $data = $paginated->getCollection()->map(fn ($a) => array_merge(
+            $this->formatAttachment($a),
+            [
+                'task_id'   => $a->task_id,
+                'task_name' => $a->task?->name,
+            ]
+        ));
+
+        return response()->json([
+            'data'        => $data,
+            'next_cursor' => optional($paginated->nextCursor())->encode(),
+        ]);
     }
 
     // DELETE /projects/{project}/tasks/{task}/attachments/{attachment}

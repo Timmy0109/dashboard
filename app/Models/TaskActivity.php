@@ -23,4 +23,9 @@ class TaskActivity extends Model
     {
         return $this->belongsTo(User::class, 'actor_id');
     }
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
+    }
 }

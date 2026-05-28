@@ -1,77 +1,7 @@
 <template>
-  <v-navigation-drawer v-model="drawer" :rail="rail" permanent color="grey-darken-4" width="220">
-    <!-- Logo / title -->
-    <v-list-item
-      prepend-icon="mdi-briefcase-variant"
-      title="專案管理系統"
-      :subtitle="auth.user?.name"
-      nav
-      class="py-4"
-    >
-      <template #append>
-        <v-btn
-          :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
-          variant="text"
-          color="grey-lighten-1"
-          size="small"
-          @click="rail = !rail"
-        />
-      </template>
-    </v-list-item>
+  <AppSidebar @logout="handleLogout" />
 
-    <v-divider color="grey-darken-3" />
-
-    <v-list density="compact" nav class="mt-1">
-      <v-list-item
-        v-for="item in navItems"
-        :key="item.to"
-        :prepend-icon="item.icon"
-        :title="item.label"
-        :to="item.to"
-        :active="isActive(item.to)"
-        color="primary"
-        rounded="lg"
-        class="mb-0.5"
-      />
-    </v-list>
-
-    <template #append>
-      <v-divider color="grey-darken-3" />
-      <v-list density="compact" nav class="py-1">
-        <v-list-item
-          prepend-icon="mdi-logout"
-          title="登出"
-          rounded="lg"
-          @click="handleLogout"
-        />
-      </v-list>
-    </template>
-  </v-navigation-drawer>
-
-  <v-app-bar flat :color="isDark ? 'surface' : 'white'" border="b">
-    <v-app-bar-title class="text-subtitle-1 font-weight-semibold">
-      {{ currentPageTitle }}
-    </v-app-bar-title>
-
-    <template #append>
-      <v-btn
-        :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-        variant="text"
-        density="comfortable"
-        :title="isDark ? '切換至淺色' : '切換至深色'"
-        class="mr-2"
-        @click="onToggleTheme"
-      />
-      <div class="d-flex align-center gap-2 pr-4" style="cursor:pointer" @click="showProfile = true">
-        <v-avatar color="primary" size="32" class="mr-1">
-          <v-img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" cover />
-          <span v-else class="text-caption font-weight-bold text-white">{{ auth.user?.name?.charAt(0) }}</span>
-        </v-avatar>
-        <span class="text-body-2 d-none d-sm-inline">{{ auth.user?.name }}</span>
-        <v-icon icon="mdi-chevron-down" size="16" color="grey" />
-      </div>
-    </template>
-  </v-app-bar>
+  <AppHeader :title="currentPageTitle" @open-profile="showProfile = true" />
 
   <v-main>
     <v-container fluid class="pa-6">
@@ -115,6 +45,8 @@ import { useFeatureStore } from '@/stores/feature'
 import { useThemeStore } from '@/stores/theme'
 import { useToastStore } from '@/stores/toast'
 import ProfileModal from '@/components/ProfileModal.vue'
+import AppSidebar from '@/components/shell/AppSidebar.vue'
+import AppHeader from '@/components/shell/AppHeader.vue'
 
 const auth = useAuthStore()
 const feature = useFeatureStore()
@@ -123,46 +55,11 @@ const vuetifyTheme = useTheme()
 const toast = useToastStore()
 const route = useRoute()
 const router = useRouter()
-const drawer = ref(true)
-const rail = ref(false)
 const showProfile = ref(false)
-
-const isDark = computed(() => themeStore.current === 'dark')
-
-function onToggleTheme() {
-  themeStore.toggle(vuetifyTheme)
-}
 
 onMounted(() => {
   themeStore.init(vuetifyTheme)
   if (!feature.loaded) feature.fetch()
-})
-
-const navItems = computed(() => {
-  if (auth.isAdmin) {
-    // 成員管理已整合進系統管理頁面，admin 側欄不再單獨列出
-    return [
-      { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
-      { to: '/settings', icon: 'mdi-cog', label: '設定管理' },
-      { to: '/system', icon: 'mdi-domain', label: '系統管理' },
-    ]
-  }
-
-  const items = [
-    { to: '/', icon: 'mdi-view-dashboard', label: '首頁總覽' },
-    { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
-    { to: '/todo', icon: 'mdi-checkbox-marked-outline', label: '每日任務' },
-  ]
-
-  if (feature.has('report.stats_dashboard')) {
-    items.push({ to: '/stats', icon: 'mdi-chart-bar', label: '統計分析' })
-  }
-
-  if (auth.isManager && feature.has('member.approval_required')) {
-    items.push({ to: '/manager/approvals', icon: 'mdi-account-check', label: '成員管理' })
-  }
-
-  return items
 })
 
 const pageTitles: Record<string, string> = {
@@ -177,11 +74,6 @@ const pageTitles: Record<string, string> = {
 }
 
 const currentPageTitle = computed(() => pageTitles[route.name as string] ?? '')
-
-function isActive(path: string) {
-  if (path === '/') return route.path === '/'
-  return route.path.startsWith(path)
-}
 
 async function handleLogout() {
   feature.reset()

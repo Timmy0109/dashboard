@@ -9,9 +9,9 @@ declare global {
 
 window.Pusher = Pusher
 
-let _echo: Echo | null = null
+let _echo: Echo<'reverb'> | null = null
 
-export function getEcho(): Echo | null {
+export function getEcho(): Echo<'reverb'> | null {
   if (_echo) return _echo
 
   const key = import.meta.env.VITE_REVERB_APP_KEY as string | undefined

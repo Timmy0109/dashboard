@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\ActivityController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\TaskAttachmentController;
 use App\Http\Controllers\Api\TaskCommentController;
@@ -37,6 +39,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/my-tasks', [DashboardController::class, 'myTasks']);
+
+    // Notifications (per-user, no module gate)
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+
+    // Activity feed (scoped by user)
+    Route::get('/activity', [ActivityController::class, 'index']);
     Route::get('/todo', [TodoController::class, 'index']);
     Route::get('/stats', [StatsController::class, 'index']);
     Route::get('/stats/member/{userId}', [StatsController::class, 'memberDetail']);
@@ -105,11 +115,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('members', [ProjectController::class, 'members']);
         Route::post('members', [ProjectController::class, 'addMember']);
         Route::delete('members/{userId}', [ProjectController::class, 'removeMember']);
+        Route::get('attachments', [TaskAttachmentController::class, 'projectIndex']); // project-wide overview
         Route::apiResource('tasks', TaskController::class)->except(['index']);
         Route::get('tasks', [TaskController::class, 'index']);
         Route::get('tasks/{task}/activities', [TaskController::class, 'activities']);
         Route::get('tasks/{task}/comments', [TaskCommentController::class, 'index']);
         Route::post('tasks/{task}/comments', [TaskCommentController::class, 'store']);
+        Route::post('tasks/{task}/comments/{comment}/reply', [TaskCommentController::class, 'reply']);
         Route::delete('tasks/{task}/comments/{comment}', [TaskCommentController::class, 'destroy']);
         Route::get('tasks/{task}/attachments', [TaskAttachmentController::class, 'index']);
         Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store']);

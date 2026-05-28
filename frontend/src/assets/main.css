@@ -1,3 +1,6 @@
+/* Design tokens — integrated from handoff/tokens.css (2026-05-28, Wave 0) */
+@import './tokens.css';
+
 /* frappe-gantt 獨立 CSS，不依賴 Tailwind */
 @import '/node_modules/frappe-gantt/dist/frappe-gantt.css';
 

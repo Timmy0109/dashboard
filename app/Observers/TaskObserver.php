@@ -2,11 +2,16 @@
 
 namespace App\Observers;
 
+use App\Events\NotificationCreated;
 use App\Events\ProjectProgressUpdated;
 use App\Events\TaskDeleted;
 use App\Events\TaskSaved;
+use App\Models\Notification;
+use App\Models\StatusRule;
 use App\Models\Task;
 use App\Models\TaskActivity;
+use App\Models\User;
+use App\Support\SafeBroadcast;
 
 class TaskObserver
 {
@@ -34,13 +39,13 @@ class TaskObserver
         $actorId = request()->user()?->id ?? $task->created_by;
         $now = now();
 
-        // Assignee changed
+        // Assignee changed — log activity + notify new assignee (if not self-assigning)
         if (array_key_exists('assignee_id', $dirty) && $dirty['assignee_id'] !== $original['assignee_id']) {
             $fromName = $original['assignee_id']
-                ? \App\Models\User::find($original['assignee_id'])?->name ?? '未指派'
+                ? User::find($original['assignee_id'])?->name ?? '未指派'
                 : '未指派';
             $toName = $dirty['assignee_id']
-                ? \App\Models\User::find($dirty['assignee_id'])?->name ?? '未指派'
+                ? User::find($dirty['assignee_id'])?->name ?? '未指派'
                 : '未指派';
 
             TaskActivity::create([
@@ -50,15 +55,29 @@ class TaskObserver
                 'payload'    => ['from' => $fromName, 'to' => $toName],
                 'created_at' => $now,
             ]);
+
+            if ($dirty['assignee_id'] && $dirty['assignee_id'] !== $actorId) {
+                $this->notify(
+                    $dirty['assignee_id'],
+                    'task_assigned',
+                    [
+                        'task_id'      => $task->id,
+                        'task_name'    => $task->name,
+                        'project_id'   => $task->project_id,
+                        'project_name' => $task->project?->name,
+                        'actor_name'   => User::find($actorId)?->name ?? '系統',
+                    ]
+                );
+            }
         }
 
-        // Status changed
+        // Status changed — log activity + notify assignee (if not self-changing)
         if (array_key_exists('status_id', $dirty) && $dirty['status_id'] !== $original['status_id']) {
             $fromName = $original['status_id']
-                ? \App\Models\StatusRule::find($original['status_id'])?->name ?? '未知'
+                ? StatusRule::find($original['status_id'])?->name ?? '未知'
                 : '未知';
             $toName = $dirty['status_id']
-                ? \App\Models\StatusRule::find($dirty['status_id'])?->name ?? '未知'
+                ? StatusRule::find($dirty['status_id'])?->name ?? '未知'
                 : '未知';
 
             TaskActivity::create([
@@ -68,6 +87,22 @@ class TaskObserver
                 'payload'    => ['from' => $fromName, 'to' => $toName],
                 'created_at' => $now,
             ]);
+
+            $assigneeId = $dirty['assignee_id'] ?? $original['assignee_id'] ?? null;
+            if ($assigneeId && $assigneeId !== $actorId) {
+                $this->notify(
+                    $assigneeId,
+                    'task_status_changed',
+                    [
+                        'task_id'    => $task->id,
+                        'task_name'  => $task->name,
+                        'project_id' => $task->project_id,
+                        'from'       => $fromName,
+                        'to'         => $toName,
+                        'actor_name' => User::find($actorId)?->name ?? '系統',
+                    ]
+                );
+            }
         }
 
         // Progress updated (only log if not due to is_completed sync)
@@ -102,8 +137,8 @@ class TaskObserver
         $project = $task->project;
         $project->recalculateProgress();
 
-        broadcast(new TaskSaved($task));
-        broadcast(new ProjectProgressUpdated($project->fresh()));
+        SafeBroadcast::dispatch(new TaskSaved($task));
+        SafeBroadcast::dispatch(new ProjectProgressUpdated($project->fresh()));
     }
 
     public function deleted(Task $task): void
@@ -114,7 +149,19 @@ class TaskObserver
         $project = $task->project;
         $project->recalculateProgress();
 
-        broadcast(new TaskDeleted($taskId, $projectId));
-        broadcast(new ProjectProgressUpdated($project->fresh()));
+        SafeBroadcast::dispatch(new TaskDeleted($taskId, $projectId));
+        SafeBroadcast::dispatch(new ProjectProgressUpdated($project->fresh()));
+    }
+
+    /** Create + broadcast a notification. */
+    private function notify(int $userId, string $type, array $payload): void
+    {
+        $notification = Notification::create([
+            'user_id' => $userId,
+            'type'    => $type,
+            'payload' => $payload,
+        ]);
+
+        SafeBroadcast::dispatch(new NotificationCreated($notification));
     }
 }

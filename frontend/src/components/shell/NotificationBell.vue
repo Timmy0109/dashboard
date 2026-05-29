@@ -4,33 +4,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import { useNotificationStore } from '@/stores/notification'
 import type { Notification } from '@/types/notification'
 
-// Wave 1 Agent D 會建立 `@/stores/notification` store。
-// 此 worktree 尚未包含該檔案，先用本地 stub 以通過 vue-tsc / build。
-// Wave gate 合併時改回 `useNotificationStore` import。
-//
-// 預期介面：
-//   notifications: Notification[]
-//   unreadCount: number
-//   fetch(): void
-//   markAsRead(id: number): void
-//   markAllRead(): void
-interface NotificationStoreLike {
-  notifications: Notification[]
-  unreadCount: number
-  fetch: () => void
-  markAsRead: (id: number) => void
-  markAllRead: () => void
-}
-
-const notificationStore: NotificationStoreLike = {
-  notifications: [],
-  unreadCount: 0,
-  fetch: () => {},
-  markAsRead: (_id: number) => {},
-  markAllRead: () => {},
-}
+const notificationStore = useNotificationStore()
 
 const router = useRouter()
 const menuOpen = ref(false)

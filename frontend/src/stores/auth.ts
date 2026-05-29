@@ -53,6 +53,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updatePassword(current_password: string, password: string, password_confirmation: string) {
+    await api.put('/profile/password', { current_password, password, password_confirmation })
+  }
+
   async function updateAvatar(file: File) {
     const form = new FormData()
     form.append('avatar', file)
@@ -62,5 +66,5 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value) user.value.avatar_url = data.avatar_url
   }
 
-  return { user, loading, isLoggedIn, isAdmin, isManager, canManageMembers, fetchUser, login, logout, updateProfile, updateAvatar }
+  return { user, loading, isLoggedIn, isAdmin, isManager, canManageMembers, fetchUser, login, logout, updateProfile, updatePassword, updateAvatar }
 })

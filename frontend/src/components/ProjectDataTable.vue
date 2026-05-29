@@ -108,7 +108,8 @@ const headers = [
 ]
 
 function isOverdue(project: ProjectListItem) {
-  if (!project.due_date || project.is_completed) return false
+  if (!project.due_date) return false
+  if (project.is_completed || project.progress_percent >= 100) return false
   return new Date(project.due_date) < new Date()
 }
 </script>

@@ -11,14 +11,19 @@ import HBarChart from '@/components/charts/HBarChart.vue'
 
 const props = defineProps<{ projects: ProjectListItem[] }>()
 
+// 「已完成」= 手動標記 OR 進度滿 100%（進度由子任務平均自動計算）
+function isCompleted(p: ProjectListItem) {
+  return p.is_completed || p.progress_percent >= 100
+}
+
 function isOverdue(p: ProjectListItem) {
-  if (!p.due_date || p.is_completed) return false
+  if (!p.due_date || isCompleted(p)) return false
   return new Date(p.due_date) < new Date()
 }
 
 const total = computed(() => props.projects.length)
-const completed = computed(() => props.projects.filter(p => p.is_completed).length)
-const inProgress = computed(() => props.projects.filter(p => !p.is_completed && p.progress_percent > 0).length)
+const completed = computed(() => props.projects.filter(isCompleted).length)
+const inProgress = computed(() => props.projects.filter(p => !isCompleted(p) && p.progress_percent > 0).length)
 const overdue = computed(() => props.projects.filter(isOverdue).length)
 
 interface DonutDatum { label: string; value: number; color: string }

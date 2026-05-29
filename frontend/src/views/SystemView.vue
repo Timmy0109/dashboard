@@ -1,12 +1,59 @@
 <template>
   <div>
+    <!-- Page header -->
     <div class="mb-6 d-flex align-center justify-space-between flex-wrap gap-3">
       <div>
         <h2 class="text-h6 font-weight-bold">系統管理</h2>
-        <p class="text-body-2 text-grey">管理所有公司帳戶與功能權限</p>
+        <p class="text-body-2 text-medium-emphasis">管理所有公司帳戶、成員與功能權限</p>
       </div>
-      <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="showCreate = true">新增公司</v-btn>
+      <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="showCreate = true">
+        新增公司
+      </v-btn>
     </div>
+
+    <!-- KPI strip -->
+    <v-row dense class="mb-4">
+      <v-col cols="12" sm="6" md="3">
+        <KPICard
+          label="管理公司"
+          :value="activeCompanies"
+          icon="mdi-domain"
+          icon-color="primary"
+          accent="primary"
+          sub="運作中的公司數"
+        />
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <KPICard
+          label="全平台成員"
+          :value="totalMembers"
+          icon="mdi-account-group"
+          icon-color="info"
+          accent="info"
+          sub="所有公司成員總數"
+        />
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <KPICard
+          label="全平台 Manager"
+          :value="totalManagers"
+          icon="mdi-account-tie"
+          icon-color="success"
+          accent="success"
+          sub="跨公司經理數"
+        />
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <KPICard
+          label="已停用 / 已刪除"
+          :value="suspendedCount + trashedCount"
+          icon="mdi-domain-off"
+          icon-color="warning"
+          accent="warning"
+          :sub="`停用 ${suspendedCount}・已刪 ${trashedCount}`"
+        />
+      </v-col>
+    </v-row>
 
     <!-- Company list -->
     <v-card rounded="xl">
@@ -17,7 +64,7 @@
         :search="search"
         hover
         item-value="id"
-        @click:row="(_e: Event, { item }: any) => !item.deleted_at && openEmployees(item)"
+        @click:row="(_e: Event, ctx: { item: Company }) => !ctx.item.deleted_at && openEmployees(ctx.item)"
       >
         <template #top>
           <v-toolbar flat rounded="t-xl">
@@ -32,16 +79,19 @@
                 rounded="lg"
                 style="max-width:260px"
               />
-              <v-btn-toggle v-model="showTrashed" mandatory density="compact" rounded="lg" color="primary">
-                <v-btn :value="false" size="small">啟用中</v-btn>
-                <v-btn :value="true" size="small">已刪除</v-btn>
-              </v-btn-toggle>
+              <ChipGroup
+                v-model="trashedFilter"
+                :items="[
+                  { value: 'active', label: '啟用中', count: activeCompanies + suspendedCount },
+                  { value: 'trashed', label: '已刪除', count: trashedCount },
+                ]"
+              />
             </div>
           </v-toolbar>
         </template>
 
         <template #item.name="{ item }">
-          <span :class="item.deleted_at ? 'text-grey text-decoration-line-through' : 'font-weight-medium'">
+          <span :class="item.deleted_at ? 'text-medium-emphasis text-decoration-line-through' : 'font-weight-medium'">
             {{ item.name }}
           </span>
         </template>
@@ -78,8 +128,12 @@
         </template>
 
         <template #no-data>
-          <div class="text-center py-8 text-grey">
-            {{ showTrashed ? '沒有已刪除的公司' : '尚無公司，點擊新增' }}
+          <div class="py-6">
+            <EmptyState
+              :icon="trashedFilter === 'trashed' ? 'mdi-trash-can-outline' : 'mdi-domain-plus'"
+              :title="trashedFilter === 'trashed' ? '沒有已刪除的公司' : '尚無公司資料'"
+              :sub="trashedFilter === 'trashed' ? '已刪除的公司會出現在這裡，可隨時還原。' : '點擊右上角「新增公司」開始建立。'"
+            />
           </div>
         </template>
       </v-data-table>
@@ -111,7 +165,7 @@
         </v-card-title>
         <v-card-text class="pa-5">
           <p class="text-body-2">確定要刪除公司「<strong>{{ deleteTarget?.name }}</strong>」？</p>
-          <p class="text-caption text-grey mt-1">公司資料將被軟刪除，可在「已刪除」頁籤中還原。</p>
+          <p class="text-caption text-medium-emphasis mt-1">公司資料將被軟刪除，可在「已刪除」頁籤中還原。</p>
         </v-card-text>
         <v-card-actions class="pa-5 pt-0 gap-3">
           <v-btn variant="outlined" color="grey" class="flex-grow-1" @click="showDeleteConfirm = false">取消</v-btn>
@@ -136,16 +190,16 @@
             <v-progress-circular indeterminate color="primary" />
           </div>
           <div v-else class="pt-2">
-            <div v-for="cat in categories" :key="cat.key" class="mb-5">
-              <div class="text-caption text-grey font-weight-bold text-uppercase mb-2">{{ cat.label }}</div>
-              <v-list rounded="lg" bg-color="grey-lighten-5" class="pa-0">
+            <div v-for="cat in featureCategories" :key="cat.key" class="mb-5">
+              <div class="text-caption text-medium-emphasis font-weight-bold text-uppercase mb-2">{{ cat.label }}</div>
+              <v-list rounded="lg" bg-color="surface-variant" class="pa-0">
                 <template v-for="(f, idx) in featuresByCategory(cat.key)" :key="f.key">
                   <v-list-item class="px-4 py-2">
                     <template #title>
                       <span class="text-body-2 font-weight-medium">{{ f.name }}</span>
                     </template>
                     <template #subtitle>
-                      <span class="text-caption text-grey">{{ f.description }}</span>
+                      <span class="text-caption text-medium-emphasis">{{ f.description }}</span>
                     </template>
                     <template #append>
                       <v-switch
@@ -175,7 +229,9 @@
             <div class="text-caption" style="color:rgba(255,255,255,.7)">公司成員管理</div>
           </div>
           <div class="d-flex align-center gap-2">
-            <v-btn color="white" variant="tonal" prepend-icon="mdi-account-plus" size="small" rounded="lg" @click="showUserModal = true">新增使用者</v-btn>
+            <v-btn color="white" variant="tonal" prepend-icon="mdi-account-plus" size="small" rounded="lg" @click="showUserModal = true">
+              新增使用者
+            </v-btn>
             <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="showEmployees = false" />
           </div>
         </v-card-title>
@@ -217,7 +273,7 @@
                 </v-avatar>
                 <div>
                   <div class="text-body-2 font-weight-medium">{{ item.name }}</div>
-                  <div class="text-caption text-grey">{{ item.email }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ item.email }}</div>
                 </div>
               </div>
             </template>
@@ -236,11 +292,15 @@
               </v-chip>
             </template>
             <template #item.created_at="{ item }">
-              <span class="text-caption text-grey">{{ item.created_at }}</span>
+              <span class="text-caption text-medium-emphasis">{{ item.created_at }}</span>
             </template>
             <template #no-data>
-              <div class="text-center py-8 text-grey text-body-2">
-                {{ employeeSearch ? '找不到符合的員工' : '此公司尚無員工' }}
+              <div class="py-6">
+                <EmptyState
+                  icon="mdi-account-search-outline"
+                  :title="employeeSearch ? '找不到符合的員工' : '此公司尚無員工'"
+                  :sub="employeeSearch ? '試試其他關鍵字' : '可點擊上方「新增使用者」加入第一位員工'"
+                />
               </div>
             </template>
           </v-data-table>
@@ -249,7 +309,7 @@
         <!-- Footer stats -->
         <v-divider />
         <div class="px-5 py-3 d-flex align-center gap-4" style="flex-shrink:0">
-          <span class="text-caption text-grey">
+          <span class="text-caption text-medium-emphasis">
             共 <strong>{{ employees.length }}</strong> 名員工
           </span>
           <v-chip size="x-small" color="primary" variant="tonal">
@@ -278,15 +338,41 @@ import { ref, computed, onMounted } from 'vue'
 import { useCompanyStore, type Company, type CompanyFeature } from '@/stores/company'
 import { useToast } from '@/composables/useToast'
 import UserModal from '@/components/UserModal.vue'
+import KPICard from '@/components/ui/KPICard.vue'
+import ChipGroup from '@/components/ui/ChipGroup.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import api from '@/lib/axios'
+
+interface Employee {
+  id: number
+  name: string
+  email: string
+  role: 'admin' | 'manager' | 'member'
+  status: 'active' | 'inactive'
+  created_at: string
+}
 
 const store = useCompanyStore()
 const toast = useToast()
 const search = ref('')
-const showTrashed = ref(false)
+const trashedFilter = ref<'active' | 'trashed'>('active')
+
+const activeCompanies = computed(() =>
+  store.list.filter(c => !c.deleted_at && c.status === 'active').length,
+)
+const suspendedCount = computed(() =>
+  store.list.filter(c => !c.deleted_at && c.status !== 'active').length,
+)
+const trashedCount = computed(() => store.list.filter(c => !!c.deleted_at).length)
+const totalMembers = computed(() =>
+  store.list.filter(c => !c.deleted_at).reduce((sum, c) => sum + (c.members_count ?? 0), 0),
+)
+const totalManagers = computed(() =>
+  store.list.filter(c => !c.deleted_at).reduce((sum, c) => sum + (c.managers_count ?? 0), 0),
+)
 
 const filteredCompanies = computed(() =>
-  store.list.filter(c => showTrashed.value ? !!c.deleted_at : !c.deleted_at)
+  store.list.filter(c => trashedFilter.value === 'trashed' ? !!c.deleted_at : !c.deleted_at),
 )
 
 const showCreate = ref(false)
@@ -304,7 +390,7 @@ const featuresLoading = ref(false)
 
 const showEmployees = ref(false)
 const employeeCompany = ref<Company | null>(null)
-const employees = ref<any[]>([])
+const employees = ref<Employee[]>([])
 const employeesLoading = ref(false)
 const employeeSearch = ref('')
 const showUserModal = ref(false)
@@ -327,12 +413,12 @@ const employeeHeaders = [
   { title: '加入日期',     key: 'created_at', sortable: true },
 ]
 
-const categories = [
+const featureCategories = [
   { key: 'member',  label: '成員管理' },
   { key: 'project', label: '專案功能' },
   { key: 'report',  label: '報表分析' },
   { key: 'system',  label: '系統設定' },
-]
+] as const
 
 function featuresByCategory(cat: string) {
   return featureList.value.filter(f => f.category === cat)
@@ -431,7 +517,7 @@ async function openEmployees(company: Company) {
   employeesLoading.value = true
   employees.value = []
   try {
-    const { data } = await api.get(`/admin/companies/${company.id}/users`)
+    const { data } = await api.get<Employee[]>(`/admin/companies/${company.id}/users`)
     employees.value = data
   } finally {
     employeesLoading.value = false

@@ -7,7 +7,7 @@
       <template v-if="!selectedCompany">
         <div class="mb-6">
           <h2 class="text-h6 font-weight-bold">專案管理</h2>
-          <p class="text-body-2 text-grey">選擇公司以查看其專案</p>
+          <p class="text-body-2 text-medium-emphasis">選擇公司以查看其專案</p>
         </div>
 
         <v-card rounded="xl">
@@ -55,7 +55,7 @@
             </template>
 
             <template #no-data>
-              <div class="text-center py-8 text-grey">目前沒有公司</div>
+              <EmptyState icon="mdi-domain" title="目前沒有公司" sub="平台尚未建立任何公司" />
             </template>
           </v-data-table>
         </v-card>
@@ -76,7 +76,7 @@
               返回公司列表
             </v-btn>
             <h2 class="text-h6 font-weight-bold">{{ selectedCompany.name }}</h2>
-            <p class="text-body-2 text-grey">專案列表</p>
+            <p class="text-body-2 text-medium-emphasis">專案列表</p>
           </div>
           <div class="d-flex gap-2 flex-wrap">
             <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
@@ -85,19 +85,41 @@
           </div>
         </div>
 
+        <ProjectsChartStrip :projects="store.list" class="mb-5" />
+
+        <ProjectsToolbar
+          v-model:search="projectSearch"
+          v-model:status="statusFilter"
+          v-model:view="viewMode"
+          :status-options="statusFilterOptions"
+        />
+
         <ProjectDataTable
-          :projects="store.list"
+          v-if="viewMode === 'table'"
+          :projects="filteredProjects"
           :loading="store.listLoading"
           @edit="openEdit"
           @delete="handleDelete"
         />
+        <ProjectCardGrid
+          v-else
+          :projects="filteredProjects"
+          :loading="store.listLoading"
+        />
+
+        <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
+          共 {{ filteredProjects.length }} / {{ store.list.length }} 個專案
+        </div>
       </template>
     </template>
 
     <!-- ── MANAGER / MEMBER: Tabs (Projects | My Tasks) ─────────────────── -->
     <template v-else>
       <div class="mb-5 d-flex align-center justify-space-between flex-wrap gap-3">
-        <h2 class="text-h6 font-weight-bold">專案管理</h2>
+        <div>
+          <h2 class="text-h6 font-weight-bold">專案管理</h2>
+          <p class="text-body-2 text-medium-emphasis">我的專案</p>
+        </div>
         <div class="d-flex gap-2 flex-wrap">
           <template v-if="auth.canManageMembers && activeTab === 'projects'">
             <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
@@ -124,12 +146,31 @@
       <v-tabs-window v-model="activeTab">
         <!-- Projects tab -->
         <v-tabs-window-item value="projects">
+          <ProjectsChartStrip :projects="store.list" class="mb-5" />
+
+          <ProjectsToolbar
+            v-model:search="projectSearch"
+            v-model:status="statusFilter"
+            v-model:view="viewMode"
+            :status-options="statusFilterOptions"
+          />
+
           <ProjectDataTable
-            :projects="store.list"
+            v-if="viewMode === 'table'"
+            :projects="filteredProjects"
             :loading="store.listLoading"
             @edit="openEdit"
             @delete="handleDelete"
           />
+          <ProjectCardGrid
+            v-else
+            :projects="filteredProjects"
+            :loading="store.listLoading"
+          />
+
+          <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
+            共 {{ filteredProjects.length }} / {{ store.list.length }} 個專案
+          </div>
         </v-tabs-window-item>
 
         <!-- My Tasks tab -->
@@ -227,9 +268,11 @@
               </template>
 
               <template #no-data>
-                <div class="text-center py-8 text-grey">
-                  {{ taskTab === 'overdue' ? '沒有逾期任務' : taskTab === 'completed' ? '尚無已完成任務' : '目前沒有任務' }}
-                </div>
+                <EmptyState
+                  icon="mdi-format-list-checks"
+                  :title="taskTab === 'overdue' ? '沒有逾期任務' : taskTab === 'completed' ? '尚無已完成任務' : '目前沒有任務'"
+                  sub="切換上方分頁或建立新任務"
+                />
               </template>
             </v-data-table>
           </v-card>
@@ -291,6 +334,10 @@ import ProjectModal from '@/components/ProjectModal.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import ProjectDataTable from '@/components/ProjectDataTable.vue'
 import ImportDialog from '@/components/ImportDialog.vue'
+import ProjectsChartStrip from '@/components/project/ProjectsChartStrip.vue'
+import ProjectsToolbar from '@/components/project/ProjectsToolbar.vue'
+import ProjectCardGrid from '@/components/project/ProjectCardGrid.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import api from '@/lib/axios'
 
 interface Company {
@@ -355,6 +402,41 @@ const editingProject = ref<ProjectListItem | null>(null)
 
 // Member/manager tabs
 const activeTab = ref<'projects' | 'tasks'>('projects')
+
+// Project list filters
+const projectSearch = ref('')
+const statusFilter = ref<string>('all')
+const viewMode = ref<'table' | 'card'>('table')
+
+const statusFilterOptions = computed(() => {
+  const seen = new Map<string, { value: string; label: string; count: number }>()
+  seen.set('all', { value: 'all', label: '全部', count: store.list.length })
+  for (const p of store.list) {
+    if (!p.status) continue
+    const key = String(p.status.id)
+    if (!seen.has(key)) {
+      seen.set(key, { value: key, label: p.status.name, count: 0 })
+    }
+    seen.get(key)!.count++
+  }
+  return Array.from(seen.values())
+})
+
+const filteredProjects = computed<ProjectListItem[]>(() => {
+  let list = store.list
+  if (statusFilter.value !== 'all') {
+    list = list.filter(p => p.status && String(p.status.id) === statusFilter.value)
+  }
+  const q = projectSearch.value.trim().toLowerCase()
+  if (q) {
+    list = list.filter(p =>
+      p.name.toLowerCase().includes(q)
+      || (p.project_no ?? '').toLowerCase().includes(q)
+      || (p.owner?.name ?? '').toLowerCase().includes(q),
+    )
+  }
+  return list
+})
 
 // Task filter tabs
 const taskTab = ref('all')

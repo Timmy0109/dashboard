@@ -186,171 +186,45 @@
       </template>
     </template>
 
-    <!-- ── MANAGER / MEMBER: Tabs (Projects | My Tasks) ─────────────────── -->
+    <!-- ── MANAGER / MEMBER: Projects only ──────────────────────────────── -->
     <template v-else>
       <div class="mb-5 d-flex align-center justify-space-between flex-wrap gap-3">
         <div>
           <h2 class="text-h6 font-weight-bold">專案管理</h2>
           <p class="text-body-2 text-medium-emphasis">我的專案</p>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <template v-if="auth.canManageMembers && activeTab === 'projects'">
-            <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
-            <v-btn variant="outlined" color="grey" prepend-icon="mdi-download" rounded="lg" :loading="exporting" @click="exportAll">匯出全部</v-btn>
-            <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate">新增專案</v-btn>
-          </template>
-          <v-btn
-            v-if="activeTab === 'tasks'"
-            color="primary"
-            prepend-icon="mdi-plus"
-            rounded="lg"
-            @click="openAddTask"
-          >
-            新增任務
-          </v-btn>
+        <div v-if="auth.canManageMembers" class="d-flex gap-2 flex-wrap">
+          <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
+          <v-btn variant="outlined" color="grey" prepend-icon="mdi-download" rounded="lg" :loading="exporting" @click="exportAll">匯出全部</v-btn>
+          <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate">新增專案</v-btn>
         </div>
       </div>
 
-      <v-tabs v-model="activeTab" color="primary" class="mb-4">
-        <v-tab value="projects">專案列表</v-tab>
-        <v-tab value="tasks">我的任務</v-tab>
-      </v-tabs>
+      <ProjectsChartStrip :projects="store.list" class="mb-5" />
 
-      <v-tabs-window v-model="activeTab">
-        <!-- Projects tab -->
-        <v-tabs-window-item value="projects">
-          <ProjectsChartStrip :projects="store.list" class="mb-5" />
+      <ProjectsToolbar
+        v-model:search="projectSearch"
+        v-model:status="statusFilter"
+        v-model:view="viewMode"
+        :status-options="statusFilterOptions"
+      />
 
-          <ProjectsToolbar
-            v-model:search="projectSearch"
-            v-model:status="statusFilter"
-            v-model:view="viewMode"
-            :status-options="statusFilterOptions"
-          />
+      <ProjectDataTable
+        v-if="viewMode === 'table'"
+        :projects="filteredProjects"
+        :loading="store.listLoading"
+        @edit="openEdit"
+        @delete="handleDelete"
+      />
+      <ProjectCardGrid
+        v-else
+        :projects="filteredProjects"
+        :loading="store.listLoading"
+      />
 
-          <ProjectDataTable
-            v-if="viewMode === 'table'"
-            :projects="filteredProjects"
-            :loading="store.listLoading"
-            @edit="openEdit"
-            @delete="handleDelete"
-          />
-          <ProjectCardGrid
-            v-else
-            :projects="filteredProjects"
-            :loading="store.listLoading"
-          />
-
-          <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
-            共 {{ filteredProjects.length }} / {{ store.list.length }} 個專案
-          </div>
-        </v-tabs-window-item>
-
-        <!-- My Tasks tab -->
-        <v-tabs-window-item value="tasks">
-          <v-card rounded="xl">
-            <v-data-table
-              :headers="taskHeaders"
-              :items="filteredTasks"
-              :loading="todoStore.loading"
-              :search="taskSearch"
-              hover
-              item-value="id"
-              @click:row="(_e: Event, { item }: { item: TodoTask }) => openEditTask(item)"
-            >
-              <template #top>
-                <v-toolbar flat rounded="t-xl">
-                  <div class="d-flex align-center gap-3 pa-3 w-100 flex-wrap">
-                    <v-text-field
-                      v-model="taskSearch"
-                      prepend-inner-icon="mdi-magnify"
-                      placeholder="搜尋任務..."
-                      variant="outlined"
-                      density="compact"
-                      hide-details
-                      rounded="lg"
-                      style="max-width:260px"
-                    />
-                    <v-chip-group v-model="taskTab" mandatory selected-class="bg-primary text-white" class="flex-shrink-0">
-                      <v-chip v-for="t in taskTabs" :key="t.value" :value="t.value" size="small" filter>
-                        {{ t.label }}（{{ getTaskCount(t.value) }}）
-                      </v-chip>
-                    </v-chip-group>
-                  </div>
-                </v-toolbar>
-              </template>
-
-              <template #item.assignee="{ item }">
-                <div v-if="item.assignee" class="d-flex align-center gap-2">
-                  <v-avatar color="primary" size="26" class="mr-2">
-                    <span class="text-caption text-white font-weight-bold">{{ item.assignee.name.charAt(0) }}</span>
-                  </v-avatar>
-                  <span class="text-body-2">{{ item.assignee.name }}</span>
-                </div>
-                <span v-else class="text-grey text-body-2">未指派</span>
-              </template>
-
-              <template #item.end_date="{ item }">
-                <span :class="item.is_overdue ? 'text-error font-weight-medium' : ''">
-                  <v-icon v-if="item.is_overdue" icon="mdi-alert-circle" size="14" color="error" class="mr-1" />
-                  {{ item.end_date }}
-                </span>
-              </template>
-
-              <template #item.priority="{ item }">
-                <v-chip
-                  v-if="item.priority"
-                  size="small"
-                  :style="{ backgroundColor: item.priority.color + '22', color: item.priority.color }"
-                  class="font-weight-medium"
-                >
-                  {{ item.priority.name }}
-                </v-chip>
-              </template>
-
-              <template #item.status="{ item }">
-                <v-chip
-                  v-if="item.status"
-                  size="small"
-                  :style="{ backgroundColor: item.status.color + '22', color: item.status.color }"
-                >
-                  <v-icon :icon="statusIcon(item.status.icon)" size="12" class="mr-1" />
-                  {{ item.status.name }}
-                </v-chip>
-              </template>
-
-              <template #item.progress="{ item }">
-                <div class="d-flex align-center gap-2" style="min-width:100px">
-                  <v-progress-linear
-                    :model-value="item.progress"
-                    :color="item.is_overdue ? 'error' : 'primary'"
-                    bg-color="grey-lighten-3"
-                    rounded
-                    height="5"
-                    class="flex-grow-1"
-                  />
-                  <span class="text-caption text-grey-darken-1">{{ item.progress }}%</span>
-                </div>
-              </template>
-
-              <template #item.actions="{ item }">
-                <div class="d-flex gap-1" @click.stop>
-                  <v-btn icon="mdi-pencil" size="small" variant="text" color="grey" @click="openEditTask(item)" />
-                  <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="handleDeleteTask(item)" />
-                </div>
-              </template>
-
-              <template #no-data>
-                <EmptyState
-                  icon="mdi-format-list-checks"
-                  :title="taskTab === 'overdue' ? '沒有逾期任務' : taskTab === 'completed' ? '尚無已完成任務' : '目前沒有任務'"
-                  sub="切換上方分頁或建立新任務"
-                />
-              </template>
-            </v-data-table>
-          </v-card>
-        </v-tabs-window-item>
-      </v-tabs-window>
+      <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
+        共 {{ filteredProjects.length }} / {{ store.list.length }} 個專案
+      </div>
     </template>
 
     <!-- Import Dialog -->
@@ -364,47 +238,15 @@
       @close="showModal = false"
       @saved="onProjectSaved"
     />
-
-    <!-- Project picker for task add -->
-    <v-dialog v-model="showProjectPicker" max-width="400" persistent>
-      <v-card rounded="xl">
-        <v-card-title class="pa-5 pb-3">選擇所屬專案</v-card-title>
-        <v-card-text>
-          <v-select
-            v-model="selectedProjectId"
-            :items="store.list"
-            item-title="name"
-            item-value="id"
-            label="專案"
-            placeholder="請選擇專案"
-          />
-        </v-card-text>
-        <v-card-actions class="pa-4 pt-0 gap-2">
-          <v-btn variant="outlined" color="grey" flex-grow-1 @click="showProjectPicker = false">取消</v-btn>
-          <v-btn color="primary" flex-grow-1 :disabled="!selectedProjectId" @click="confirmProjectPick">繼續</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Task Modal -->
-    <TaskModal
-      v-if="showTaskModal && activeProjectId !== null"
-      :task="editingTask"
-      :project-id="activeProjectId"
-      @close="showTaskModal = false"
-      @saved="onTaskSaved"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useProjectStore, type ProjectListItem, type Task } from '@/stores/project'
-import { useTodoStore, type TodoTask } from '@/stores/todo'
+import { useProjectStore, type ProjectListItem } from '@/stores/project'
 import { useToast } from '@/composables/useToast'
 import ProjectModal from '@/components/ProjectModal.vue'
-import TaskModal from '@/components/TaskModal.vue'
 import ProjectDataTable from '@/components/ProjectDataTable.vue'
 import ImportDialog from '@/components/ImportDialog.vue'
 import ProjectsChartStrip from '@/components/project/ProjectsChartStrip.vue'
@@ -425,7 +267,6 @@ interface Company {
 
 const auth = useAuthStore()
 const store = useProjectStore()
-const todoStore = useTodoStore()
 const toast = useToast()
 
 // Admin company state
@@ -504,9 +345,6 @@ async function onImportDone() {
 const showModal = ref(false)
 const editingProject = ref<ProjectListItem | null>(null)
 
-// Member/manager tabs
-const activeTab = ref<'projects' | 'tasks'>('projects')
-
 // Project list filters
 const projectSearch = ref('')
 const statusFilter = ref<string>('all')
@@ -542,59 +380,6 @@ const filteredProjects = computed<ProjectListItem[]>(() => {
   return list
 })
 
-// Task filter tabs
-const taskTab = ref('all')
-const taskSearch = ref('')
-const taskTabs = [
-  { label: '全部',   value: 'all' },
-  { label: '待處理', value: 'pending' },
-  { label: '進行中', value: 'in_progress' },
-  { label: '已完成', value: 'completed' },
-  { label: '逾期',   value: 'overdue' },
-]
-
-const taskHeaders = [
-  { title: '任務名稱', key: 'name' },
-  { title: '所屬專案', key: 'project_name', sortable: true },
-  { title: '負責人',  key: 'assignee',     sortable: false },
-  { title: '截止日期', key: 'end_date',     sortable: true },
-  { title: '優先級',  key: 'priority',     sortable: false },
-  { title: '狀態',   key: 'status',       sortable: false },
-  { title: '進度',   key: 'progress',     sortable: true },
-  { title: '',      key: 'actions',      sortable: false, width: '80px' },
-]
-
-const filteredTasks = computed(() => {
-  const tasks = todoStore.tasks
-  if (taskTab.value === 'completed')  return tasks.filter(t => t.is_completed)
-  if (taskTab.value === 'overdue')    return tasks.filter(t => t.is_overdue && !t.is_completed)
-  if (taskTab.value === 'pending')    return tasks.filter(t => t.progress === 0 && !t.is_completed)
-  if (taskTab.value === 'in_progress')return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed)
-  return tasks
-})
-
-function statusIcon(icon: string | null | undefined) {
-  if (!icon) return 'mdi-circle-outline'
-  const normalized = icon.replace(/_/g, '-')
-  return normalized.startsWith('mdi-') ? normalized : `mdi-${normalized}`
-}
-
-function getTaskCount(tab: string) {
-  const tasks = todoStore.tasks
-  if (tab === 'completed')   return tasks.filter(t => t.is_completed).length
-  if (tab === 'overdue')     return tasks.filter(t => t.is_overdue && !t.is_completed).length
-  if (tab === 'pending')     return tasks.filter(t => t.progress === 0 && !t.is_completed).length
-  if (tab === 'in_progress') return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length
-  return tasks.length
-}
-
-// Task modal state
-const showTaskModal = ref(false)
-const showProjectPicker = ref(false)
-const editingTask = ref<Task | null>(null)
-const activeProjectId = ref<number | null>(null)
-const selectedProjectId = ref<number | null>(null)
-
 async function selectCompany(company: Company) {
   selectedCompany.value = company
   await store.fetchList(company.id)
@@ -624,57 +409,6 @@ async function handleDelete(project: ProjectListItem) {
   await store.deleteProject(project.id)
 }
 
-function openAddTask() {
-  if (store.list.length === 0) {
-    toast.error('請先建立專案')
-    return
-  }
-  selectedProjectId.value = null
-  showProjectPicker.value = true
-}
-
-function confirmProjectPick() {
-  if (!selectedProjectId.value) return
-  activeProjectId.value = selectedProjectId.value
-  editingTask.value = null
-  showProjectPicker.value = false
-  showTaskModal.value = true
-}
-
-function openEditTask(task: TodoTask) {
-  editingTask.value = {
-    id: task.id,
-    project_id: task.project_id,
-    name: task.name,
-    note: task.note,
-    start_date: task.start_date,
-    end_date: task.end_date,
-    progress: task.progress,
-    is_completed: task.is_completed,
-    assignee: task.assignee,
-    status: task.status ? { id: task.status.id, name: task.status.name, icon: task.status.icon, color: task.status.color } : null,
-    priority: task.priority,
-  }
-  activeProjectId.value = task.project_id
-  showTaskModal.value = true
-}
-
-async function handleDeleteTask(task: TodoTask) {
-  if (!confirm(`確定要刪除任務「${task.name}」？`)) return
-  try {
-    await todoStore.deleteTask(task.project_id, task.id)
-    toast.success('已刪除')
-  } catch {
-    toast.error('刪除失敗')
-  }
-}
-
-async function onTaskSaved() {
-  showTaskModal.value = false
-  await todoStore.fetch()
-  toast.success('儲存成功')
-}
-
 onMounted(async () => {
   if (auth.isAdmin) {
     companiesLoading.value = true
@@ -685,7 +419,7 @@ onMounted(async () => {
       companiesLoading.value = false
     }
   } else {
-    await Promise.all([store.fetchList(), todoStore.fetch()])
+    await store.fetchList()
   }
 })
 </script>

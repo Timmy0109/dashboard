@@ -1,82 +1,191 @@
 <template>
-  <v-dialog :model-value="true" max-width="560" scrollable persistent @update:model-value="$emit('close')">
-    <v-card rounded="xl">
-      <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between bg-primary rounded-t-xl">
-        <span class="text-body-1 font-weight-semibold text-white">{{ project ? '編輯專案' : '新增專案' }}</span>
+  <v-dialog
+    :model-value="true"
+    max-width="640"
+    scrollable
+    persistent
+    @update:model-value="$emit('close')"
+  >
+    <v-card rounded="xl" class="pms-modal">
+      <!-- Header -->
+      <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+        <div class="d-flex align-center gap-2">
+          <v-icon
+            :icon="props.project ? 'mdi-folder-edit-outline' : 'mdi-folder-plus-outline'"
+            color="white"
+            size="20"
+          />
+          <span class="text-body-1 font-weight-semibold text-white">
+            {{ props.project ? '編輯專案' : '新增專案' }}
+          </span>
+        </div>
         <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="$emit('close')" />
       </v-card-title>
-      <v-divider />
-      <v-card-text class="pa-5">
-        <v-form @submit.prevent="handleSubmit">
-          <v-text-field v-model="form.name" label="專案名稱" required autofocus class="mb-3" />
-          <v-text-field v-model="form.project_no" label="專案編號" placeholder="例：P-2026-001" class="mb-3" />
 
-          <v-row dense class="mb-1">
-            <v-col cols="6">
-              <v-select
-                v-model="form.category_id"
-                label="類型"
-                :items="lookup.categories.map(c => ({ title: c.name, value: c.id }))"
-                required
-              />
-            </v-col>
-            <v-col cols="6">
-              <v-select
-                v-model="form.priority_id"
-                label="優先級"
-                :items="lookup.priorities.map(p => ({ title: p.name, value: p.id }))"
-                required
-              />
-            </v-col>
-          </v-row>
+      <v-card-text class="pa-6">
+        <v-form ref="formRef" @submit.prevent="handleSubmit">
+          <!-- 基本資訊 -->
+          <div class="pms-section">
+            <div class="pms-section-title">
+              <v-icon icon="mdi-information-outline" size="16" class="mr-1" />基本資訊
+            </div>
+            <v-row dense>
+              <v-col cols="12" sm="8">
+                <v-text-field
+                  v-model="form.name"
+                  label="專案名稱"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[(v: string) => !!v || '請輸入專案名稱']"
+                  required
+                  autofocus
+                  hide-details="auto"
+                />
+              </v-col>
+              <v-col cols="12" sm="4">
+                <v-text-field
+                  v-model="form.project_no"
+                  label="專案編號"
+                  placeholder="例：P-2026-001"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details="auto"
+                />
+              </v-col>
+            </v-row>
+          </div>
 
-          <v-select
-            v-model="form.status_id"
-            label="狀態"
-            :items="lookup.statuses.map(s => ({ title: s.name, value: s.id }))"
-            required
-            class="mb-3"
-          />
+          <!-- 分類 -->
+          <div class="pms-section">
+            <div class="pms-section-title">
+              <v-icon icon="mdi-tag-outline" size="16" class="mr-1" />分類與狀態
+            </div>
+            <v-row dense>
+              <v-col cols="12" sm="4">
+                <v-select
+                  v-model="form.category_id"
+                  label="類型"
+                  :items="lookup.categories.map(c => ({ title: c.name, value: c.id }))"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details="auto"
+                  :rules="[(v: number | '') => v !== '' || '請選擇類型']"
+                  required
+                />
+              </v-col>
+              <v-col cols="12" sm="4">
+                <v-select
+                  v-model="form.priority_id"
+                  label="優先級"
+                  :items="lookup.priorities.map(p => ({ title: p.name, value: p.id }))"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details="auto"
+                  :rules="[(v: number | '') => v !== '' || '請選擇優先級']"
+                  required
+                />
+              </v-col>
+              <v-col cols="12" sm="4">
+                <v-select
+                  v-model="form.status_id"
+                  label="狀態"
+                  :items="lookup.statuses.map(s => ({ title: s.name, value: s.id }))"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details="auto"
+                  :rules="[(v: number | '') => v !== '' || '請選擇狀態']"
+                  required
+                />
+              </v-col>
+            </v-row>
+          </div>
 
-          <v-row dense class="mb-1">
-            <v-col cols="6">
-              <v-text-field v-model="form.start_date" label="開始日期" type="date" required />
-            </v-col>
-            <v-col cols="6">
-              <v-text-field v-model="form.due_date" label="預計結束" type="date" />
-            </v-col>
-          </v-row>
+          <!-- 期程 -->
+          <div class="pms-section">
+            <div class="pms-section-title">
+              <v-icon icon="mdi-calendar-range" size="16" class="mr-1" />期程
+            </div>
+            <v-row dense>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="form.start_date"
+                  label="開始日期"
+                  type="date"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details="auto"
+                  :rules="[(v: string) => !!v || '請選擇開始日期']"
+                  required
+                />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="form.due_date"
+                  label="預計結束"
+                  type="date"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details="auto"
+                />
+              </v-col>
+            </v-row>
+          </div>
 
-          <!-- Member autocomplete with chips -->
-          <v-autocomplete
-            v-model="form.member_ids"
-            :items="memberOptions"
-            item-title="name"
-            item-value="id"
-            label="指派成員"
-            variant="outlined"
-            multiple
-            chips
-            closable-chips
-            clearable
-            hide-details
-            class="mb-3"
-            placeholder="搜尋成員..."
-            no-data-text="無可指派的成員"
-          />
+          <!-- 成員 -->
+          <div class="pms-section">
+            <div class="pms-section-title">
+              <v-icon icon="mdi-account-group-outline" size="16" class="mr-1" />指派成員
+            </div>
+            <v-autocomplete
+              v-model="form.member_ids"
+              :items="memberOptions"
+              item-title="name"
+              item-value="id"
+              variant="outlined"
+              density="comfortable"
+              multiple
+              chips
+              closable-chips
+              clearable
+              hide-details="auto"
+              placeholder="搜尋成員姓名..."
+              no-data-text="無可指派的成員"
+            />
+          </div>
 
-          <v-textarea v-model="form.note" label="備註" rows="2" auto-grow class="mb-3" />
+          <!-- 備註 -->
+          <div class="pms-section">
+            <div class="pms-section-title">
+              <v-icon icon="mdi-note-text-outline" size="16" class="mr-1" />備註
+            </div>
+            <v-textarea
+              v-model="form.note"
+              rows="2"
+              auto-grow
+              variant="outlined"
+              density="comfortable"
+              placeholder="可選：補充說明、目標、注意事項..."
+              hide-details="auto"
+            />
+          </div>
 
-          <v-alert v-if="errorMsg" type="error" variant="tonal" density="compact" class="mb-3 text-body-2">
+          <v-alert v-if="errorMsg" type="error" variant="tonal" density="compact" class="mt-2 mb-1 text-body-2">
             {{ errorMsg }}
           </v-alert>
-
-          <div class="d-flex gap-4">
-            <v-btn variant="outlined" color="grey" class="flex-grow-1 mr-3" @click="$emit('close')">取消</v-btn>
-            <v-btn type="submit" color="primary" class="flex-grow-1" :loading="saving">儲存</v-btn>
-          </div>
         </v-form>
       </v-card-text>
+
+      <v-divider />
+
+      <v-card-actions class="px-6 py-4">
+        <v-btn variant="text" color="grey-darken-1" :disabled="saving" @click="$emit('close')">
+          取消
+        </v-btn>
+        <v-spacer />
+        <v-btn color="primary" rounded="lg" :loading="saving" @click="handleSubmit">
+          {{ props.project ? '儲存變更' : '建立專案' }}
+        </v-btn>
+      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
@@ -95,6 +204,7 @@ const projectStore = useProjectStore()
 const lookup = useLookupStore()
 const toast = useToast()
 
+const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const saving = ref(false)
 const errorMsg = ref('')
 
@@ -135,6 +245,9 @@ onMounted(async () => {
 })
 
 async function handleSubmit() {
+  const valid = await formRef.value?.validate()
+  if (valid && !valid.valid) return
+
   saving.value = true
   errorMsg.value = ''
   try {
@@ -177,3 +290,22 @@ async function syncMembers(projectId: number) {
   )
 }
 </script>
+
+<style scoped>
+.pms-modal :deep(.v-field) {
+  border-radius: 10px;
+}
+.pms-section + .pms-section {
+  margin-top: 18px;
+}
+.pms-section-title {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: rgba(0, 0, 0, .6);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+</style>

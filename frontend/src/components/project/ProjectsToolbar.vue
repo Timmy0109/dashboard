@@ -42,13 +42,11 @@ const emit = defineEmits<{
     <v-btn-toggle
       :model-value="view"
       mandatory
-      density="compact"
-      rounded="lg"
       color="primary"
       @update:model-value="emit('update:view', $event as 'table' | 'card')"
     >
-      <v-btn value="table" size="small" icon="mdi-table" title="表格檢視" />
-      <v-btn value="card" size="small" icon="mdi-view-grid-outline" title="卡片檢視" />
+      <v-btn value="table" icon="mdi-table" title="表格檢視" />
+      <v-btn value="card" icon="mdi-view-grid-outline" title="卡片檢視" />
     </v-btn-toggle>
   </div>
 </template>

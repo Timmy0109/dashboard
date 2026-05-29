@@ -4,27 +4,10 @@
       :headers="headers"
       :items="projects"
       :loading="loading"
-      :search="search"
       hover
       item-value="id"
       @click:row="(_e: Event, { item }: { item: ProjectListItem }) => router.push(`/projects/${item.id}`)"
     >
-      <template #top>
-        <v-toolbar flat rounded="t-xl">
-          <v-text-field
-            v-model="search"
-            prepend-inner-icon="mdi-magnify"
-            placeholder="搜尋專案..."
-            variant="outlined"
-            density="compact"
-            hide-details
-            rounded="lg"
-            class="mx-4 my-2"
-            style="max-width:300px"
-          />
-        </v-toolbar>
-      </template>
-
       <template #item.name="{ item }">
         <div>
           <div class="text-body-2 font-weight-medium">{{ item.name }}</div>
@@ -103,7 +86,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { ProjectListItem } from '@/stores/project'
@@ -113,7 +95,6 @@ const emit = defineEmits<{ edit: [p: ProjectListItem]; delete: [p: ProjectListIt
 
 const auth = useAuthStore()
 const router = useRouter()
-const search = ref('')
 
 const headers = [
   { title: '專案名稱',   key: 'name',             sortable: true },

@@ -68,17 +68,17 @@ function handleLogout() {
       :subtitle="auth.user?.name"
       nav
       class="py-4"
-    >
-      <template #append>
-        <v-btn
-          :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
-          variant="text"
-          color="grey-lighten-1"
-          size="small"
-          @click="rail = !rail"
-        />
-      </template>
-    </v-list-item>
+    />
+
+    <!-- 收合 / 展開切換 — rail 模式下保持可點 -->
+    <v-list density="compact" nav class="py-0">
+      <v-list-item
+        :prepend-icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
+        :title="rail ? '展開選單' : '收合選單'"
+        rounded="lg"
+        @click="rail = !rail"
+      />
+    </v-list>
 
     <v-divider color="grey-darken-3" />
 

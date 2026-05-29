@@ -1,244 +1,12 @@
-<template>
-  <div>
-    <div class="mb-6">
-      <h2 class="text-h6 font-weight-bold">統計分析</h2>
-      <p class="text-body-2 text-grey">專案與任務整體數據</p>
-    </div>
-
-    <div v-if="loading" class="d-flex justify-center align-center py-16">
-      <v-progress-circular indeterminate color="primary" />
-    </div>
-
-    <template v-else-if="data">
-      <!-- Summary Cards -->
-      <v-row class="mb-5">
-        <v-col v-for="card in summaryCards" :key="card.label" cols="6" sm="4" md="">
-          <v-card rounded="xl" height="100%">
-            <v-card-text class="pa-4">
-              <div class="d-flex align-center justify-space-between mb-3">
-                <div
-                  class="d-flex align-center justify-center rounded-lg"
-                  :style="{ width: '36px', height: '36px', backgroundColor: card.bgColor }"
-                >
-                  <v-icon :icon="card.icon" :color="card.iconColor" size="18" />
-                </div>
-                <v-chip v-if="card.badge" size="x-small" :color="card.badgeColor" variant="tonal">
-                  {{ card.badge }}
-                </v-chip>
-              </div>
-              <div class="text-h5 font-weight-bold" :class="card.color">{{ card.value }}</div>
-              <div class="text-caption text-grey mt-1">{{ card.label }}</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <v-row class="mb-5" align="stretch">
-        <!-- Status Distribution -->
-        <v-col cols="12" md="6">
-          <v-card rounded="xl" height="100%">
-            <v-card-title class="d-flex align-center gap-2 pa-5 pb-4">
-              <v-icon icon="mdi-chart-donut" color="primary" size="20" />
-              <span class="text-body-1 font-weight-semibold">專案狀態分佈</span>
-              <v-spacer />
-              <v-chip size="x-small" color="primary" variant="tonal">{{ totalProjects }} 個專案</v-chip>
-            </v-card-title>
-            <v-divider />
-            <v-card-text class="pa-5">
-              <div v-if="data.status_distribution.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
-              <div v-else class="d-flex flex-column gap-4">
-                <div v-for="item in data.status_distribution" :key="item.status.name" class="d-flex align-center gap-3">
-                  <div class="d-flex align-center gap-2" style="width:110px;flex-shrink:0">
-                    <v-icon size="14" :style="{ color: item.status.color }" :icon="statusIcon(item.status.icon)" />
-                    <span class="text-body-2 text-grey-darken-1 text-truncate">{{ item.status.name }}</span>
-                  </div>
-                  <v-progress-linear
-                    :model-value="item.count / totalProjects * 100"
-                    :color="item.status.color"
-                    bg-color="grey-lighten-3"
-                    rounded
-                    height="8"
-                    class="flex-grow-1"
-                  />
-                  <div class="d-flex align-center gap-1" style="width:52px;flex-shrink:0;justify-content:flex-end">
-                    <span class="text-body-2 font-weight-medium">{{ item.count }}</span>
-                    <span class="text-caption text-grey">({{ Math.round(item.count / totalProjects * 100) }}%)</span>
-                  </div>
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-
-        <!-- Task Workload -->
-        <v-col cols="12" md="6">
-          <v-card rounded="xl" height="100%">
-            <v-card-title class="d-flex align-center gap-2 pa-5 pb-4">
-              <v-icon icon="mdi-account-group" color="primary" size="20" />
-              <span class="text-body-1 font-weight-semibold">成員任務負載</span>
-              <v-spacer />
-              <v-chip size="x-small" color="grey" variant="tonal">未完成</v-chip>
-            </v-card-title>
-            <v-divider />
-            <v-card-text class="pa-5">
-              <div v-if="data.task_workload.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
-              <div v-else class="d-flex flex-column gap-3">
-                <div
-                  v-for="(item, idx) in data.task_workload"
-                  :key="item.name"
-                  class="d-flex align-center gap-3 px-2 py-1 rounded-lg"
-                  :style="item.user_id ? 'cursor:pointer;transition:background .15s' : ''"
-                  @click="item.user_id && openMemberDetail(item.user_id)"
-                  @mouseenter="item.user_id && ($event.currentTarget as HTMLElement).classList.add('bg-grey-lighten-4')"
-                  @mouseleave="item.user_id && ($event.currentTarget as HTMLElement).classList.remove('bg-grey-lighten-4')"
-                >
-                  <!-- Rank badge -->
-                  <div class="d-flex align-center justify-center rounded-lg" style="width:22px;flex-shrink:0">
-                    <v-icon v-if="idx === 0" icon="mdi-trophy" color="amber-darken-2" size="16" />
-                    <v-icon v-else-if="idx === 1" icon="mdi-medal" color="grey-darken-1" size="16" />
-                    <v-icon v-else-if="idx === 2" icon="mdi-medal" color="brown-lighten-1" size="16" />
-                    <span v-else class="text-caption text-grey">{{ idx + 1 }}</span>
-                  </div>
-                  <v-avatar color="primary" size="26" class="mr-1" style="flex-shrink:0">
-                    <span class="text-caption text-white font-weight-bold">{{ item.name.charAt(0) }}</span>
-                  </v-avatar>
-                  <span class="text-body-2 text-grey-darken-1 text-truncate" style="width:60px;flex-shrink:0">{{ item.name }}</span>
-                  <v-progress-linear
-                    :model-value="item.task_count / maxWorkload * 100"
-                    :color="idx === 0 ? 'error' : idx === 1 ? 'warning' : 'primary'"
-                    bg-color="grey-lighten-3"
-                    rounded
-                    height="7"
-                    class="flex-grow-1"
-                  />
-                  <span class="text-body-2 font-weight-medium" style="width:20px;text-align:right;flex-shrink:0">{{ item.task_count }}</span>
-                  <v-icon v-if="item.user_id" icon="mdi-chevron-right" size="16" color="grey" style="flex-shrink:0" />
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- Project Progress Ranking -->
-      <v-card rounded="xl" class="mb-5">
-        <v-card-title class="d-flex align-center gap-2 pa-5 pb-4">
-          <v-icon icon="mdi-podium" color="primary" size="20" />
-          <span class="text-body-1 font-weight-semibold">專案進度排行</span>
-          <v-spacer />
-          <v-chip size="x-small" color="grey" variant="tonal">前 {{ data.project_progress.length }} 名</v-chip>
-        </v-card-title>
-        <v-divider />
-        <v-card-text class="pa-5">
-          <div v-if="data.project_progress.length === 0" class="py-8 text-center text-body-2 text-grey">無資料</div>
-          <div v-else class="d-flex flex-column gap-3">
-            <div v-for="(p, idx) in data.project_progress" :key="p.id" class="d-flex align-center gap-3">
-              <!-- Rank -->
-              <div class="d-flex align-center justify-center" style="width:28px;flex-shrink:0">
-                <v-icon v-if="idx === 0" icon="mdi-trophy" color="amber-darken-2" size="18" />
-                <v-icon v-else-if="idx === 1" icon="mdi-medal" color="grey-darken-1" size="18" />
-                <v-icon v-else-if="idx === 2" icon="mdi-medal" color="brown-lighten-1" size="18" />
-                <span v-else class="text-caption text-grey font-weight-medium">{{ idx + 1 }}</span>
-              </div>
-              <!-- Name -->
-              <div class="d-flex align-center gap-2" style="width:200px;flex-shrink:0">
-                <span class="text-body-2 text-truncate">{{ p.name }}</span>
-                <v-chip v-if="p.is_completed" size="x-small" color="success" variant="tonal" class="flex-shrink-0">完成</v-chip>
-              </div>
-              <!-- Progress bar -->
-              <v-progress-linear
-                :model-value="p.progress_percent"
-                :color="p.is_completed ? 'success' : p.progress_percent >= 70 ? 'primary' : p.progress_percent >= 30 ? 'warning' : 'error'"
-                bg-color="grey-lighten-3"
-                rounded
-                height="8"
-                class="flex-grow-1"
-              />
-              <!-- Percent -->
-              <span
-                class="text-body-2 font-weight-semibold"
-                :class="p.is_completed ? 'text-success' : 'text-grey-darken-1'"
-                style="width:40px;text-align:right;flex-shrink:0"
-              >
-                {{ p.progress_percent }}%
-              </span>
-            </div>
-          </div>
-        </v-card-text>
-      </v-card>
-
-      <!-- Completion Trend -->
-      <v-card rounded="xl">
-        <v-card-title class="d-flex align-center gap-2 pa-5 pb-4">
-          <v-icon icon="mdi-chart-bar" color="primary" size="20" />
-          <span class="text-body-1 font-weight-semibold">任務完成趨勢</span>
-          <v-spacer />
-          <v-chip size="x-small" color="grey" variant="tonal">近 6 個月</v-chip>
-        </v-card-title>
-        <v-divider />
-        <v-card-text class="pa-5">
-          <div v-if="data.completion_trend.length === 0" class="py-8 text-center text-body-2 text-grey">
-            近 6 個月無已完成任務
-          </div>
-          <template v-else>
-            <!-- Y-axis guide lines -->
-            <div class="position-relative" style="height:160px">
-              <!-- Grid lines -->
-              <div
-                v-for="line in gridLines"
-                :key="line.value"
-                class="position-absolute w-100 d-flex align-center"
-                :style="{ bottom: (line.value / maxTrend * 128) + 'px', left: 0 }"
-              >
-                <span class="text-caption text-grey" style="width:24px;flex-shrink:0;font-size:10px">{{ line.label }}</span>
-                <div style="flex:1;height:1px;background:rgba(0,0,0,.06)" />
-              </div>
-              <!-- Bars -->
-              <div class="d-flex align-end gap-2 h-100 pl-8">
-                <div
-                  v-for="item in data.completion_trend"
-                  :key="item.month"
-                  class="d-flex flex-column align-center gap-1"
-                  style="flex:1"
-                >
-                  <span class="text-caption font-weight-medium" style="color:#00897B">{{ item.count }}</span>
-                  <div
-                    class="w-100 rounded-t"
-                    :style="{
-                      height: Math.max(item.count / maxTrend * 128, 4) + 'px',
-                      background: `linear-gradient(to top, #00897B, #4DB6AC)`,
-                      transition: 'height .3s ease',
-                      borderRadius: '6px 6px 0 0',
-                    }"
-                  />
-                  <span class="text-caption text-grey">{{ item.month.slice(5) }}月</span>
-                </div>
-              </div>
-            </div>
-            <!-- Total -->
-            <div class="d-flex justify-end mt-3">
-              <span class="text-caption text-grey">
-                近 6 個月合計
-                <span class="font-weight-bold text-primary ml-1">{{ data.completion_trend.reduce((s, i) => s + i.count, 0) }}</span>
-                個任務完成
-              </span>
-            </div>
-          </template>
-        </v-card-text>
-      </v-card>
-    </template>
-  </div>
-
-  <MemberWorkloadDialog
-    v-if="selectedMemberId"
-    :user-id="selectedMemberId"
-    @close="selectedMemberId = null"
-  />
-</template>
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+// StatsView — 統計分析
+// 5 summary cards / 狀態分佈 / 成員負載 / 專案進度排行 / 任務完成趨勢
+import { computed, onMounted, ref } from 'vue'
 import api from '@/lib/axios'
+
+import KPICard from '@/components/ui/KPICard.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import TrendChart from '@/components/charts/TrendChart.vue'
 import MemberWorkloadDialog from '@/components/MemberWorkloadDialog.vue'
 
 interface StatsData {
@@ -253,54 +21,74 @@ const data = ref<StatsData | null>(null)
 const loading = ref(false)
 const selectedMemberId = ref<number | null>(null)
 
-function openMemberDetail(userId: number) {
-  selectedMemberId.value = userId
+function openMemberDetail(userId: number | null) {
+  if (userId) selectedMemberId.value = userId
 }
 
-const totalProjects = computed(() => data.value?.status_distribution.reduce((s, i) => s + i.count, 0) || 1)
-const maxWorkload   = computed(() => Math.max(...(data.value?.task_workload.map(i => i.task_count) ?? [1]), 1))
-const maxTrend      = computed(() => Math.max(...(data.value?.completion_trend.map(i => i.count) ?? [1]), 1))
+const totalProjects = computed(() =>
+  data.value?.status_distribution.reduce((s, i) => s + i.count, 0) || 0,
+)
+const totalForPct = computed(() => Math.max(totalProjects.value, 1))
+const maxWorkload = computed(() =>
+  Math.max(...(data.value?.task_workload.map(i => i.task_count) ?? [1]), 1),
+)
 
-const gridLines = computed(() => {
-  const max = maxTrend.value
-  const step = max <= 5 ? 1 : max <= 20 ? 5 : max <= 50 ? 10 : 20
-  const lines = []
-  for (let v = step; v <= max; v += step) lines.push({ value: v, label: String(v) })
-  return lines
-})
+interface SummaryCard {
+  label: string
+  value: number
+  icon: string
+  iconColor: string
+  accent: 'primary' | 'success' | 'warning' | 'error' | 'info'
+  trend?: string
+}
 
-const summaryCards = computed(() => {
+const summaryCards = computed<SummaryCard[]>(() => {
   if (!data.value) return []
   const t = data.value.totals
-  const completeRate = t.tasks > 0 ? Math.round(t.completed_tasks / t.tasks * 100) : 0
+  const completeRate = t.tasks > 0 ? Math.round((t.completed_tasks / t.tasks) * 100) : 0
   return [
     {
       label: '總專案數', value: t.projects,
-      icon: 'mdi-folder-multiple', iconColor: 'primary', bgColor: '#e8f5e9',
-      color: '', badge: null, badgeColor: '',
+      icon: 'mdi-folder-multiple', iconColor: 'primary', accent: 'primary',
     },
     {
       label: '總任務數', value: t.tasks,
-      icon: 'mdi-clipboard-list', iconColor: 'blue-darken-1', bgColor: '#e3f2fd',
-      color: '', badge: null, badgeColor: '',
+      icon: 'mdi-clipboard-list', iconColor: 'info', accent: 'info',
     },
     {
       label: '已完成任務', value: t.completed_tasks,
-      icon: 'mdi-clipboard-check', iconColor: 'success', bgColor: '#e8f5e9',
-      color: 'text-success', badge: completeRate + '%', badgeColor: 'success',
+      icon: 'mdi-clipboard-check', iconColor: 'success', accent: 'success',
+      trend: t.tasks > 0 ? `${completeRate}%` : undefined,
     },
     {
       label: '逾期任務', value: t.overdue_tasks,
-      icon: 'mdi-alert-circle', iconColor: t.overdue_tasks > 0 ? 'error' : 'grey', bgColor: t.overdue_tasks > 0 ? '#fdecea' : '#f5f5f5',
-      color: t.overdue_tasks > 0 ? 'text-error' : 'text-grey',
-      badge: t.overdue_tasks > 0 ? '需注意' : null, badgeColor: 'error',
+      icon: 'mdi-alert-circle',
+      iconColor: t.overdue_tasks > 0 ? 'error' : 'grey',
+      accent: t.overdue_tasks > 0 ? 'error' : 'warning',
+      trend: t.overdue_tasks > 0 ? '需注意' : undefined,
     },
     {
       label: '活躍成員', value: t.members,
-      icon: 'mdi-account-group', iconColor: 'purple', bgColor: '#f3e5f5',
-      color: 'text-purple', badge: null, badgeColor: '',
+      icon: 'mdi-account-group', iconColor: 'info', accent: 'info',
     },
   ]
+})
+
+// 狀態分佈：堆疊式 progress bar 顯示比例
+interface StackSegment {
+  name: string
+  color: string
+  pct: number
+}
+const stackedSegments = computed<StackSegment[]>(() => {
+  if (!data.value) return []
+  return data.value.status_distribution
+    .filter(i => i.count > 0)
+    .map(i => ({
+      name: i.status.name,
+      color: i.status.color,
+      pct: (i.count / totalForPct.value) * 100,
+    }))
 })
 
 function statusIcon(icon: string | null | undefined) {
@@ -308,6 +96,36 @@ function statusIcon(icon: string | null | undefined) {
   const normalized = icon.replace(/_/g, '-')
   return normalized.startsWith('mdi-') ? normalized : `mdi-${normalized}`
 }
+
+function rankIcon(idx: number) {
+  if (idx === 0) return { icon: 'mdi-trophy', color: 'amber-darken-2' }
+  if (idx === 1) return { icon: 'mdi-medal',  color: 'grey-darken-1' }
+  if (idx === 2) return { icon: 'mdi-medal',  color: 'brown-lighten-1' }
+  return null
+}
+
+function progressColor(pct: number, isCompleted: boolean) {
+  if (isCompleted) return 'success'
+  if (pct >= 70) return 'primary'
+  if (pct >= 30) return 'warning'
+  return 'error'
+}
+
+function workloadColor(idx: number) {
+  if (idx === 0) return 'error'
+  if (idx === 1) return 'warning'
+  return 'primary'
+}
+
+const trendData = computed(() =>
+  (data.value?.completion_trend ?? []).map(i => ({
+    month: i.month.slice(5) + '月',
+    count: i.count,
+  })),
+)
+const trendTotal = computed(() =>
+  (data.value?.completion_trend ?? []).reduce((s, i) => s + i.count, 0),
+)
 
 onMounted(async () => {
   loading.value = true
@@ -319,3 +137,299 @@ onMounted(async () => {
   }
 })
 </script>
+
+<template>
+  <div>
+    <div class="mb-6">
+      <h2 class="text-h5 font-weight-bold">統計分析</h2>
+      <p class="text-body-2 text-medium-emphasis mt-1 mb-0">專案與任務整體數據</p>
+    </div>
+
+    <div v-if="loading" class="d-flex justify-center align-center py-16">
+      <v-progress-circular indeterminate color="primary" />
+    </div>
+
+    <template v-else-if="data">
+      <!-- Summary 5 cards -->
+      <v-row class="mb-5" dense>
+        <v-col
+          v-for="card in summaryCards"
+          :key="card.label"
+          cols="6"
+          sm="4"
+          md=""
+        >
+          <KPICard
+            :label="card.label"
+            :value="card.value"
+            :icon="card.icon"
+            :icon-color="card.iconColor"
+            :accent="card.accent"
+            :trend="card.trend"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- 狀態分佈 + 成員負載 -->
+      <v-row class="mb-5" align="stretch">
+        <!-- 狀態分佈 -->
+        <v-col cols="12" md="6">
+          <v-card rounded="xl" class="h-100">
+            <v-card-title class="d-flex align-center gap-2 pa-5 pb-3">
+              <v-icon icon="mdi-chart-donut" color="primary" size="20" />
+              <span class="text-body-1 font-weight-medium">專案狀態分佈</span>
+              <v-spacer />
+              <v-chip size="x-small" color="primary" variant="tonal">
+                {{ totalProjects }} 個專案
+              </v-chip>
+            </v-card-title>
+            <v-divider />
+            <v-card-text class="pa-5">
+              <EmptyState
+                v-if="stackedSegments.length === 0"
+                icon="mdi-chart-donut"
+                title="尚無資料"
+                sub="目前沒有專案狀態資料"
+              />
+              <template v-else>
+                <!-- 堆疊式 progress bar -->
+                <div
+                  class="d-flex w-100 overflow-hidden rounded mb-5"
+                  style="height: 14px; background-color: rgba(var(--v-theme-on-surface), 0.06)"
+                  role="img"
+                  aria-label="專案狀態分佈"
+                >
+                  <div
+                    v-for="seg in stackedSegments"
+                    :key="seg.name"
+                    :style="{ width: seg.pct + '%', backgroundColor: seg.color, transition: 'width .3s ease' }"
+                    :title="`${seg.name} ${Math.round(seg.pct)}%`"
+                  />
+                </div>
+
+                <!-- Legend with progress bars -->
+                <div class="d-flex flex-column gap-3">
+                  <div
+                    v-for="item in data.status_distribution"
+                    :key="item.status.name"
+                    class="d-flex align-center gap-3"
+                  >
+                    <div class="d-flex align-center gap-2" style="width: 110px; flex-shrink: 0">
+                      <v-icon
+                        :icon="statusIcon(item.status.icon)"
+                        size="14"
+                        :style="{ color: item.status.color }"
+                      />
+                      <span class="text-body-2 text-truncate">{{ item.status.name }}</span>
+                    </div>
+                    <v-progress-linear
+                      :model-value="(item.count / totalForPct) * 100"
+                      :color="item.status.color"
+                      bg-color="grey-lighten-3"
+                      rounded
+                      height="8"
+                      class="flex-grow-1"
+                    />
+                    <div
+                      class="d-flex align-center gap-1"
+                      style="width: 60px; flex-shrink: 0; justify-content: flex-end"
+                    >
+                      <span class="text-body-2 font-weight-medium">{{ item.count }}</span>
+                      <span class="text-caption text-medium-emphasis">
+                        ({{ Math.round((item.count / totalForPct) * 100) }}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </v-card-text>
+          </v-card>
+        </v-col>
+
+        <!-- 成員任務負載 -->
+        <v-col cols="12" md="6">
+          <v-card rounded="xl" class="h-100">
+            <v-card-title class="d-flex align-center gap-2 pa-5 pb-3">
+              <v-icon icon="mdi-account-group" color="primary" size="20" />
+              <span class="text-body-1 font-weight-medium">成員任務負載</span>
+              <v-spacer />
+              <v-chip size="x-small" color="grey" variant="tonal">未完成</v-chip>
+            </v-card-title>
+            <v-divider />
+            <v-card-text class="pa-5">
+              <EmptyState
+                v-if="data.task_workload.length === 0"
+                icon="mdi-account-group-outline"
+                title="尚無資料"
+                sub="目前沒有成員負載資料"
+              />
+              <div v-else class="d-flex flex-column gap-2">
+                <div
+                  v-for="(item, idx) in data.task_workload"
+                  :key="item.name + idx"
+                  class="pms-workload-row d-flex align-center gap-3 px-2 py-2 rounded-lg"
+                  :class="{ 'pms-workload-row--clickable': !!item.user_id }"
+                  :tabindex="item.user_id ? 0 : -1"
+                  :role="item.user_id ? 'button' : undefined"
+                  @click="openMemberDetail(item.user_id)"
+                  @keydown.enter="openMemberDetail(item.user_id)"
+                >
+                  <!-- Rank -->
+                  <div class="d-flex align-center justify-center" style="width: 22px; flex-shrink: 0">
+                    <v-icon
+                      v-if="rankIcon(idx)"
+                      :icon="rankIcon(idx)!.icon"
+                      :color="rankIcon(idx)!.color"
+                      size="16"
+                    />
+                    <span v-else class="text-caption text-medium-emphasis">{{ idx + 1 }}</span>
+                  </div>
+                  <v-avatar color="primary" size="26" style="flex-shrink: 0">
+                    <span class="text-caption text-white font-weight-bold">
+                      {{ item.name.charAt(0) }}
+                    </span>
+                  </v-avatar>
+                  <span
+                    class="text-body-2 text-truncate"
+                    style="width: 80px; flex-shrink: 0"
+                  >
+                    {{ item.name }}
+                  </span>
+                  <v-progress-linear
+                    :model-value="(item.task_count / maxWorkload) * 100"
+                    :color="workloadColor(idx)"
+                    bg-color="grey-lighten-3"
+                    rounded
+                    height="7"
+                    class="flex-grow-1"
+                  />
+                  <span
+                    class="text-body-2 font-weight-medium"
+                    style="width: 24px; text-align: right; flex-shrink: 0"
+                  >
+                    {{ item.task_count }}
+                  </span>
+                  <v-icon
+                    v-if="item.user_id"
+                    icon="mdi-chevron-right"
+                    size="16"
+                    color="grey"
+                    style="flex-shrink: 0"
+                  />
+                </div>
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- 專案進度排行 -->
+      <v-card rounded="xl" class="mb-5">
+        <v-card-title class="d-flex align-center gap-2 pa-5 pb-3">
+          <v-icon icon="mdi-podium" color="primary" size="20" />
+          <span class="text-body-1 font-weight-medium">專案進度排行</span>
+          <v-spacer />
+          <v-chip size="x-small" color="grey" variant="tonal">
+            前 {{ data.project_progress.length }} 名
+          </v-chip>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-5">
+          <EmptyState
+            v-if="data.project_progress.length === 0"
+            icon="mdi-podium"
+            title="尚無資料"
+            sub="目前沒有專案進度資料"
+          />
+          <div v-else class="d-flex flex-column gap-3">
+            <div
+              v-for="(p, idx) in data.project_progress"
+              :key="p.id"
+              class="d-flex align-center gap-3"
+            >
+              <div class="d-flex align-center justify-center" style="width: 28px; flex-shrink: 0">
+                <v-icon
+                  v-if="rankIcon(idx)"
+                  :icon="rankIcon(idx)!.icon"
+                  :color="rankIcon(idx)!.color"
+                  size="18"
+                />
+                <span v-else class="text-caption font-weight-medium text-medium-emphasis">
+                  {{ idx + 1 }}
+                </span>
+              </div>
+              <div class="d-flex align-center gap-2" style="width: 220px; flex-shrink: 0">
+                <span class="text-body-2 text-truncate">{{ p.name }}</span>
+                <v-chip
+                  v-if="p.is_completed"
+                  size="x-small"
+                  color="success"
+                  variant="tonal"
+                  class="flex-shrink-0"
+                >
+                  完成
+                </v-chip>
+              </div>
+              <v-progress-linear
+                :model-value="p.progress_percent"
+                :color="progressColor(p.progress_percent, p.is_completed)"
+                bg-color="grey-lighten-3"
+                rounded
+                height="8"
+                class="flex-grow-1"
+              />
+              <span
+                class="text-body-2 font-weight-medium"
+                :class="p.is_completed ? 'text-success' : 'text-medium-emphasis'"
+                style="width: 44px; text-align: right; flex-shrink: 0"
+              >
+                {{ p.progress_percent }}%
+              </span>
+            </div>
+          </div>
+        </v-card-text>
+      </v-card>
+
+      <!-- 任務完成趨勢 -->
+      <v-card rounded="xl">
+        <v-card-title class="d-flex align-center gap-2 pa-5 pb-3">
+          <v-icon icon="mdi-chart-bar" color="primary" size="20" />
+          <span class="text-body-1 font-weight-medium">任務完成趨勢</span>
+          <v-spacer />
+          <v-chip size="x-small" color="grey" variant="tonal">近 6 個月</v-chip>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-5">
+          <TrendChart :data="trendData" />
+          <div v-if="trendData.length > 0" class="d-flex justify-end mt-3">
+            <span class="text-caption text-medium-emphasis">
+              近 6 個月合計
+              <span class="font-weight-bold text-primary ml-1">{{ trendTotal }}</span>
+              個任務完成
+            </span>
+          </div>
+        </v-card-text>
+      </v-card>
+    </template>
+
+    <MemberWorkloadDialog
+      v-if="selectedMemberId"
+      :user-id="selectedMemberId"
+      @close="selectedMemberId = null"
+    />
+  </div>
+</template>
+
+<style scoped>
+.pms-workload-row {
+  transition: background-color 0.15s ease;
+}
+.pms-workload-row--clickable {
+  cursor: pointer;
+}
+.pms-workload-row--clickable:hover,
+.pms-workload-row--clickable:focus-visible {
+  background-color: rgba(var(--v-theme-on-surface), 0.05);
+  outline: none;
+}
+</style>

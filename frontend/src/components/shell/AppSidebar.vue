@@ -64,21 +64,24 @@ function handleLogout() {
   <v-navigation-drawer v-model="drawer" :rail="rail" permanent color="grey-darken-4" width="220">
     <v-list-item
       prepend-icon="mdi-briefcase-variant"
-      title="專案管理系統"
-      :subtitle="auth.user?.name"
+      :title="rail ? undefined : '專案管理系統'"
+      :subtitle="rail ? undefined : auth.user?.name"
       nav
       class="py-4"
     />
 
-    <!-- 收合 / 展開切換 — rail 模式下保持可點 -->
-    <v-list density="compact" nav class="py-0">
-      <v-list-item
-        :prepend-icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
+    <!-- 收合 / 展開切換 — icon only -->
+    <div class="d-flex pb-1 px-2" :class="rail ? 'justify-center' : 'justify-end'">
+      <v-btn
+        :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
+        variant="text"
+        color="grey-lighten-1"
+        size="small"
+        density="comfortable"
         :title="rail ? '展開選單' : '收合選單'"
-        rounded="lg"
         @click="rail = !rail"
       />
-    </v-list>
+    </div>
 
     <v-divider color="grey-darken-3" />
 

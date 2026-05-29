@@ -28,3 +28,4 @@ Thumbs.db
 
 # Design handoff package (large standalone HTML + redundant assets — kept local only)
 /handoff/
+.claude/worktrees/

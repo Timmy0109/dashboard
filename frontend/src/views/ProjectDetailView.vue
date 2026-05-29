@@ -4,149 +4,179 @@
   </div>
 
   <div v-else-if="project">
-    <!-- ── Header ──────────────────────────────────────────────────────── -->
-    <div class="mb-5">
-      <v-btn
-        variant="text" color="grey" prepend-icon="mdi-arrow-left"
-        size="small" class="mb-3 px-0"
-        @click="router.back()"
-      >返回</v-btn>
+    <!-- ── Back ──────────────────────────────────────────────────────── -->
+    <v-btn
+      variant="text" color="grey" prepend-icon="mdi-arrow-left"
+      size="small" class="mb-3 px-0"
+      @click="router.back()"
+    >返回</v-btn>
 
-      <v-card rounded="xl" class="pa-5" elevation="1">
-        <div class="d-flex align-start justify-space-between gap-4 flex-wrap">
-          <div class="flex-grow-1">
-            <div class="d-flex align-center gap-3 flex-wrap mb-1">
-              <h2 class="text-h6 font-weight-bold">{{ project.name }}</h2>
-              <v-chip
-                v-if="project.status"
-                size="small"
-                :prepend-icon="statusIcon(project.status.icon)"
-                :style="{ backgroundColor: project.status.color + '22', color: project.status.color }"
-                class="font-weight-medium"
-              >
-                {{ project.status.name }}
-              </v-chip>
-            </div>
-            <div v-if="project.project_no" class="text-caption text-grey">{{ project.project_no }}</div>
-          </div>
-
-          <div class="d-flex align-center gap-2 flex-shrink-0 flex-wrap">
-            <!-- WebSocket indicator -->
+    <!-- ── Header Card ────────────────────────────────────────────────── -->
+    <v-card rounded="xl" class="pa-5 mb-5" elevation="1">
+      <div class="d-flex align-start justify-space-between gap-4 flex-wrap">
+        <div class="flex-grow-1" style="min-width: 0">
+          <div class="d-flex align-center gap-2 flex-wrap mb-1">
+            <h2 class="text-h6 font-weight-bold">{{ project.name }}</h2>
             <v-chip
-              size="x-small"
-              :color="wsConnected ? 'success' : 'grey'"
-              variant="tonal"
-              :prepend-icon="wsConnected ? 'mdi-wifi' : 'mdi-wifi-off'"
-            >
-              {{ wsConnected ? '即時連線' : '連線中...' }}
-            </v-chip>
-            <v-btn
-              variant="outlined"
-              color="grey"
-              prepend-icon="mdi-download"
-              rounded="lg"
+              v-if="project.status"
               size="small"
-              :loading="exporting"
-              @click="exportProject"
+              :prepend-icon="statusIcon(project.status.icon)"
+              :style="{ backgroundColor: project.status.color + '22', color: project.status.color }"
+              class="font-weight-medium"
             >
-              下載報告
-            </v-btn>
-            <v-btn
-              v-if="canEdit"
-              color="primary" prepend-icon="mdi-plus" rounded="lg"
-              @click="showTaskModal = true; editingTask = null"
-            >新增任務</v-btn>
+              {{ project.status.name }}
+            </v-chip>
+            <v-chip
+              v-if="project.priority"
+              size="small"
+              :style="{ backgroundColor: project.priority.color + '22', color: project.priority.color }"
+              class="font-weight-medium"
+            >
+              {{ project.priority.name }}
+            </v-chip>
           </div>
-        </div>
-
-        <!-- Read-only banner for managers viewing other managers' projects -->
-        <v-alert
-          v-if="auth.canManageMembers && !canEdit"
-          type="info"
-          variant="tonal"
-          density="compact"
-          class="mt-3"
-          icon="mdi-eye-outline"
-        >
-          你是此專案的觀察者，僅能查看，無法新增或修改任務
-        </v-alert>
-
-        <!-- Progress bar spanning full width -->
-        <div class="mt-4">
-          <div class="d-flex justify-space-between mb-1">
-            <span class="text-caption text-grey">整體進度</span>
-            <span class="text-caption font-weight-bold" :class="project.progress_percent >= 100 ? 'text-success' : 'text-primary'">
-              {{ project.progress_percent }}%
+          <div class="text-caption text-medium-emphasis d-flex align-center flex-wrap gap-x-4 gap-y-1">
+            <span v-if="project.project_no">
+              <v-icon icon="mdi-pound" size="12" class="mr-1" />{{ project.project_no }}
+            </span>
+            <span v-if="project.owner">
+              <v-icon icon="mdi-account-tie" size="12" class="mr-1" />負責人 {{ project.owner.name }}
+            </span>
+            <span>
+              <v-icon icon="mdi-calendar-start" size="12" class="mr-1" />
+              {{ formatDate(project.start_date) }}
+            </span>
+            <span>
+              <v-icon icon="mdi-calendar-end" size="12" class="mr-1" />
+              {{ formatDate(project.due_date) }}
             </span>
           </div>
-          <v-progress-linear
-            :model-value="project.progress_percent"
-            :color="project.progress_percent >= 100 ? 'success' : 'primary'"
-            bg-color="grey-lighten-3"
-            rounded
-            height="8"
-          />
         </div>
-      </v-card>
-    </div>
 
-    <!-- ── Info Cards ──────────────────────────────────────────────────── -->
-    <v-row class="mb-5">
+        <div class="d-flex align-center gap-2 flex-shrink-0 flex-wrap">
+          <!-- WebSocket indicator -->
+          <v-chip
+            size="x-small"
+            :color="wsConnected ? 'success' : 'grey'"
+            variant="tonal"
+            class="pms-ws-chip"
+          >
+            <span
+              class="pms-ws-dot mr-1"
+              :class="wsConnected ? 'pms-ws-dot--live' : ''"
+              :style="{ backgroundColor: wsConnected ? 'rgb(var(--v-theme-success))' : 'rgb(var(--v-theme-on-surface))' }"
+            />
+            {{ wsConnected ? '即時連線' : '連線中...' }}
+          </v-chip>
+          <v-btn
+            variant="outlined"
+            color="grey"
+            prepend-icon="mdi-download"
+            rounded="lg"
+            size="small"
+            :loading="exporting"
+            @click="exportProject"
+          >下載報告</v-btn>
+          <v-btn
+            v-if="canEdit"
+            color="primary" prepend-icon="mdi-plus" rounded="lg"
+            @click="openCreateTask"
+          >新增任務</v-btn>
+        </div>
+      </div>
+
+      <!-- Read-only banner -->
+      <v-alert
+        v-if="auth.canManageMembers && !canEdit"
+        type="info"
+        variant="tonal"
+        density="compact"
+        class="mt-3"
+        icon="mdi-eye-outline"
+      >
+        你是此專案的觀察者，僅能查看，無法新增或修改任務
+      </v-alert>
+
+      <!-- 整體進度 ProgressBar -->
+      <div class="mt-4">
+        <div class="d-flex justify-space-between mb-1">
+          <span class="text-caption text-medium-emphasis">整體進度</span>
+          <span
+            class="text-caption font-weight-bold pms-tnum"
+            :class="project.progress_percent >= 100 ? 'text-success' : 'text-primary'"
+          >
+            {{ project.progress_percent }}%
+          </span>
+        </div>
+        <v-progress-linear
+          :model-value="project.progress_percent"
+          :color="project.progress_percent >= 100 ? 'success' : 'primary'"
+          bg-color="grey-lighten-3"
+          rounded
+          height="8"
+        />
+      </div>
+
+      <!-- 團隊成員 -->
+      <div v-if="memberNames.length > 0" class="mt-4 d-flex align-center gap-3 flex-wrap">
+        <span class="text-caption text-medium-emphasis">團隊成員</span>
+        <AvatarStack :names="memberNames" :max="5" :size="28" />
+        <v-btn
+          variant="text"
+          size="x-small"
+          color="primary"
+          @click="showMembersDialog = true"
+        >
+          共 {{ memberNames.length }} 人
+        </v-btn>
+      </div>
+    </v-card>
+
+    <!-- ── Info Cards (4 張) ────────────────────────────────────────── -->
+    <v-row class="mb-5" dense>
       <v-col cols="6" sm="3">
-        <v-card rounded="xl" height="100%">
-          <v-card-text class="pa-4">
-            <div class="d-flex align-center gap-2 mb-2">
-              <v-icon icon="mdi-format-list-checks" size="18" color="primary" />
-              <span class="text-caption text-grey">任務總數</span>
-            </div>
-            <div class="text-h5 font-weight-bold">{{ project.tasks.length }}</div>
-            <div class="text-caption text-grey mt-1">
-              已完成 <span class="text-success font-weight-medium">{{ completedCount }}</span> / {{ project.tasks.length }}
-            </div>
-          </v-card-text>
-        </v-card>
+        <KPICard
+          label="任務總數"
+          :value="totalTasks"
+          :sub="`已完成 ${completedCount} / ${totalTasks}`"
+          icon="mdi-format-list-checks"
+          icon-color="primary"
+          accent="primary"
+        />
       </v-col>
       <v-col cols="6" sm="3">
-        <v-card rounded="xl" height="100%">
-          <v-card-text class="pa-4">
-            <div class="d-flex align-center gap-2 mb-2">
-              <v-icon icon="mdi-alert-circle" size="18" color="error" />
-              <span class="text-caption text-grey">逾期任務</span>
-            </div>
-            <div class="text-h5 font-weight-bold" :class="overdueCount > 0 ? 'text-error' : ''">{{ overdueCount }}</div>
-            <div class="text-caption text-grey mt-1">
-              {{ overdueCount > 0 ? '需要立即處理' : '目前無逾期' }}
-            </div>
-          </v-card-text>
-        </v-card>
+        <KPICard
+          label="逾期任務"
+          :value="overdueCount"
+          :sub="overdueCount > 0 ? '需要立即處理' : '目前無逾期'"
+          icon="mdi-alert-circle-outline"
+          icon-color="error"
+          accent="error"
+        />
       </v-col>
       <v-col cols="6" sm="3">
-        <v-card rounded="xl" height="100%">
-          <v-card-text class="pa-4">
-            <div class="d-flex align-center gap-2 mb-2">
-              <v-icon icon="mdi-calendar-start" size="18" color="grey" />
-              <span class="text-caption text-grey">開始日期</span>
-            </div>
-            <div class="text-body-1 font-weight-semibold">{{ project.start_date?.slice(0, 10) ?? '—' }}</div>
-          </v-card-text>
-        </v-card>
+        <KPICard
+          label="進行中"
+          :value="inProgressCount"
+          sub="正在執行中的任務"
+          icon="mdi-progress-clock"
+          icon-color="info"
+          accent="info"
+        />
       </v-col>
       <v-col cols="6" sm="3">
-        <v-card rounded="xl" height="100%">
-          <v-card-text class="pa-4">
-            <div class="d-flex align-center gap-2 mb-2">
-              <v-icon icon="mdi-calendar-end" size="18" :color="dueDateUrgency" />
-              <span class="text-caption text-grey">預計結束</span>
-            </div>
-            <div class="text-body-1 font-weight-semibold" :class="dueDateClass">
-              {{ project.due_date?.slice(0, 10) ?? '未設定' }}
-            </div>
-          </v-card-text>
-        </v-card>
+        <KPICard
+          label="剩餘天數"
+          :value="remainingDays === null ? '—' : `${remainingDays}`"
+          :sub="remainingDaysSub"
+          icon="mdi-calendar-clock"
+          :icon-color="remainingDays !== null && remainingDays < 0 ? 'error' : 'warning'"
+          :accent="remainingDays !== null && remainingDays < 0 ? 'error' : 'warning'"
+        />
       </v-col>
     </v-row>
 
-    <!-- ── Gantt Chart ─────────────────────────────────────────────────── -->
+    <!-- ── Gantt Chart Card ───────────────────────────────────────── -->
     <v-card rounded="xl" class="mb-5">
       <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3 d-flex align-center gap-2">
         <v-icon icon="mdi-chart-gantt" size="18" color="primary" />
@@ -154,9 +184,12 @@
       </v-card-title>
       <v-divider />
       <v-card-text class="pt-4">
-        <div v-if="project.tasks.length === 0" class="py-8 text-center text-body-2 text-grey">
-          尚無任務，新增任務後甘特圖將自動顯示
-        </div>
+        <EmptyState
+          v-if="project.tasks.length === 0"
+          icon="mdi-chart-gantt"
+          title="尚無任務"
+          sub="新增任務後甘特圖將自動顯示"
+        />
         <GanttChart
           v-else
           :tasks="project.tasks"
@@ -166,14 +199,15 @@
       </v-card-text>
     </v-card>
 
-    <!-- ── Task Table ──────────────────────────────────────────────────── -->
-    <v-card rounded="xl">
+    <!-- ── Task Table Card ─────────────────────────────────────────── -->
+    <v-card rounded="xl" class="mb-5">
       <v-data-table
         :headers="taskHeaders"
         :items="filteredTasks"
         :search="taskSearch"
         hover
         item-value="id"
+        @click:row="(_e: Event, { item }: { item: Task }) => openEditTask(item)"
       >
         <template #top>
           <v-toolbar flat rounded="t-xl">
@@ -192,11 +226,10 @@
                 rounded="lg"
                 style="max-width:220px"
               />
-              <v-chip-group v-model="taskTab" mandatory selected-class="bg-primary text-white">
-                <v-chip v-for="tab in taskTabs" :key="tab.value" :value="tab.value" size="small" filter>
-                  {{ tab.label }}（{{ getTabCount(tab.value) }}）
-                </v-chip>
-              </v-chip-group>
+              <ChipGroup
+                v-model="taskTab"
+                :items="taskTabOptions"
+              />
             </div>
           </v-toolbar>
         </template>
@@ -218,6 +251,9 @@
             <span :class="item.is_completed ? 'text-grey text-decoration-line-through' : 'text-body-2 font-weight-medium'">
               {{ item.name }}
             </span>
+            <TaskMetaBadges
+              :attachments-count="attachmentCountForTask(item.id)"
+            />
           </div>
         </template>
 
@@ -274,7 +310,7 @@
               height="5"
               class="flex-grow-1"
             />
-            <span class="text-caption text-grey-darken-1">{{ item.progress }}%</span>
+            <span class="text-caption text-grey-darken-1 pms-tnum">{{ item.progress }}%</span>
           </div>
         </template>
 
@@ -286,18 +322,52 @@
         </template>
 
         <template #no-data>
-          <div class="text-center py-8 text-grey">
-            {{
-              taskTab === 'overdue'     ? '沒有逾期任務' :
-              taskTab === 'completed'   ? '尚無已完成任務' :
-              taskTab === 'pending'     ? '沒有待處理任務' :
-              taskTab === 'in_progress' ? '沒有進行中任務' :
-              '目前沒有任務'
-            }}
-          </div>
+          <EmptyState
+            icon="mdi-format-list-checks"
+            :title="emptyTaskTitle"
+            sub="切換上方分頁或新增任務"
+          />
         </template>
       </v-data-table>
     </v-card>
+
+    <!-- ── Attachments Panel ──────────────────────────────────────── -->
+    <v-card rounded="xl">
+      <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3 d-flex align-center gap-2">
+        <v-icon icon="mdi-paperclip" size="18" color="primary" />
+        附件
+      </v-card-title>
+      <v-divider />
+      <v-card-text class="pa-5">
+        <AttachmentsPanel :project-id="project.id" />
+      </v-card-text>
+    </v-card>
+
+    <!-- Members dialog -->
+    <v-dialog v-model="showMembersDialog" max-width="480">
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3 d-flex align-center justify-space-between">
+          <span>專案成員（{{ memberNames.length }}）</span>
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showMembersDialog = false" />
+        </v-card-title>
+        <v-divider />
+        <v-list density="comfortable">
+          <v-list-item v-for="m in project.members" :key="m.id">
+            <template #prepend>
+              <v-avatar color="primary" size="32">
+                <span class="text-caption text-white font-weight-bold">{{ m.name.charAt(0) }}</span>
+              </v-avatar>
+            </template>
+            <v-list-item-title class="text-body-2">{{ m.name }}</v-list-item-title>
+            <template #append>
+              <v-chip size="x-small" variant="tonal" color="primary">
+                {{ m.pivot.role }}
+              </v-chip>
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-dialog>
 
     <!-- Task Modal -->
     <TaskModal
@@ -309,7 +379,13 @@
     />
   </div>
 
-  <div v-else class="py-20 text-center text-body-2 text-grey">找不到專案</div>
+  <EmptyState
+    v-else
+    icon="mdi-folder-question-outline"
+    title="找不到專案"
+    sub="該專案可能已被刪除或你沒有檢視權限"
+    class="py-12"
+  />
 </template>
 
 <script setup lang="ts">
@@ -317,8 +393,15 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type Task } from '@/stores/project'
+import { useAttachmentStore } from '@/stores/attachment'
 import GanttChart from '@/components/GanttChart.vue'
 import TaskModal from '@/components/TaskModal.vue'
+import KPICard from '@/components/ui/KPICard.vue'
+import AvatarStack from '@/components/ui/AvatarStack.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import ChipGroup from '@/components/ui/ChipGroup.vue'
+import TaskMetaBadges from '@/components/ui/TaskMetaBadges.vue'
+import AttachmentsPanel from '@/components/project/AttachmentsPanel.vue'
 import getEcho from '@/lib/echo'
 import api from '@/lib/axios'
 
@@ -326,12 +409,15 @@ const route  = useRoute()
 const router = useRouter()
 const auth   = useAuthStore()
 const store  = useProjectStore()
+const attachmentStore = useAttachmentStore()
 
 const showTaskModal = ref(false)
+const showMembersDialog = ref(false)
 const editingTask   = ref<Task | null>(null)
 const wsConnected   = ref(false)
 const taskSearch    = ref('')
 const exporting     = ref(false)
+const taskTab = ref<'all' | 'pending' | 'in_progress' | 'completed' | 'overdue'>('all')
 
 async function exportProject() {
   if (!project.value) return
@@ -350,7 +436,14 @@ async function exportProject() {
 }
 
 const project        = computed(() => store.current)
+const totalTasks     = computed(() => project.value?.tasks.length ?? 0)
 const completedCount = computed(() => project.value?.tasks.filter(t => t.is_completed).length ?? 0)
+const overdueCount   = computed(() => project.value?.tasks.filter(t => isTaskOverdue(t)).length ?? 0)
+const inProgressCount = computed(
+  () => project.value?.tasks.filter(t => !t.is_completed && t.progress > 0 && t.progress < 100).length ?? 0,
+)
+
+const memberNames = computed(() => project.value?.members.map(m => m.name) ?? [])
 
 // Manager 是否有此專案的編輯權（自己是 owner，或是 admin）
 const canEdit = computed(() => {
@@ -358,27 +451,40 @@ const canEdit = computed(() => {
   if (auth.isAdmin) return true
   return project.value.owner?.id === auth.user?.id
 })
-const overdueCount   = computed(() => project.value?.tasks.filter(t => isTaskOverdue(t)).length ?? 0)
 
-const dueDateClass = computed(() => {
-  if (!project.value?.due_date || project.value.is_completed) return ''
-  return new Date(project.value.due_date) < new Date() ? 'text-error font-weight-bold' : ''
+function formatDate(d: string | null | undefined) {
+  if (!d) return '未設定'
+  return d.slice(0, 10)
+}
+
+const remainingDays = computed<number | null>(() => {
+  if (!project.value?.due_date) return null
+  if (project.value.is_completed) return null
+  const due = new Date(project.value.due_date)
+  const now = new Date()
+  const ms = due.getTime() - now.getTime()
+  return Math.ceil(ms / (1000 * 60 * 60 * 24))
 })
 
-const dueDateUrgency = computed(() => {
-  if (!project.value?.due_date || project.value.is_completed) return 'grey'
-  return new Date(project.value.due_date) < new Date() ? 'error' : 'grey'
+const remainingDaysSub = computed(() => {
+  if (project.value?.is_completed) return '已完成'
+  if (remainingDays.value === null) return '未設定截止日'
+  if (remainingDays.value < 0) return `已逾期 ${Math.abs(remainingDays.value)} 天`
+  if (remainingDays.value === 0) return '今日截止'
+  return `距離截止 ${remainingDays.value} 天`
 })
 
 // Task tabs
-const taskTab  = ref('all')
-const taskTabs = [
-  { label: '全部',   value: 'all' },
-  { label: '待處理', value: 'pending' },
-  { label: '進行中', value: 'in_progress' },
-  { label: '已完成', value: 'completed' },
-  { label: '逾期',   value: 'overdue' },
-]
+const taskTabOptions = computed(() => {
+  const tasks = project.value?.tasks ?? []
+  return [
+    { value: 'all',         label: '全部',   count: tasks.length },
+    { value: 'pending',     label: '待處理', count: tasks.filter(t => t.progress === 0 && !t.is_completed).length },
+    { value: 'in_progress', label: '進行中', count: tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length },
+    { value: 'completed',   label: '已完成', count: tasks.filter(t => t.is_completed).length },
+    { value: 'overdue',     label: '逾期',   count: tasks.filter(t => isTaskOverdue(t)).length },
+  ]
+})
 
 const filteredTasks = computed(() => {
   const tasks = project.value?.tasks ?? []
@@ -389,14 +495,15 @@ const filteredTasks = computed(() => {
   return tasks
 })
 
-function getTabCount(tab: string) {
-  const tasks = project.value?.tasks ?? []
-  if (tab === 'completed')   return tasks.filter(t => t.is_completed).length
-  if (tab === 'overdue')     return tasks.filter(t => isTaskOverdue(t)).length
-  if (tab === 'pending')     return tasks.filter(t => t.progress === 0 && !t.is_completed).length
-  if (tab === 'in_progress') return tasks.filter(t => t.progress > 0 && t.progress < 100 && !t.is_completed).length
-  return tasks.length
-}
+const emptyTaskTitle = computed(() => {
+  switch (taskTab.value) {
+    case 'overdue':     return '沒有逾期任務'
+    case 'completed':   return '尚無已完成任務'
+    case 'pending':     return '沒有待處理任務'
+    case 'in_progress': return '沒有進行中任務'
+    default:            return '目前沒有任務'
+  }
+})
 
 const taskHeaders = [
   { title: '任務名稱', key: 'name',       sortable: true },
@@ -417,6 +524,17 @@ function statusIcon(icon: string | null | undefined) {
   if (!icon) return 'mdi-circle-outline'
   const normalized = icon.replace(/_/g, '-')
   return normalized.startsWith('mdi-') ? normalized : `mdi-${normalized}`
+}
+
+function attachmentCountForTask(taskId: number): number {
+  if (!project.value) return 0
+  const list = attachmentStore.byProject[project.value.id] ?? []
+  return list.filter(a => a.task_id === taskId).length
+}
+
+function openCreateTask() {
+  editingTask.value = null
+  showTaskModal.value = true
 }
 
 function openEditTask(task: Task) {
@@ -475,3 +593,22 @@ onBeforeUnmount(() => {
   wsConnected.value = false
 })
 </script>
+
+<style scoped>
+.pms-tnum {
+  font-variant-numeric: tabular-nums;
+}
+.pms-ws-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.pms-ws-dot--live {
+  animation: pms-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pms-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(1.4); }
+}
+</style>

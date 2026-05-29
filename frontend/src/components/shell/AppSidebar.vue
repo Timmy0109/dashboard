@@ -62,16 +62,13 @@ function handleLogout() {
 
 <template>
   <v-navigation-drawer v-model="drawer" :rail="rail" permanent color="grey-darken-4" width="220">
-    <v-list-item
-      prepend-icon="mdi-briefcase-variant"
-      :title="rail ? undefined : '專案管理系統'"
-      :subtitle="rail ? undefined : auth.user?.name"
-      nav
-      class="py-4"
-    />
-
-    <!-- 收合 / 展開切換 — icon only -->
-    <div class="d-flex pb-1 px-2" :class="rail ? 'justify-center' : 'justify-end'">
+    <!-- 品牌 + 收合切換同列 -->
+    <div class="d-flex align-center gap-2 px-3 py-4">
+      <v-icon v-if="!rail" icon="mdi-briefcase-variant" color="grey-lighten-1" size="22" />
+      <div v-if="!rail" class="flex-grow-1 overflow-hidden">
+        <div class="text-body-2 font-weight-bold text-white text-truncate">專案管理系統</div>
+        <div class="text-caption text-grey-lighten-1 text-truncate">{{ auth.user?.name }}</div>
+      </div>
       <v-btn
         :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
         variant="text"

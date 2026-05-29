@@ -5,47 +5,110 @@
 
       <!-- Step 1: Company list -->
       <template v-if="!selectedCompany">
-        <div class="mb-6">
+        <div class="mb-5">
           <h2 class="text-h6 font-weight-bold">專案管理</h2>
           <p class="text-body-2 text-medium-emphasis">選擇公司以查看其專案</p>
         </div>
 
+        <!-- KPI strip -->
+        <v-row class="mb-5" dense>
+          <v-col cols="12" sm="6" md="3">
+            <KPICard
+              label="公司總數"
+              :value="companies.length"
+              icon="mdi-domain"
+              icon-color="primary"
+              accent="primary"
+            />
+          </v-col>
+          <v-col cols="12" sm="6" md="3">
+            <KPICard
+              label="運作中"
+              :value="companyStats.active"
+              icon="mdi-check-circle"
+              icon-color="success"
+              accent="success"
+            />
+          </v-col>
+          <v-col cols="12" sm="6" md="3">
+            <KPICard
+              label="已停用"
+              :value="companyStats.suspended"
+              icon="mdi-pause-circle"
+              icon-color="error"
+              accent="error"
+            />
+          </v-col>
+          <v-col cols="12" sm="6" md="3">
+            <KPICard
+              label="總成員"
+              :value="companyStats.totalMembers"
+              icon="mdi-account-group"
+              icon-color="info"
+              accent="info"
+            />
+          </v-col>
+        </v-row>
+
+        <!-- Toolbar -->
+        <v-card rounded="xl" class="mb-3 pa-3 d-flex align-center gap-3 flex-wrap">
+          <v-text-field
+            v-model="companySearch"
+            prepend-inner-icon="mdi-magnify"
+            placeholder="搜尋公司..."
+            variant="outlined"
+            density="compact"
+            hide-details
+            rounded="lg"
+            style="max-width:280px"
+          />
+          <ChipGroup
+            v-model="companyStatusFilter"
+            :items="companyStatusOptions"
+          />
+        </v-card>
+
         <v-card rounded="xl">
           <v-data-table
             :headers="companyHeaders"
-            :items="companies"
+            :items="filteredCompanies"
             :loading="companiesLoading"
-            :search="companySearch"
             hover
             item-value="id"
             @click:row="(_e: Event, { item }: { item: Company }) => selectCompany(item)"
           >
-            <template #top>
-              <v-toolbar flat rounded="t-xl">
-                <v-text-field
-                  v-model="companySearch"
-                  prepend-inner-icon="mdi-magnify"
-                  placeholder="搜尋公司..."
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  rounded="lg"
-                  class="mx-4 my-2"
-                  style="max-width:300px"
-                />
-              </v-toolbar>
+            <template #item.name="{ item }">
+              <div class="d-flex align-center gap-3 py-2">
+                <v-avatar size="36" color="primary" variant="tonal">
+                  <span class="text-body-2 font-weight-bold">{{ item.name.charAt(0) }}</span>
+                </v-avatar>
+                <span class="text-body-2 font-weight-medium">{{ item.name }}</span>
+              </div>
             </template>
 
             <template #item.managers_count="{ item }">
-              <span class="text-body-2">{{ item.managers_count ?? 0 }} 人</span>
+              <v-chip size="small" variant="tonal" color="primary">
+                {{ item.managers_count ?? 0 }} 人
+              </v-chip>
             </template>
 
             <template #item.members_count="{ item }">
-              <span class="text-body-2">{{ item.members_count ?? 0 }} 人</span>
+              <v-chip size="small" variant="tonal" color="secondary">
+                {{ item.members_count ?? 0 }} 人
+              </v-chip>
             </template>
 
             <template #item.status="{ item }">
-              <v-chip :color="item.status === 'active' ? 'success' : 'error'" size="small" variant="tonal">
+              <v-chip
+                :color="item.status === 'active' ? 'success' : 'error'"
+                size="small"
+                variant="tonal"
+              >
+                <v-icon
+                  :icon="item.status === 'active' ? 'mdi-check-circle' : 'mdi-pause-circle'"
+                  size="12"
+                  class="mr-1"
+                />
                 {{ item.status === 'active' ? '運作中' : '已停用' }}
               </v-chip>
             </template>
@@ -55,10 +118,20 @@
             </template>
 
             <template #no-data>
-              <EmptyState icon="mdi-domain" title="目前沒有公司" sub="平台尚未建立任何公司" />
+              <div class="py-6">
+                <EmptyState
+                  icon="mdi-domain"
+                  :title="companies.length === 0 ? '目前沒有公司' : '找不到符合條件的公司'"
+                  :sub="companies.length === 0 ? '平台尚未建立任何公司' : '試試其他關鍵字或狀態'"
+                />
+              </div>
             </template>
           </v-data-table>
         </v-card>
+
+        <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
+          共 {{ filteredCompanies.length }} / {{ companies.length }} 間公司
+        </div>
       </template>
 
       <!-- Step 2: Projects for selected company -->
@@ -338,6 +411,8 @@ import ProjectsChartStrip from '@/components/project/ProjectsChartStrip.vue'
 import ProjectsToolbar from '@/components/project/ProjectsToolbar.vue'
 import ProjectCardGrid from '@/components/project/ProjectCardGrid.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import KPICard from '@/components/ui/KPICard.vue'
+import ChipGroup from '@/components/ui/ChipGroup.vue'
 import api from '@/lib/axios'
 
 interface Company {
@@ -358,6 +433,7 @@ const companies = ref<Company[]>([])
 const companiesLoading = ref(false)
 const selectedCompany = ref<Company | null>(null)
 const companySearch = ref('')
+const companyStatusFilter = ref<string>('all')
 
 const companyHeaders = [
   { title: '公司名稱', key: 'name',           sortable: true },
@@ -366,6 +442,34 @@ const companyHeaders = [
   { title: '狀態',   key: 'status',         sortable: false },
   { title: '',      key: 'action',          sortable: false, width: '48px' },
 ]
+
+const companyStats = computed(() => {
+  let active = 0
+  let suspended = 0
+  let totalMembers = 0
+  for (const c of companies.value) {
+    if (c.status === 'active') active++
+    else suspended++
+    totalMembers += (c.managers_count ?? 0) + (c.members_count ?? 0)
+  }
+  return { active, suspended, totalMembers }
+})
+
+const companyStatusOptions = computed(() => [
+  { value: 'all',       label: '全部',   count: companies.value.length },
+  { value: 'active',    label: '運作中', count: companyStats.value.active },
+  { value: 'suspended', label: '已停用', count: companyStats.value.suspended },
+])
+
+const filteredCompanies = computed<Company[]>(() => {
+  let list = companies.value
+  if (companyStatusFilter.value !== 'all') {
+    list = list.filter(c => c.status === companyStatusFilter.value)
+  }
+  const q = companySearch.value.trim().toLowerCase()
+  if (q) list = list.filter(c => c.name.toLowerCase().includes(q))
+  return list
+})
 
 // Import / Export
 const showImport = ref(false)

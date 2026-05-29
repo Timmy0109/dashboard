@@ -9,8 +9,7 @@ defineProps<{ projects: ProjectListItem[]; loading?: boolean }>()
 const router = useRouter()
 
 function isOverdue(p: ProjectListItem) {
-  if (!p.due_date) return false
-  if (p.is_completed || p.progress_percent >= 100) return false
+  if (!p.due_date || p.is_completed) return false
   return new Date(p.due_date) < new Date()
 }
 

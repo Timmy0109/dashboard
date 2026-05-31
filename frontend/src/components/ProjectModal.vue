@@ -129,6 +129,26 @@
                 />
               </v-col>
             </v-row>
+
+            <!-- 結案旗標：僅編輯既有專案時顯示 -->
+            <div v-if="props.project" class="pms-completed-row mt-3 pa-3 rounded-lg">
+              <v-switch
+                v-model="form.is_completed"
+                color="success"
+                density="compact"
+                hide-details
+                inset
+              >
+                <template #label>
+                  <div class="d-flex flex-column">
+                    <span class="text-body-2 font-weight-medium">結案</span>
+                    <span class="text-caption text-medium-emphasis">
+                      勾選代表此專案已結案，會從「進行中」列表移出並計入「已完成」統計
+                    </span>
+                  </div>
+                </template>
+              </v-switch>
+            </div>
           </div>
 
           <!-- 成員 -->
@@ -216,6 +236,7 @@ const form = reactive({
   status_id: '' as number | '',
   start_date: '',
   due_date: '',
+  is_completed: false,
   note: '',
   member_ids: [] as number[],
 })
@@ -234,6 +255,7 @@ onMounted(async () => {
     form.status_id   = props.project.status?.id ?? ''
     form.start_date  = props.project.start_date?.slice(0, 10) ?? ''
     form.due_date    = props.project.due_date?.slice(0, 10) ?? ''
+    form.is_completed = props.project.is_completed ?? false
   } else {
     form.start_date = new Date().toISOString().slice(0, 10)
     if (lookup.statuses.length)   form.status_id   = lookup.statuses[0]!.id
@@ -261,6 +283,7 @@ async function handleSubmit() {
       due_date: form.due_date || null,
       note: form.note || null,
     }
+    if (props.project) payload.is_completed = form.is_completed
     if (!props.project && props.companyId != null) payload.company_id = props.companyId
 
     if (props.project) {
@@ -307,5 +330,9 @@ async function syncMembers(projectId: number) {
   color: rgba(0, 0, 0, .6);
   margin-bottom: 10px;
   text-transform: uppercase;
+}
+.pms-completed-row {
+  background-color: rgba(var(--v-theme-success), 0.06);
+  border: 1px solid rgba(var(--v-theme-success), 0.18);
 }
 </style>

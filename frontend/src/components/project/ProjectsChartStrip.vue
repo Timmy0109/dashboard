@@ -11,6 +11,7 @@ import HBarChart from '@/components/charts/HBarChart.vue'
 
 const props = defineProps<{ projects: ProjectListItem[] }>()
 
+// 「已完成」= manager / admin 手動勾選結案旗標
 function isOverdue(p: ProjectListItem) {
   if (!p.due_date || p.is_completed) return false
   return new Date(p.due_date) < new Date()

@@ -19,18 +19,18 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-3">
-    <div class="d-flex align-center gap-3 flex-wrap flex-grow-1">
+  <div class="d-flex align-center w-100 justify-space-between flex-wrap gap-3">
+    <div class="d-flex align-center gap-4 flex-wrap flex-grow-1">
       <v-text-field
         :model-value="search"
         prepend-inner-icon="mdi-magnify"
-        placeholder="搜尋專案名稱 / 編號 / 負責人..."
+        placeholder="搜尋專案名稱 / 負責人..."
         variant="outlined"
         density="compact"
         hide-details
         rounded="lg"
-        style="max-width: 320px; min-width: 220px"
         @update:model-value="emit('update:search', $event)"
+        style="max-width: 260px"
       />
       <ChipGroup
         :model-value="status"
@@ -42,13 +42,11 @@ const emit = defineEmits<{
     <v-btn-toggle
       :model-value="view"
       mandatory
-      density="compact"
-      rounded="lg"
       color="primary"
       @update:model-value="emit('update:view', $event as 'table' | 'card')"
     >
-      <v-btn value="table" size="small" icon="mdi-table" title="表格檢視" />
-      <v-btn value="card" size="small" icon="mdi-view-grid-outline" title="卡片檢視" />
+      <v-btn value="table" icon="mdi-table" title="表格檢視" />
+      <v-btn value="card" icon="mdi-view-grid-outline" title="卡片檢視" />
     </v-btn-toggle>
   </div>
 </template>

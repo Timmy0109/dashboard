@@ -135,6 +135,50 @@ class BroadcastEventsTest extends TestCase
         Event::assertDispatched(NotificationCreated::class);
     }
 
+    public function test_task_created_with_assignee_notifies_assignee(): void
+    {
+        Event::fake([NotificationCreated::class]);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/projects/{$this->project->id}/tasks", [
+                'name'        => 'Assigned on create',
+                'start_date'  => '2026-02-01',
+                'end_date'    => '2026-02-15',
+                'status_id'   => $this->task->status_id,
+                'priority_id' => $this->task->priority_id,
+                'assignee_id' => $this->bob->id,
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->bob->id,
+            'type'    => 'task_assigned',
+        ]);
+
+        Event::assertDispatched(NotificationCreated::class);
+    }
+
+    public function test_task_created_with_self_as_assignee_does_not_notify(): void
+    {
+        Event::fake([NotificationCreated::class]);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/projects/{$this->project->id}/tasks", [
+                'name'        => 'Self-assigned',
+                'start_date'  => '2026-02-01',
+                'end_date'    => '2026-02-15',
+                'status_id'   => $this->task->status_id,
+                'priority_id' => $this->task->priority_id,
+                'assignee_id' => $this->admin->id,
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $this->admin->id,
+            'type'    => 'task_assigned',
+        ]);
+    }
+
     public function test_mention_in_comment_fires_notification(): void
     {
         Event::fake([NotificationCreated::class]);

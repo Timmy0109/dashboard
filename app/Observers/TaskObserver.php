@@ -29,6 +29,23 @@ class TaskObserver
             'payload'    => null,
             'created_at' => now(),
         ]);
+
+        // If task was created with an assignee that isn't the creator,
+        // notify the assignee. (Updating-path already covers re-assigns.)
+        if ($task->assignee_id && $task->assignee_id !== $task->created_by) {
+            $task->loadMissing('project');
+            $this->notify(
+                $task->assignee_id,
+                'task_assigned',
+                [
+                    'task_id'      => $task->id,
+                    'task_name'    => $task->name,
+                    'project_id'   => $task->project_id,
+                    'project_name' => $task->project?->name,
+                    'actor_name'   => User::find($task->created_by)?->name ?? '系統',
+                ]
+            );
+        }
     }
 
     public function updating(Task $task): void

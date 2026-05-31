@@ -57,18 +57,10 @@
 
     <!-- Company list -->
     <v-card rounded="xl">
-      <v-data-table
-        :headers="companyHeaders"
-        :items="filteredCompanies"
-        :loading="store.loading"
-        :search="search"
-        hover
-        item-value="id"
-        @click:row="(_e: Event, ctx: { item: Company }) => !ctx.item.deleted_at && openEmployees(ctx.item)"
-      >
-        <template #top>
-          <v-toolbar flat rounded="t-xl">
-            <div class="d-flex align-center gap-3 pa-3 w-100 flex-wrap">
+      <v-card-title class="text-body-1 font-weight-semibold border-b">
+        <div class="d-flex align-center gap-4 py-4 w-100">
+          <v-icon icon="mdi-format-list-checks" size="18" color="primary" />
+              公司系統列表
               <v-text-field
                 v-model="search"
                 prepend-inner-icon="mdi-magnify"
@@ -86,9 +78,17 @@
                   { value: 'trashed', label: '已刪除', count: trashedCount },
                 ]"
               />
-            </div>
-          </v-toolbar>
-        </template>
+        </div>
+      </v-card-title>
+      <v-data-table
+        :headers="companyHeaders"
+        :items="filteredCompanies"
+        :loading="store.loading"
+        :search="search"
+        hover
+        item-value="id"
+        @click:row="(_e: Event, ctx: { item: Company }) => !ctx.item.deleted_at && openEmployees(ctx.item)"
+      >
 
         <template #item.name="{ item }">
           <span :class="item.deleted_at ? 'text-medium-emphasis text-decoration-line-through' : 'font-weight-medium'">

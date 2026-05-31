@@ -1,30 +1,31 @@
 <template>
   <v-card rounded="xl">
+    <v-card-title class="border-b">
+      <div class="d-flex text-body-1 font-weight-black align-center pa-2 gap-4">
+            <v-icon icon="mdi-format-list-checks" size="18" color="primary" />
+        專案列表
+      <ProjectsToolbar
+        :search="search"
+        :status="status"
+        :view="view"
+        :status-options="statusOptions"
+        @update:search="emit('update:search', $event)"
+        @update:status="emit('update:status', $event)"
+        @update:view="emit('update:view', $event)"
+      />
+    </div>
+    </v-card-title>
+
     <v-data-table
       :headers="headers"
       :items="projects"
       :loading="loading"
-      :search="search"
       hover
       item-value="id"
-      @click:row="(_e: Event, { item }: { item: ProjectListItem }) => router.push(`/projects/${item.id}`)"
+      @click:row="
+        (_e: Event, { item }: { item: ProjectListItem }) => router.push(`/projects/${item.id}`)
+      "
     >
-      <template #top>
-        <v-toolbar flat rounded="t-xl">
-          <v-text-field
-            v-model="search"
-            prepend-inner-icon="mdi-magnify"
-            placeholder="搜尋專案..."
-            variant="outlined"
-            density="compact"
-            hide-details
-            rounded="lg"
-            class="mx-4 my-2"
-            style="max-width:300px"
-          />
-        </v-toolbar>
-      </template>
-
       <template #item.name="{ item }">
         <div>
           <div class="text-body-2 font-weight-medium">{{ item.name }}</div>
@@ -35,7 +36,9 @@
       <template #item.owner="{ item }">
         <div v-if="item.owner" class="d-flex align-center gap-2">
           <v-avatar color="primary" size="26" class="mr-2">
-            <span class="text-caption text-white font-weight-bold">{{ item.owner.name.charAt(0) }}</span>
+            <span class="text-caption text-white font-weight-bold">{{
+              item.owner.name.charAt(0)
+            }}</span>
           </v-avatar>
           <span class="text-body-2">{{ item.owner.name }}</span>
         </div>
@@ -47,13 +50,19 @@
 
       <template #item.due_date="{ item }">
         <span :class="isOverdue(item) ? 'text-error font-weight-medium' : 'text-body-2'">
-          <v-icon v-if="isOverdue(item)" icon="mdi-alert-circle" size="14" color="error" class="mr-1" />
-          {{ item.due_date ? item.due_date.slice(0, 10) : '—' }}
+          <v-icon
+            v-if="isOverdue(item)"
+            icon="mdi-alert-circle"
+            size="14"
+            color="error"
+            class="mr-1"
+          />
+          {{ item.due_date ? item.due_date.slice(0, 10) : "—" }}
         </span>
       </template>
 
       <template #item.progress_percent="{ item }">
-        <div class="d-flex align-center gap-2" style="min-width:120px">
+        <div class="d-flex align-center gap-2" style="min-width: 120px">
           <v-progress-linear
             :model-value="item.progress_percent"
             :color="item.progress_percent >= 100 ? 'success' : 'primary'"
@@ -90,8 +99,20 @@
 
       <template #item.actions="{ item }">
         <div v-if="auth.canManageMembers" class="d-flex gap-1" @click.stop>
-          <v-btn icon="mdi-pencil" size="small" variant="text" color="grey" @click="emit('edit', item)" />
-          <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="emit('delete', item)" />
+          <v-btn
+            icon="mdi-pencil"
+            size="small"
+            variant="text"
+            color="grey"
+            @click="emit('edit', item)"
+          />
+          <v-btn
+            icon="mdi-delete"
+            size="small"
+            variant="text"
+            color="error"
+            @click="emit('delete', item)"
+          />
         </div>
       </template>
 
@@ -103,31 +124,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import type { ProjectListItem } from '@/stores/project'
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import type { ProjectListItem } from "@/stores/project";
+import ProjectsToolbar from "@/components/project/ProjectsToolbar.vue";
 
-defineProps<{ projects: ProjectListItem[]; loading?: boolean }>()
-const emit = defineEmits<{ edit: [p: ProjectListItem]; delete: [p: ProjectListItem] }>()
+interface StatusOption {
+  value: string;
+  label: string;
+  count: number;
+}
 
-const auth = useAuthStore()
-const router = useRouter()
-const search = ref('')
+defineProps<{
+  projects: ProjectListItem[];
+  loading?: boolean;
+  search: string;
+  status: string;
+  view: "table" | "card";
+  statusOptions: StatusOption[];
+}>();
+const emit = defineEmits<{
+  edit: [p: ProjectListItem];
+  delete: [p: ProjectListItem];
+  "update:search": [v: string];
+  "update:status": [v: string];
+  "update:view": [v: "table" | "card"];
+}>();
+
+const auth = useAuthStore();
+const router = useRouter();
 
 const headers = [
-  { title: '專案名稱',   key: 'name',             sortable: true },
-  { title: '負責人',    key: 'owner',             sortable: false },
-  { title: '開始日期',   key: 'start_date',        sortable: true },
-  { title: '預計結束',   key: 'due_date',          sortable: true },
-  { title: '進度',     key: 'progress_percent',   sortable: true, width: '160px' },
-  { title: '優先級',    key: 'priority',           sortable: false },
-  { title: '狀態',     key: 'status',             sortable: false },
-  { title: '',        key: 'actions',            sortable: false, width: '80px' },
-]
+  { title: "專案名稱", key: "name", sortable: true },
+  { title: "負責人", key: "owner", sortable: false },
+  { title: "開始日期", key: "start_date", sortable: true },
+  { title: "預計結束", key: "due_date", sortable: true },
+  { title: "進度", key: "progress_percent", sortable: true, width: "160px" },
+  { title: "優先級", key: "priority", sortable: false },
+  { title: "狀態", key: "status", sortable: false },
+  { title: "", key: "actions", sortable: false, width: "80px" },
+];
 
 function isOverdue(project: ProjectListItem) {
-  if (!project.due_date || project.is_completed) return false
-  return new Date(project.due_date) < new Date()
+  if (!project.due_date || project.is_completed) return false;
+  return new Date(project.due_date) < new Date();
 }
 </script>

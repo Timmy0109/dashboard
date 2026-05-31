@@ -3,8 +3,23 @@
 import { useRouter } from 'vue-router'
 import type { ProjectListItem } from '@/stores/project'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import ProjectsToolbar from '@/components/project/ProjectsToolbar.vue'
 
-defineProps<{ projects: ProjectListItem[]; loading?: boolean }>()
+interface StatusOption { value: string; label: string; count: number }
+
+defineProps<{
+  projects: ProjectListItem[]
+  loading?: boolean
+  search: string
+  status: string
+  view: 'table' | 'card'
+  statusOptions: StatusOption[]
+}>()
+const emit = defineEmits<{
+  'update:search': [v: string]
+  'update:status': [v: string]
+  'update:view': [v: 'table' | 'card']
+}>()
 
 const router = useRouter()
 
@@ -19,25 +34,43 @@ function go(id: number) {
 </script>
 
 <template>
-  <div v-if="loading" class="d-flex justify-center py-12">
-    <v-progress-circular indeterminate color="primary" />
-  </div>
+  <v-card rounded="xl">
+    <v-card-title class="border-b">
+      <div class="d-flex align-center text-body-1 font-weight-black gap-4 pa-2 w-100">
+        <v-icon icon="mdi-format-list-checks" size="18" color="primary" />
+            專案列表
+        <ProjectsToolbar
+          :search="search"
+          :status="status"
+          :view="view"
+          :status-options="statusOptions"
+          @update:search="emit('update:search', $event)"
+          @update:status="emit('update:status', $event)"
+          @update:view="emit('update:view', $event)"
+        />
+      </div>
+    </v-card-title>
 
-  <EmptyState
-    v-else-if="projects.length === 0"
-    icon="mdi-folder-outline"
-    title="目前沒有專案"
-    sub="點擊「新增專案」開始建立"
-  />
+    <div v-if="loading" class="d-flex justify-center py-12">
+      <v-progress-circular indeterminate color="primary" />
+    </div>
 
-  <div v-else class="pms-project-grid">
+    <EmptyState
+      v-else-if="projects.length === 0"
+      icon="mdi-folder-outline"
+      title="目前沒有專案"
+      sub="點擊「新增專案」開始建立"
+    />
+
+    <div v-else class="d-flex gap-4 pa-5">
     <v-card
       v-for="p in projects"
       :key="p.id"
       rounded="xl"
       hover
-      ripple
-      class="pms-project-card"
+      variant="elevated"
+      class="w-25"
+      color="grey-lighten-4"
       @click="go(p.id)"
     >
       <v-card-text class="pa-5">
@@ -52,7 +85,7 @@ function go(id: number) {
           </div>
           <v-chip
             v-if="p.status"
-            size="x-small"
+            size="small"
             :style="{ backgroundColor: p.status.color + '22', color: p.status.color }"
             class="font-weight-medium"
           >
@@ -66,11 +99,12 @@ function go(id: number) {
           </v-avatar>
           <span class="text-caption text-medium-emphasis">{{ p.owner.name }}</span>
         </div>
+        <v-divider class="mb-3" />
 
         <div class="d-flex justify-space-between mb-1">
           <span class="text-caption text-medium-emphasis">整體進度</span>
           <span
-            class="text-caption font-weight-bold pms-tnum"
+            class="text-caption font-weight-bold"
             :class="p.progress_percent >= 100 ? 'text-success' : 'text-primary'"
           >{{ p.progress_percent }}%</span>
         </div>
@@ -91,7 +125,7 @@ function go(id: number) {
           </div>
           <v-chip
             v-if="p.priority"
-            size="x-small"
+            size="small"
             :style="{ backgroundColor: p.priority.color + '22', color: p.priority.color }"
           >
             {{ p.priority.name }}
@@ -99,23 +133,6 @@ function go(id: number) {
         </div>
       </v-card-text>
     </v-card>
-  </div>
+    </div>
+  </v-card>
 </template>
-
-<style scoped>
-.pms-project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-.pms-project-card {
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-.pms-project-card:hover {
-  transform: translateY(-1px);
-}
-.pms-tnum {
-  font-variant-numeric: tabular-nums;
-}
-</style>

@@ -51,6 +51,18 @@ function titleOf(n: Notification): string {
       return `「${p.task_name}」狀態變更為 ${p.to}`
     case 'task_replied':
       return `${p.actor_name} 回覆了你的留言`
+    case 'fee_submitted':
+      return p.is_resubmit
+        ? `${p.submitter} 重新提交了「${p.task_name}」費用 NT$${p.amount.toLocaleString()}`
+        : `${p.submitter} 提交了「${p.task_name}」費用 NT$${p.amount.toLocaleString()}`
+    case 'fee_approved':
+      return `${p.reviewer} 已核准你的費用 NT$${p.amount.toLocaleString()}`
+    case 'fee_rejected':
+      return `${p.reviewer} 駁回了你的費用 NT$${p.amount.toLocaleString()}`
+    case 'fee_unapproved':
+      return `${p.reviewer} 將你的費用改回待審 NT$${p.amount.toLocaleString()}`
+    case 'fee_receipt_requested':
+      return `${p.reviewer} 要求補上 NT$${p.amount.toLocaleString()} 的憑證`
     default:
       return '新的通知'
   }
@@ -61,6 +73,9 @@ function snippetOf(n: Notification): string {
   if (n.type === 'task_mentioned' || n.type === 'task_replied') {
     return p.snippet ?? ''
   }
+  if (n.type === 'fee_rejected') return p.reject_reason ?? ''
+  if (n.type === 'fee_unapproved') return p.unapprove_reason ?? ''
+  if (n.type === 'fee_receipt_requested') return p.message ?? ''
   return ''
 }
 
@@ -70,6 +85,11 @@ function iconOf(n: Notification): string {
     case 'task_mentioned': return 'mdi-at'
     case 'task_status_changed': return 'mdi-flag'
     case 'task_replied': return 'mdi-reply'
+    case 'fee_submitted': return 'mdi-cash-plus'
+    case 'fee_approved': return 'mdi-check-circle'
+    case 'fee_rejected': return 'mdi-close-circle'
+    case 'fee_unapproved': return 'mdi-undo-variant'
+    case 'fee_receipt_requested': return 'mdi-receipt-text-outline'
     default: return 'mdi-bell'
   }
 }

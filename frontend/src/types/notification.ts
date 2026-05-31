@@ -8,6 +8,11 @@ export type NotificationType =
   | 'task_mentioned'
   | 'task_status_changed'
   | 'task_replied'
+  | 'fee_submitted'
+  | 'fee_approved'
+  | 'fee_rejected'
+  | 'fee_unapproved'
+  | 'fee_receipt_requested'
 
 interface NotificationPayloadByType {
   task_assigned: {
@@ -40,6 +45,46 @@ interface NotificationPayloadByType {
     project_id: number
     actor_name: string
     snippet: string
+  }
+  fee_submitted: {
+    task_fee_id: number
+    task_id: number
+    project_id: number
+    task_name: string
+    amount: number
+    submitter: string
+    is_resubmit?: boolean
+  }
+  fee_approved: {
+    task_fee_id: number
+    task_id: number
+    project_id: number
+    amount: number
+    reviewer: string
+  }
+  fee_rejected: {
+    task_fee_id: number
+    task_id: number
+    project_id: number
+    amount: number
+    reviewer: string
+    reject_reason: string
+  }
+  fee_unapproved: {
+    task_fee_id: number
+    task_id: number
+    project_id: number
+    amount: number
+    reviewer: string
+    unapprove_reason: string
+  }
+  fee_receipt_requested: {
+    task_fee_id: number
+    task_id: number
+    project_id: number
+    amount: number
+    reviewer: string
+    message: string | null
   }
 }
 

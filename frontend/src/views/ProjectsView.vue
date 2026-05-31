@@ -2,7 +2,6 @@
   <div>
     <!-- ── ADMIN: Company picker → Projects ─────────────────────────────── -->
     <template v-if="auth.isAdmin">
-
       <!-- Step 1: Company list -->
       <template v-if="!selectedCompany">
         <div class="mb-5">
@@ -51,24 +50,24 @@
         </v-row>
 
         <!-- Toolbar -->
-        <v-card rounded="xl" class="mb-3 pa-3 d-flex align-center gap-3 flex-wrap">
-          <v-text-field
-            v-model="companySearch"
-            prepend-inner-icon="mdi-magnify"
-            placeholder="搜尋公司..."
-            variant="outlined"
-            density="compact"
-            hide-details
-            rounded="lg"
-            style="max-width:280px"
-          />
-          <ChipGroup
-            v-model="companyStatusFilter"
-            :items="companyStatusOptions"
-          />
-        </v-card>
-
         <v-card rounded="xl">
+          <v-card-title class="text-body-1 font-weight-semibold border-b">
+            <div class="d-flex align-center gap-4 py-4 w-100">
+              <v-icon icon="mdi-format-list-checks" size="18" color="primary" />
+              公司列表
+              <v-text-field
+                v-model="companySearch"
+                prepend-inner-icon="mdi-magnify"
+                placeholder="搜尋公司..."
+                variant="outlined"
+                density="compact"
+                hide-details
+                rounded="lg"
+                style="max-width: 280px"
+              />
+              <ChipGroup v-model="companyStatusFilter" :items="companyStatusOptions" />
+            </div>
+          </v-card-title>
           <v-data-table
             :headers="companyHeaders"
             :items="filteredCompanies"
@@ -109,7 +108,7 @@
                   size="12"
                   class="mr-1"
                 />
-                {{ item.status === 'active' ? '運作中' : '已停用' }}
+                {{ item.status === "active" ? "運作中" : "已停用" }}
               </v-chip>
             </template>
 
@@ -144,7 +143,10 @@
               prepend-icon="mdi-arrow-left"
               size="small"
               class="mb-2 px-0"
-              @click="selectedCompany = null; store.list = []"
+              @click="
+                selectedCompany = null;
+                store.list = [];
+              "
             >
               返回公司列表
             </v-btn>
@@ -152,25 +154,39 @@
             <p class="text-body-2 text-medium-emphasis">專案列表</p>
           </div>
           <div class="d-flex gap-2 flex-wrap">
-            <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
-            <v-btn variant="outlined" color="grey" prepend-icon="mdi-download" rounded="lg" :loading="exporting" @click="exportAll">匯出全部</v-btn>
-            <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate">新增專案</v-btn>
+            <v-btn
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-upload"
+              rounded="lg"
+              @click="showImport = true"
+              >匯入</v-btn
+            >
+            <v-btn
+              variant="outlined"
+              color="grey"
+              prepend-icon="mdi-download"
+              rounded="lg"
+              :loading="exporting"
+              @click="exportAll"
+              >匯出全部</v-btn
+            >
+            <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate"
+              >新增專案</v-btn
+            >
           </div>
         </div>
 
         <ProjectsChartStrip :projects="store.list" class="mb-5" />
 
-        <ProjectsToolbar
-          v-model:search="projectSearch"
-          v-model:status="statusFilter"
-          v-model:view="viewMode"
-          :status-options="statusFilterOptions"
-        />
-
         <ProjectDataTable
           v-if="viewMode === 'table'"
           :projects="filteredProjects"
           :loading="store.listLoading"
+          v-model:search="projectSearch"
+          v-model:status="statusFilter"
+          v-model:view="viewMode"
+          :status-options="statusFilterOptions"
           @edit="openEdit"
           @delete="handleDelete"
         />
@@ -178,6 +194,10 @@
           v-else
           :projects="filteredProjects"
           :loading="store.listLoading"
+          v-model:search="projectSearch"
+          v-model:status="statusFilter"
+          v-model:view="viewMode"
+          :status-options="statusFilterOptions"
         />
 
         <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
@@ -194,25 +214,39 @@
           <p class="text-body-2 text-medium-emphasis">我的專案</p>
         </div>
         <div v-if="auth.canManageMembers" class="d-flex gap-2 flex-wrap">
-          <v-btn variant="outlined" color="primary" prepend-icon="mdi-upload" rounded="lg" @click="showImport = true">匯入</v-btn>
-          <v-btn variant="outlined" color="grey" prepend-icon="mdi-download" rounded="lg" :loading="exporting" @click="exportAll">匯出全部</v-btn>
-          <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate">新增專案</v-btn>
+          <v-btn
+            variant="outlined"
+            color="primary"
+            prepend-icon="mdi-upload"
+            rounded="lg"
+            @click="showImport = true"
+            >匯入</v-btn
+          >
+          <v-btn
+            variant="outlined"
+            color="grey"
+            prepend-icon="mdi-download"
+            rounded="lg"
+            :loading="exporting"
+            @click="exportAll"
+            >匯出全部</v-btn
+          >
+          <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate"
+            >新增專案</v-btn
+          >
         </div>
       </div>
 
       <ProjectsChartStrip :projects="store.list" class="mb-5" />
 
-      <ProjectsToolbar
-        v-model:search="projectSearch"
-        v-model:status="statusFilter"
-        v-model:view="viewMode"
-        :status-options="statusFilterOptions"
-      />
-
       <ProjectDataTable
         v-if="viewMode === 'table'"
         :projects="filteredProjects"
         :loading="store.listLoading"
+        v-model:search="projectSearch"
+        v-model:status="statusFilter"
+        v-model:view="viewMode"
+        :status-options="statusFilterOptions"
         @edit="openEdit"
         @delete="handleDelete"
       />
@@ -220,6 +254,10 @@
         v-else
         :projects="filteredProjects"
         :loading="store.listLoading"
+        v-model:search="projectSearch"
+        v-model:status="statusFilter"
+        v-model:view="viewMode"
+        :status-options="statusFilterOptions"
       />
 
       <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
@@ -242,184 +280,184 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { useProjectStore, type ProjectListItem } from '@/stores/project'
-import { useToast } from '@/composables/useToast'
-import ProjectModal from '@/components/ProjectModal.vue'
-import ProjectDataTable from '@/components/ProjectDataTable.vue'
-import ImportDialog from '@/components/ImportDialog.vue'
-import ProjectsChartStrip from '@/components/project/ProjectsChartStrip.vue'
-import ProjectsToolbar from '@/components/project/ProjectsToolbar.vue'
-import ProjectCardGrid from '@/components/project/ProjectCardGrid.vue'
-import EmptyState from '@/components/ui/EmptyState.vue'
-import KPICard from '@/components/ui/KPICard.vue'
-import ChipGroup from '@/components/ui/ChipGroup.vue'
-import api from '@/lib/axios'
+import { onMounted, ref, computed } from "vue";
+import { useAuthStore } from "@/stores/auth";
+import { useProjectStore, type ProjectListItem } from "@/stores/project";
+import { useToast } from "@/composables/useToast";
+import ProjectModal from "@/components/ProjectModal.vue";
+import ProjectDataTable from "@/components/ProjectDataTable.vue";
+import ImportDialog from "@/components/ImportDialog.vue";
+import ProjectsChartStrip from "@/components/project/ProjectsChartStrip.vue";
+import ProjectCardGrid from "@/components/project/ProjectCardGrid.vue";
+import EmptyState from "@/components/ui/EmptyState.vue";
+import KPICard from "@/components/ui/KPICard.vue";
+import ChipGroup from "@/components/ui/ChipGroup.vue";
+import api from "@/lib/axios";
 
 interface Company {
-  id: number
-  name: string
-  status: 'active' | 'suspended'
-  managers_count: number
-  members_count: number
+  id: number;
+  name: string;
+  status: "active" | "suspended";
+  managers_count: number;
+  members_count: number;
 }
 
-const auth = useAuthStore()
-const store = useProjectStore()
-const toast = useToast()
+const auth = useAuthStore();
+const store = useProjectStore();
+const toast = useToast();
 
 // Admin company state
-const companies = ref<Company[]>([])
-const companiesLoading = ref(false)
-const selectedCompany = ref<Company | null>(null)
-const companySearch = ref('')
-const companyStatusFilter = ref<string>('all')
+const companies = ref<Company[]>([]);
+const companiesLoading = ref(false);
+const selectedCompany = ref<Company | null>(null);
+const companySearch = ref("");
+const companyStatusFilter = ref<string>("all");
 
 const companyHeaders = [
-  { title: '公司名稱', key: 'name',           sortable: true },
-  { title: 'Manager', key: 'managers_count', sortable: true },
-  { title: '成員數',  key: 'members_count',  sortable: true },
-  { title: '狀態',   key: 'status',         sortable: false },
-  { title: '',      key: 'action',          sortable: false, width: '48px' },
-]
+  { title: "公司名稱", key: "name", sortable: true },
+  { title: "Manager", key: "managers_count", sortable: true },
+  { title: "成員數", key: "members_count", sortable: true },
+  { title: "狀態", key: "status", sortable: false },
+  { title: "", key: "action", sortable: false, width: "48px" },
+];
 
 const companyStats = computed(() => {
-  let active = 0
-  let suspended = 0
-  let totalMembers = 0
+  let active = 0;
+  let suspended = 0;
+  let totalMembers = 0;
   for (const c of companies.value) {
-    if (c.status === 'active') active++
-    else suspended++
-    totalMembers += (c.managers_count ?? 0) + (c.members_count ?? 0)
+    if (c.status === "active") active++;
+    else suspended++;
+    totalMembers += (c.managers_count ?? 0) + (c.members_count ?? 0);
   }
-  return { active, suspended, totalMembers }
-})
+  return { active, suspended, totalMembers };
+});
 
 const companyStatusOptions = computed(() => [
-  { value: 'all',       label: '全部',   count: companies.value.length },
-  { value: 'active',    label: '運作中', count: companyStats.value.active },
-  { value: 'suspended', label: '已停用', count: companyStats.value.suspended },
-])
+  { value: "all", label: "全部", count: companies.value.length },
+  { value: "active", label: "運作中", count: companyStats.value.active },
+  { value: "suspended", label: "已停用", count: companyStats.value.suspended },
+]);
 
 const filteredCompanies = computed<Company[]>(() => {
-  let list = companies.value
-  if (companyStatusFilter.value !== 'all') {
-    list = list.filter(c => c.status === companyStatusFilter.value)
+  let list = companies.value;
+  if (companyStatusFilter.value !== "all") {
+    list = list.filter((c) => c.status === companyStatusFilter.value);
   }
-  const q = companySearch.value.trim().toLowerCase()
-  if (q) list = list.filter(c => c.name.toLowerCase().includes(q))
-  return list
-})
+  const q = companySearch.value.trim().toLowerCase();
+  if (q) list = list.filter((c) => c.name.toLowerCase().includes(q));
+  return list;
+});
 
 // Import / Export
-const showImport = ref(false)
-const exporting = ref(false)
+const showImport = ref(false);
+const exporting = ref(false);
 
 async function exportAll() {
-  exporting.value = true
+  exporting.value = true;
   try {
-    const res = await api.get('/projects/export', { responseType: 'blob' })
-    const url = URL.createObjectURL(res.data)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `全部專案_${new Date().toISOString().slice(0, 10)}.xlsx`
-    a.click()
-    URL.revokeObjectURL(url)
+    const res = await api.get("/projects/export", { responseType: "blob" });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `全部專案_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   } finally {
-    exporting.value = false
+    exporting.value = false;
   }
 }
 
 async function onImportDone() {
-  showImport.value = false
+  showImport.value = false;
   if (auth.isAdmin && selectedCompany.value) {
-    await store.fetchList(selectedCompany.value.id)
+    await store.fetchList(selectedCompany.value.id);
   } else {
-    await store.fetchList()
+    await store.fetchList();
   }
-  toast.success('匯入完成，專案列表已更新')
+  toast.success("匯入完成，專案列表已更新");
 }
 
 // Shared modal state
-const showModal = ref(false)
-const editingProject = ref<ProjectListItem | null>(null)
+const showModal = ref(false);
+const editingProject = ref<ProjectListItem | null>(null);
 
 // Project list filters
-const projectSearch = ref('')
-const statusFilter = ref<string>('all')
-const viewMode = ref<'table' | 'card'>('table')
+const projectSearch = ref("");
+const statusFilter = ref<string>("all");
+const viewMode = ref<"table" | "card">("table");
 
 const statusFilterOptions = computed(() => {
-  const seen = new Map<string, { value: string; label: string; count: number }>()
-  seen.set('all', { value: 'all', label: '全部', count: store.list.length })
+  const seen = new Map<string, { value: string; label: string; count: number }>();
+  seen.set("all", { value: "all", label: "全部", count: store.list.length });
   for (const p of store.list) {
-    if (!p.status) continue
-    const key = String(p.status.id)
+    if (!p.status) continue;
+    const key = String(p.status.id);
     if (!seen.has(key)) {
-      seen.set(key, { value: key, label: p.status.name, count: 0 })
+      seen.set(key, { value: key, label: p.status.name, count: 0 });
     }
-    seen.get(key)!.count++
+    seen.get(key)!.count++;
   }
-  return Array.from(seen.values())
-})
+  return Array.from(seen.values());
+});
 
 const filteredProjects = computed<ProjectListItem[]>(() => {
-  let list = store.list
-  if (statusFilter.value !== 'all') {
-    list = list.filter(p => p.status && String(p.status.id) === statusFilter.value)
+  let list = store.list;
+  if (statusFilter.value !== "all") {
+    list = list.filter((p) => p.status && String(p.status.id) === statusFilter.value);
   }
-  const q = projectSearch.value.trim().toLowerCase()
+  const q = projectSearch.value.trim().toLowerCase();
   if (q) {
-    list = list.filter(p =>
-      p.name.toLowerCase().includes(q)
-      || (p.project_no ?? '').toLowerCase().includes(q)
-      || (p.owner?.name ?? '').toLowerCase().includes(q),
-    )
+    list = list.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.project_no ?? "").toLowerCase().includes(q) ||
+        (p.owner?.name ?? "").toLowerCase().includes(q),
+    );
   }
-  return list
-})
+  return list;
+});
 
 async function selectCompany(company: Company) {
-  selectedCompany.value = company
-  await store.fetchList(company.id)
+  selectedCompany.value = company;
+  await store.fetchList(company.id);
 }
 
 function openCreate() {
-  editingProject.value = null
-  showModal.value = true
+  editingProject.value = null;
+  showModal.value = true;
 }
 
 function openEdit(project: ProjectListItem) {
-  editingProject.value = project
-  showModal.value = true
+  editingProject.value = project;
+  showModal.value = true;
 }
 
 async function onProjectSaved() {
-  showModal.value = false
+  showModal.value = false;
   if (auth.isAdmin && selectedCompany.value) {
-    await store.fetchList(selectedCompany.value.id)
+    await store.fetchList(selectedCompany.value.id);
   } else {
-    await store.fetchList()
+    await store.fetchList();
   }
 }
 
 async function handleDelete(project: ProjectListItem) {
-  if (!confirm(`確定要刪除「${project.name}」？此操作無法復原。`)) return
-  await store.deleteProject(project.id)
+  if (!confirm(`確定要刪除「${project.name}」？此操作無法復原。`)) return;
+  await store.deleteProject(project.id);
 }
 
 onMounted(async () => {
   if (auth.isAdmin) {
-    companiesLoading.value = true
+    companiesLoading.value = true;
     try {
-      const res = await api.get('/admin/companies')
-      companies.value = res.data
+      const res = await api.get("/admin/companies");
+      companies.value = res.data;
     } finally {
-      companiesLoading.value = false
+      companiesLoading.value = false;
     }
   } else {
-    await store.fetchList()
+    await store.fetchList();
   }
-})
+});
 </script>

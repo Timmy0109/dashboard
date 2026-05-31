@@ -250,6 +250,16 @@ async function handleLogin() {
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 12px 32px -8px rgba(15, 23, 42, 0.12);
   overflow: hidden;
+  animation: pms-card-in 0.6s ease-out both;
+}
+
+@keyframes pms-card-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pms-login-card { animation: none; }
 }
 
 .pms-login-grid {
@@ -281,6 +291,7 @@ async function handleLogin() {
   height: 260px;
   top: -60px;
   right: -80px;
+  animation: pms-float-a 12s ease-in-out infinite;
 }
 .pms-login-brand__bubble--bl {
   width: 200px;
@@ -288,6 +299,23 @@ async function handleLogin() {
   bottom: -60px;
   left: -50px;
   background-color: rgba(255, 255, 255, 0.05);
+  animation: pms-float-b 14s ease-in-out infinite;
+}
+
+@keyframes pms-float-a {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-12px, 16px); }
+}
+@keyframes pms-float-b {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(14px, -10px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pms-login-brand__bubble--tr,
+  .pms-login-brand__bubble--bl {
+    animation: none;
+  }
 }
 
 .pms-login-brand__top {
@@ -400,6 +428,7 @@ async function handleLogin() {
 .pms-login-demo__item:hover {
   background-color: #eef3f1;
   border-color: rgba(0, 128, 111, 0.25);
+  transform: translateY(-1px);
 }
 
 .pms-login-demo__avatar {

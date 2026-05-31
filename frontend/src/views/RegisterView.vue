@@ -1,117 +1,112 @@
 <template>
   <v-app>
-    <v-main>
-      <div class="pms-register-shell">
-        <!-- Left brand column (hidden on md and down) -->
-        <aside class="pms-register-brand d-none d-lg-flex">
-          <div class="pms-register-brand__inner">
-            <div class="d-flex align-center mb-8">
-              <v-icon icon="mdi-briefcase-variant" size="36" class="text-white mr-3" />
-              <span class="text-h5 font-weight-bold text-white">專案管理系統</span>
-            </div>
-            <h1 class="text-h3 font-weight-bold text-white mb-4 pms-register-brand__title">
-              加入您的團隊
-            </h1>
-            <p class="text-body-1 text-white mb-10 pms-register-brand__subtitle">
-              使用邀請碼快速申請成為公司成員，與夥伴一起追蹤專案、管理任務、創造成果。
-            </p>
+    <v-main class="pms-auth-bg">
+      <div class="pms-auth-shell">
+        <v-card class="pms-auth-card" :elevation="0">
+          <div class="pms-auth-grid">
+            <!-- Left: brand column -->
+            <aside class="pms-auth-brand">
+              <div class="pms-auth-brand__bubble pms-auth-brand__bubble--tr" />
+              <div class="pms-auth-brand__bubble pms-auth-brand__bubble--bl" />
 
-            <div class="pms-register-brand__features">
-              <div v-for="feat in features" :key="feat.title" class="d-flex align-start mb-5">
-                <div class="pms-register-brand__feature-icon mr-4">
-                  <v-icon :icon="feat.icon" color="white" />
+              <div class="pms-auth-brand__top">
+                <div class="pms-auth-brand__logo">
+                  <v-icon icon="mdi-briefcase-variant" color="white" size="22" />
                 </div>
-                <div>
-                  <div class="text-subtitle-1 font-weight-bold text-white mb-1">{{ feat.title }}</div>
-                  <div class="text-body-2 text-white pms-register-brand__feature-desc">{{ feat.desc }}</div>
-                </div>
+                <h1 class="text-h4 font-weight-bold text-white mt-8 mb-3">
+                  加入你的團隊
+                </h1>
+                <p class="text-body-1 text-white pms-auth-brand__sub">
+                  使用邀請碼快速申請成為公司成員，與夥伴一起追蹤專案、管理任務、創造成果。
+                </p>
               </div>
-            </div>
-          </div>
 
-          <div class="pms-register-brand__decor pms-register-brand__decor--a" />
-          <div class="pms-register-brand__decor pms-register-brand__decor--b" />
-        </aside>
+              <ul class="pms-auth-brand__features">
+                <li v-for="f in features" :key="f.text">
+                  <span class="pms-auth-brand__check">
+                    <v-icon icon="mdi-check" color="white" size="14" />
+                  </span>
+                  <span class="text-body-2 text-white">{{ f.text }}</span>
+                </li>
+              </ul>
+            </aside>
 
-        <!-- Right form column -->
-        <section class="pms-register-form">
-          <div class="pms-register-form__inner">
-            <v-card elevation="3" rounded="xl" class="pa-4 pa-sm-6">
-              <!-- Success state -->
-              <v-card-text v-if="success" class="text-center py-8">
-                <v-icon icon="mdi-check-circle" color="success" size="56" class="mb-4" />
-                <div class="text-h6 font-weight-bold mb-2">註冊成功</div>
-                <p class="text-body-2 text-grey mb-6">{{ successMsg }}</p>
-                <v-btn color="primary" :to="'/login'" rounded="lg">前往登入</v-btn>
-              </v-card-text>
+            <!-- Right: form column -->
+            <section class="pms-auth-form-col">
+              <div class="pms-auth-form-wrap">
+                <!-- Success state -->
+                <div v-if="success" class="text-center py-6">
+                  <v-icon icon="mdi-check-circle" color="success" size="56" class="mb-4" />
+                  <div class="text-h6 font-weight-bold mb-2">註冊成功</div>
+                  <p class="text-body-2 text-medium-emphasis mb-6">{{ successMsg }}</p>
+                  <RouterLink to="/login" class="text-decoration-none">
+                    <button type="button" class="pms-auth-submit">前往登入</button>
+                  </RouterLink>
+                </div>
 
-              <template v-else>
-                <v-card-title class="text-center pt-4 pb-2">
-                  <div class="d-flex flex-column align-center">
-                    <v-icon icon="mdi-account-plus" color="primary" size="40" class="mb-3" />
-                    <span class="text-h6 font-weight-bold">申請加入</span>
-                    <span class="text-body-2 text-grey mt-1">使用邀請碼申請成為成員</span>
+                <template v-else>
+                  <div class="mb-6">
+                    <h2 class="text-h5 font-weight-bold mb-1">申請加入</h2>
+                    <p class="text-body-2 text-medium-emphasis">使用邀請碼申請成為成員</p>
                   </div>
-                </v-card-title>
 
-                <v-card-text class="pt-2">
                   <!-- Step indicator -->
-                  <v-stepper
-                    :model-value="step"
-                    alt-labels
-                    flat
-                    class="mb-4 elevation-0 bg-transparent"
-                  >
-                    <v-stepper-header>
-                      <v-stepper-item
-                        title="驗證邀請碼"
-                        value="1"
-                        :complete="step === 2"
-                        color="primary"
-                      />
-                      <v-divider />
-                      <v-stepper-item title="填寫資料" value="2" color="primary" />
-                    </v-stepper-header>
-                  </v-stepper>
+                  <div class="pms-auth-steps mb-5">
+                    <div class="pms-auth-step" :class="{ 'pms-auth-step--active': step === 1, 'pms-auth-step--done': step === 2 }">
+                      <span class="pms-auth-step__dot">
+                        <v-icon v-if="step === 2" icon="mdi-check" size="14" color="white" />
+                        <span v-else>1</span>
+                      </span>
+                      <span class="text-caption">驗證邀請碼</span>
+                    </div>
+                    <div class="pms-auth-step__line" :class="{ 'pms-auth-step__line--done': step === 2 }" />
+                    <div class="pms-auth-step" :class="{ 'pms-auth-step--active': step === 2 }">
+                      <span class="pms-auth-step__dot">
+                        <span>2</span>
+                      </span>
+                      <span class="text-caption">填寫資料</span>
+                    </div>
+                  </div>
 
                   <!-- Step 1 -->
                   <div v-if="step === 1">
+                    <div class="mb-1 text-body-2 font-weight-medium">邀請碼</div>
                     <v-text-field
                       v-model="inviteCode"
-                      label="邀請碼"
                       prepend-inner-icon="mdi-key-variant"
                       placeholder="請輸入邀請碼"
-                      class="mb-2"
+                      variant="outlined"
+                      density="comfortable"
+                      rounded="lg"
+                      color="primary"
                       style="text-transform: uppercase"
+                      class="mb-3"
+                      :error-messages="codeError ? [codeError] : []"
                       @keyup.enter="verifyCode"
                     />
 
-                    <v-alert
-                      v-if="codeError"
-                      type="error"
-                      variant="tonal"
-                      density="compact"
-                      class="mb-3 text-body-2"
-                    >
-                      {{ codeError }}
-                    </v-alert>
-
-                    <v-btn
-                      color="primary"
-                      block
-                      size="large"
-                      :loading="verifying"
-                      :disabled="!inviteCode.trim()"
+                    <button
+                      type="button"
+                      class="pms-auth-submit"
+                      :disabled="!inviteCode.trim() || verifying"
                       @click="verifyCode"
                     >
+                      <v-progress-circular
+                        v-if="verifying"
+                        indeterminate
+                        size="18"
+                        width="2"
+                        color="white"
+                        class="mr-2"
+                      />
                       驗證邀請碼
-                    </v-btn>
+                    </button>
 
-                    <p class="text-center text-body-2 text-grey mt-4 mb-0">
+                    <p class="text-body-2 text-medium-emphasis text-center mt-4 mb-0">
                       已有帳號？
                       <RouterLink
                         to="/login"
-                        class="text-primary text-decoration-none font-weight-medium"
+                        class="pms-auth-link font-weight-medium text-decoration-none"
                       >
                         登入
                       </RouterLink>
@@ -130,42 +125,61 @@
                       加入 <strong>{{ companyName }}</strong>
                     </v-alert>
 
+                    <div class="mb-1 text-body-2 font-weight-medium">姓名</div>
                     <v-text-field
                       v-model="form.name"
-                      label="姓名"
                       prepend-inner-icon="mdi-account-outline"
-                      placeholder="您的姓名"
+                      placeholder="你的姓名"
                       autocomplete="name"
-                      class="mb-2"
+                      variant="outlined"
+                      density="comfortable"
+                      rounded="lg"
+                      color="primary"
+                      class="mb-3"
                     />
+
+                    <div class="mb-1 text-body-2 font-weight-medium">Email</div>
                     <v-text-field
                       v-model="form.email"
-                      label="Email"
                       type="email"
                       prepend-inner-icon="mdi-email-outline"
                       placeholder="your@email.com"
                       autocomplete="email"
-                      class="mb-2"
+                      variant="outlined"
+                      density="comfortable"
+                      rounded="lg"
+                      color="primary"
+                      class="mb-3"
                     />
+
+                    <div class="mb-1 text-body-2 font-weight-medium">密碼</div>
                     <v-text-field
                       v-model="form.password"
-                      label="密碼"
                       :type="showPwd ? 'text' : 'password'"
                       prepend-inner-icon="mdi-lock-outline"
-                      :append-inner-icon="showPwd ? 'mdi-eye-off' : 'mdi-eye'"
+                      :append-inner-icon="showPwd ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
                       autocomplete="new-password"
                       placeholder="至少 8 個字元"
-                      class="mb-2"
+                      variant="outlined"
+                      density="comfortable"
+                      rounded="lg"
+                      color="primary"
+                      class="mb-3"
                       @click:append-inner="showPwd = !showPwd"
                     />
+
+                    <div class="mb-1 text-body-2 font-weight-medium">確認密碼</div>
                     <v-text-field
                       v-model="form.password_confirmation"
-                      label="確認密碼"
                       :type="showPwd ? 'text' : 'password'"
                       prepend-inner-icon="mdi-lock-check-outline"
                       autocomplete="new-password"
                       placeholder="再輸入一次密碼"
-                      class="mb-2"
+                      variant="outlined"
+                      density="comfortable"
+                      rounded="lg"
+                      color="primary"
+                      class="mb-3"
                       @keyup.enter="handleRegister"
                     />
 
@@ -180,39 +194,43 @@
                     </v-alert>
 
                     <div class="d-flex ga-3">
-                      <v-btn
-                        variant="outlined"
-                        color="grey"
+                      <button
+                        type="button"
+                        class="pms-auth-submit pms-auth-submit--ghost"
                         @click="backToStep1"
                       >
                         返回
-                      </v-btn>
-                      <v-btn
-                        color="primary"
-                        class="flex-grow-1"
-                        :loading="submitting"
+                      </button>
+                      <button
+                        type="button"
+                        class="pms-auth-submit flex-grow-1"
+                        :disabled="submitting"
                         @click="handleRegister"
                       >
+                        <v-progress-circular
+                          v-if="submitting"
+                          indeterminate
+                          size="18"
+                          width="2"
+                          color="white"
+                          class="mr-2"
+                        />
                         送出申請
-                      </v-btn>
+                      </button>
                     </div>
                   </div>
-                </v-card-text>
-              </template>
-            </v-card>
-
-            <p class="text-center text-caption text-grey mt-6 mb-0">
-              &copy; {{ year }} 專案管理系統
-            </p>
+                </template>
+              </div>
+            </section>
           </div>
-        </section>
+        </v-card>
       </div>
     </v-main>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import axios from 'axios'
 import api from '@/lib/axios'
@@ -239,24 +257,11 @@ const submitting = ref(false)
 const success = ref(false)
 const successMsg = ref('')
 
-const year = computed(() => new Date().getFullYear())
-
 const features = [
-  {
-    icon: 'mdi-folder-multiple-outline',
-    title: '專案集中管理',
-    desc: '一站式追蹤所有專案進度、任務與里程碑。',
-  },
-  {
-    icon: 'mdi-account-group-outline',
-    title: '團隊協作',
-    desc: '指派任務、即時討論、檔案共享一氣呵成。',
-  },
-  {
-    icon: 'mdi-chart-timeline-variant',
-    title: '進度可視化',
-    desc: '甘特圖、KPI、趨勢圖讓決策更有底氣。',
-  },
+  { text: '邀請碼 30 分鐘有效' },
+  { text: '加入後自動分配角色' },
+  { text: '完整稽核紀錄' },
+  { text: '隨時切換多個專案' },
 ]
 
 function backToStep1() {
@@ -293,6 +298,10 @@ async function handleRegister() {
     formError.value = '兩次密碼不一致'
     return
   }
+  if (form.password.length < 8) {
+    formError.value = '密碼至少 8 個字元'
+    return
+  }
   submitting.value = true
   try {
     const { data } = await api.post('/register', {
@@ -318,104 +327,250 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.pms-register-shell {
-  display: grid;
-  grid-template-columns: 1fr;
+.pms-auth-bg {
+  background-color: #eef1f4;
+}
+
+.pms-auth-shell {
   min-height: 100vh;
-  background: rgb(var(--v-theme-background));
-}
-
-@media (min-width: 1280px) {
-  .pms-register-shell {
-    grid-template-columns: 1.05fr 1fr;
-  }
-}
-
-.pms-register-brand {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    rgb(var(--v-theme-primary)) 0%,
-    rgb(var(--v-theme-primary-darken-1, var(--v-theme-primary))) 50%,
-    rgb(var(--v-theme-secondary, var(--v-theme-primary))) 100%
-  );
-  color: #fff;
-  padding: 64px 56px;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
-.pms-register-brand__inner {
-  position: relative;
-  z-index: 2;
-  max-width: 520px;
+.pms-auth-card {
   width: 100%;
+  max-width: 1100px;
+  border-radius: 18px !important;
+  background: white;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 32px -8px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  animation: pms-card-in 0.6s ease-out both;
 }
 
-.pms-register-brand__title {
-  letter-spacing: -0.5px;
-  line-height: 1.2;
+@keyframes pms-card-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.pms-register-brand__subtitle {
-  opacity: 0.88;
+.pms-auth-grid {
+  display: grid;
+  grid-template-columns: 58% 42%;
+  min-height: 640px;
+}
+
+/* ── Left brand column ───────────────────────────────────────── */
+.pms-auth-brand {
+  position: relative;
+  padding: 48px 48px 40px;
+  background-color: #00806F;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.pms-auth-brand__bubble {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+.pms-auth-brand__bubble--tr {
+  width: 260px;
+  height: 260px;
+  top: -60px;
+  right: -80px;
+  animation: pms-float-a 12s ease-in-out infinite;
+}
+.pms-auth-brand__bubble--bl {
+  width: 200px;
+  height: 200px;
+  bottom: -60px;
+  left: -50px;
+  background-color: rgba(255, 255, 255, 0.05);
+  animation: pms-float-b 14s ease-in-out infinite;
+}
+
+@keyframes pms-float-a {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-12px, 16px); }
+}
+@keyframes pms-float-b {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(14px, -10px); }
+}
+
+.pms-auth-brand__top {
+  position: relative;
+  max-width: 440px;
+}
+
+.pms-auth-brand__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pms-auth-brand__sub {
+  opacity: 0.85;
   line-height: 1.7;
+  max-width: 380px;
 }
 
-.pms-register-brand__feature-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.16);
-  display: inline-flex;
+.pms-auth-brand__features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 24px;
+  position: relative;
+}
+
+.pms-auth-brand__features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pms-auth-brand__check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.18);
+  display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.pms-register-brand__feature-desc {
-  opacity: 0.82;
-  line-height: 1.55;
-}
-
-.pms-register-brand__decor {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  z-index: 1;
-  pointer-events: none;
-}
-
-.pms-register-brand__decor--a {
-  width: 360px;
-  height: 360px;
-  top: -120px;
-  right: -120px;
-}
-
-.pms-register-brand__decor--b {
-  width: 240px;
-  height: 240px;
-  bottom: -80px;
-  left: -80px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.pms-register-form {
+/* ── Right form column ───────────────────────────────────────── */
+.pms-auth-form-col {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  padding: 40px;
+  background-color: white;
 }
 
-.pms-register-form__inner {
+.pms-auth-form-wrap {
   width: 100%;
-  max-width: 480px;
+  max-width: 380px;
 }
 
-@media (min-width: 600px) {
-  .pms-register-form {
-    padding: 48px 32px;
+.pms-auth-link {
+  color: #00806F;
+}
+
+.pms-auth-submit {
+  width: 100%;
+  height: 48px;
+  border-radius: 10px;
+  background-color: #008C7A;
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.pms-auth-submit:hover:not(:disabled) {
+  background-color: #006e60;
+}
+.pms-auth-submit:disabled {
+  background-color: #66b8ab;
+  cursor: not-allowed;
+}
+
+.pms-auth-submit--ghost {
+  width: auto;
+  padding: 0 18px;
+  background-color: transparent;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+.pms-auth-submit--ghost:hover:not(:disabled) {
+  background-color: #f1f5f9;
+}
+
+/* ── Step indicator ──────────────────────────────────────────── */
+.pms-auth-steps {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pms-auth-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(15, 23, 42, 0.48);
+}
+.pms-auth-step__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  color: rgba(15, 23, 42, 0.6);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pms-auth-step--active .pms-auth-step__dot {
+  background-color: #00806F;
+  color: white;
+}
+.pms-auth-step--active {
+  color: #0f172a;
+}
+.pms-auth-step--done .pms-auth-step__dot {
+  background-color: #00806F;
+  color: white;
+}
+.pms-auth-step__line {
+  flex-grow: 1;
+  height: 2px;
+  background-color: #e2e8f0;
+  border-radius: 2px;
+}
+.pms-auth-step__line--done {
+  background-color: #00806F;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pms-auth-card,
+  .pms-auth-brand__bubble--tr,
+  .pms-auth-brand__bubble--bl {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .pms-auth-grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .pms-auth-brand {
+    padding: 32px 28px 28px;
+  }
+  .pms-auth-brand__features {
+    margin-top: 24px;
+  }
+  .pms-auth-form-col {
+    padding: 32px 24px;
   }
 }
 </style>

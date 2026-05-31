@@ -189,6 +189,9 @@
       </v-col>
     </v-row>
 
+    <!-- ── Fee Summary ────────────────────────────────────────────── -->
+    <ProjectFeeSummary :project-id="project.id" />
+
     <!-- ── Gantt Chart Card ───────────────────────────────────────── -->
     <v-card rounded="xl" class="mb-5">
       <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3 d-flex align-center gap-2">
@@ -211,6 +214,9 @@
         />
       </v-card-text>
     </v-card>
+
+    <!-- ── Project Admin Fees ─────────────────────────────────────── -->
+    <ProjectAdminFeesTab v-if="canManageAdminFees" :project-id="project.id" />
 
     <!-- ── Task Table Card ─────────────────────────────────────────── -->
     <v-card rounded="xl" class="mb-5">
@@ -421,6 +427,8 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import ChipGroup from "@/components/ui/ChipGroup.vue";
 import TaskMetaBadges from "@/components/ui/TaskMetaBadges.vue";
 import AttachmentsPanel from "@/components/project/AttachmentsPanel.vue";
+import ProjectFeeSummary from "@/components/fee/ProjectFeeSummary.vue";
+import ProjectAdminFeesTab from "@/components/fee/ProjectAdminFeesTab.vue";
 import getEcho from "@/lib/echo";
 import api from "@/lib/axios";
 
@@ -469,6 +477,9 @@ const inProgressCount = computed(
 );
 
 const memberNames = computed(() => project.value?.members.map((m) => m.name) ?? []);
+
+// 行政費用只開放給 admin / manager
+const canManageAdminFees = computed(() => auth.isAdmin || auth.isManager);
 
 // Manager 是否有此專案的編輯權（自己是 owner，或是 admin）
 const canEdit = computed(() => {

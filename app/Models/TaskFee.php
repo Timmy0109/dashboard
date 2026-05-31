@@ -71,4 +71,44 @@ class TaskFee extends Model
     public function isPending(): bool   { return $this->status === self::STATUS_PENDING; }
     public function isApproved(): bool  { return $this->status === self::STATUS_APPROVED; }
     public function isRejected(): bool  { return $this->status === self::STATUS_REJECTED; }
+
+    /**
+     * 集中狀態轉換：更新主表審核欄位 + 寫一筆 state log。
+     * 不在這層做權限檢查（policy 在 controller 處理），也不做合法 transition 檢查
+     * （controller 在呼叫前 assert）— 這層只負責「正確寫」。
+     */
+    public function transitionTo(string $newStatus, User $actor, ?string $reason = null): void
+    {
+        $from = $this->status;
+
+        // 更新主表審核欄位（記錄「最後一次」行為）
+        $updates = ['status' => $newStatus];
+        $now = now();
+
+        if ($newStatus === self::STATUS_APPROVED) {
+            $updates['reviewed_by']  = $actor->id;
+            $updates['reviewed_at']  = $now;
+            $updates['reject_reason'] = null;
+        } elseif ($newStatus === self::STATUS_REJECTED) {
+            $updates['reviewed_by']   = $actor->id;
+            $updates['reviewed_at']   = $now;
+            $updates['reject_reason'] = $reason;
+        } elseif ($from === self::STATUS_APPROVED && $newStatus === self::STATUS_PENDING) {
+            // unapprove
+            $updates['unapproved_by']    = $actor->id;
+            $updates['unapproved_at']    = $now;
+            $updates['unapprove_reason'] = $reason;
+        }
+
+        $this->update($updates);
+
+        TaskFeeStateLog::create([
+            'task_fee_id' => $this->id,
+            'from_status' => $from,
+            'to_status'   => $newStatus,
+            'actor_id'    => $actor->id,
+            'reason'      => $reason,
+            'created_at'  => $now,
+        ]);
+    }
 }

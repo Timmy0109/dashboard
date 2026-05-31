@@ -14,9 +14,12 @@ use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\StatsController;
+use App\Http\Controllers\Api\ProjectAdminFeeAttachmentController;
+use App\Http\Controllers\Api\ProjectAdminFeeController;
 use App\Http\Controllers\Api\TaskAttachmentController;
 use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TaskFeeController;
 use App\Http\Controllers\Api\TodoController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -127,5 +130,31 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('tasks/{task}/attachments', [TaskAttachmentController::class, 'index']);
         Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store']);
         Route::delete('tasks/{task}/attachments/{attachment}', [TaskAttachmentController::class, 'destroy']);
+
+        // Fees
+        Route::get('tasks/{task}/fees',  [TaskFeeController::class, 'index']);
+        Route::post('tasks/{task}/fees', [TaskFeeController::class, 'store']);
+        Route::get('admin-fees',  [ProjectAdminFeeController::class, 'index']);
+        Route::post('admin-fees', [ProjectAdminFeeController::class, 'store']);
+        Route::get('fee-summary', [ProjectAdminFeeController::class, 'summary']);
     });
+
+    // Task fee actions (PATCH / DELETE / state transitions)
+    Route::patch('task-fees/{fee}',  [TaskFeeController::class, 'update']);
+    Route::delete('task-fees/{fee}', [TaskFeeController::class, 'destroy']);
+    Route::post('task-fees/{fee}/resubmit',         [TaskFeeController::class, 'resubmit']);
+    Route::post('task-fees/{fee}/approve',          [TaskFeeController::class, 'approve']);
+    Route::post('task-fees/{fee}/reject',           [TaskFeeController::class, 'reject']);
+    Route::post('task-fees/{fee}/unapprove',        [TaskFeeController::class, 'unapprove']);
+    Route::post('task-fees/{fee}/request-receipt',  [TaskFeeController::class, 'requestReceipt']);
+
+    // Project admin fee actions
+    Route::patch('project-admin-fees/{fee}',  [ProjectAdminFeeController::class, 'update']);
+    Route::delete('project-admin-fees/{fee}', [ProjectAdminFeeController::class, 'destroy']);
+    Route::post('project-admin-fees/{fee}/attachments', [ProjectAdminFeeAttachmentController::class, 'store']);
+    Route::delete('project-admin-fee-attachments/{attachment}', [ProjectAdminFeeAttachmentController::class, 'destroy']);
 });
+
+// Signed download for admin fee attachment (no auth middleware)
+Route::get('/admin-fee-attachments/{attachment}', [ProjectAdminFeeAttachmentController::class, 'download'])
+    ->name('admin-fee-attachments.download');

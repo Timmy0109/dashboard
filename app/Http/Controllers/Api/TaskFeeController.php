@@ -107,7 +107,11 @@ class TaskFeeController extends Controller
     {
         $this->authorize('resubmit', $fee);
 
-        $fee->transitionTo(TaskFee::STATUS_PENDING, $request->user(), '重新提交');
+        try {
+            $fee->transitionTo(TaskFee::STATUS_PENDING, $request->user(), '重新提交');
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => '此費用狀態已被其他人變更，請重新整理'], 409);
+        }
 
         $ownerId = $fee->project->owner_id;
         if ($ownerId && $ownerId !== $request->user()->id) {
@@ -130,7 +134,11 @@ class TaskFeeController extends Controller
     public function approve(Request $request, TaskFee $fee): JsonResponse
     {
         $this->authorize('approve', $fee);
-        $fee->transitionTo(TaskFee::STATUS_APPROVED, $request->user());
+        try {
+            $fee->transitionTo(TaskFee::STATUS_APPROVED, $request->user());
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => '此費用狀態已被其他人變更，請重新整理'], 409);
+        }
 
         $this->notify($fee->submitted_by, 'fee_approved', [
             'task_fee_id' => $fee->id,
@@ -153,7 +161,11 @@ class TaskFeeController extends Controller
             'reject_reason' => 'required|string|max:500',
         ]);
 
-        $fee->transitionTo(TaskFee::STATUS_REJECTED, $request->user(), $data['reject_reason']);
+        try {
+            $fee->transitionTo(TaskFee::STATUS_REJECTED, $request->user(), $data['reject_reason']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => '此費用狀態已被其他人變更，請重新整理'], 409);
+        }
 
         $this->notify($fee->submitted_by, 'fee_rejected', [
             'task_fee_id'    => $fee->id,
@@ -177,7 +189,11 @@ class TaskFeeController extends Controller
             'unapprove_reason' => 'required|string|max:500',
         ]);
 
-        $fee->transitionTo(TaskFee::STATUS_PENDING, $request->user(), $data['unapprove_reason']);
+        try {
+            $fee->transitionTo(TaskFee::STATUS_PENDING, $request->user(), $data['unapprove_reason']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => '此費用狀態已被其他人變更，請重新整理'], 409);
+        }
 
         $this->notify($fee->submitted_by, 'fee_unapproved', [
             'task_fee_id'      => $fee->id,

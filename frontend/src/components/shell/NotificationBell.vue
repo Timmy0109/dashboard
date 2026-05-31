@@ -100,9 +100,10 @@ function onClickItem(n: Notification) {
   const taskId = p.task_id
   notificationStore.markAsRead(n.id)
   menuOpen.value = false
+  const taskTab = n.type.startsWith('fee_') ? 'fees' : 'comments'
   router.push({
     path: `/projects/${projectId}`,
-    query: { openTask: String(taskId), taskTab: 'comments' },
+    query: { openTask: String(taskId), taskTab },
   })
 }
 

@@ -1,5 +1,11 @@
 <template>
-  <v-card rounded="xl" class="mb-5 pms-fee-summary">
+  <!-- Embedded mode：只渲染 body，外層由 ProjectFeesPanel 包卡片 -->
+  <div v-if="embedded" class="pms-fee-summary">
+    <component :is="BodyContent" />
+  </div>
+
+  <!-- Standalone mode：自帶卡片 -->
+  <v-card v-else rounded="xl" class="mb-5 pms-fee-summary">
     <v-card-title class="px-5 py-4 d-flex align-center gap-2 border-b">
       <v-icon icon="mdi-cash-multiple" size="18" color="primary" />
       <span class="text-body-1 font-weight-semibold">費用與行政費用總覽</span>
@@ -15,137 +21,8 @@
         </span>
       </v-tooltip>
     </v-card-title>
-
     <v-card-text class="pa-5">
-      <v-skeleton-loader v-if="loading" type="article" />
-
-      <!-- Manager / Admin -->
-      <template v-else-if="summary && summary.scope === 'all'">
-        <div class="d-flex flex-wrap align-center justify-space-between gap-4 mb-4">
-          <div>
-            <div class="text-caption text-medium-emphasis mb-1">專案總預算</div>
-            <div class="text-h4 font-weight-bold pms-tnum text-primary">
-              {{ fmt(summary.total_budget) }}
-            </div>
-            <div class="text-caption text-medium-emphasis mt-1">
-              總費用 {{ fmt(summary.total) }}
-            </div>
-          </div>
-
-          <div class="d-flex align-center gap-3">
-            <v-progress-circular
-              :model-value="Math.min(usagePct, 100)"
-              :size="76"
-              :width="9"
-              :color="usagePct > 100 ? 'error' : usagePct >= 80 ? 'warning' : 'primary'"
-              class="pms-gauge"
-            >
-              <span class="text-body-2 font-weight-bold pms-tnum">{{ usagePct }}%</span>
-            </v-progress-circular>
-            <div>
-              <div class="text-caption text-medium-emphasis">預算使用率</div>
-              <div class="text-caption">
-                已使用 <span class="font-weight-semibold pms-tnum">{{ fmt(summary.total) }}</span>
-              </div>
-              <div class="text-caption" :class="summary.over_budget ? 'text-error' : ''">
-                {{ summary.over_budget ? '超出' : '剩餘' }}
-                <span class="font-weight-semibold pms-tnum">{{ fmt(Math.abs(summary.remaining)) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <v-alert
-          v-if="summary.over_budget"
-          type="error"
-          variant="tonal"
-          density="compact"
-          class="mb-3"
-          icon="mdi-alert"
-        >
-          已用費用已超出總預算
-        </v-alert>
-
-        <v-row dense>
-          <v-col cols="6" md="3">
-            <FeeCell
-              tone="success"
-              icon="mdi-check-circle"
-              label="已核定任務費用"
-              :amount="summary.task_fees_approved"
-              :ratio="pctOf(summary.task_fees_approved)"
-            />
-          </v-col>
-          <v-col cols="6" md="3">
-            <FeeCell
-              tone="warning"
-              icon="mdi-clock-outline"
-              label="待審任務費用"
-              :amount="summary.task_fees_pending"
-              :ratio="pctOf(summary.task_fees_pending)"
-            />
-          </v-col>
-          <v-col cols="6" md="3">
-            <FeeCell
-              tone="info"
-              icon="mdi-briefcase-outline"
-              label="行政費用"
-              :amount="summary.admin_fees"
-              :ratio="pctOf(summary.admin_fees)"
-            />
-          </v-col>
-          <v-col cols="6" md="3">
-            <FeeCell
-              :tone="summary.over_budget ? 'error' : 'neutral'"
-              icon="mdi-wallet-outline"
-              :label="summary.over_budget ? '超出預算' : '剩餘預算'"
-              :amount="Math.abs(summary.remaining)"
-              :ratio="pctOf(Math.abs(summary.remaining))"
-            />
-          </v-col>
-        </v-row>
-      </template>
-
-      <!-- Member -->
-      <template v-else-if="summary && summary.scope === 'self'">
-        <div class="text-caption text-medium-emphasis mb-3">我提交的費用</div>
-        <v-row dense>
-          <v-col cols="6" md="3">
-            <FeeCell
-              tone="success"
-              icon="mdi-check-circle"
-              label="已核定"
-              :amount="summary.own_approved"
-            />
-          </v-col>
-          <v-col cols="6" md="3">
-            <FeeCell
-              tone="warning"
-              icon="mdi-clock-outline"
-              label="審核中"
-              :amount="summary.own_pending"
-            />
-          </v-col>
-          <v-col cols="6" md="3">
-            <FeeCell
-              tone="error"
-              icon="mdi-close-circle"
-              label="退件中"
-              :amount="summary.own_rejected"
-            />
-          </v-col>
-          <v-col cols="6" md="3">
-            <FeeCell
-              tone="neutral"
-              icon="mdi-sigma"
-              label="目前支出總額"
-              :amount="summary.own_total"
-            />
-          </v-col>
-        </v-row>
-      </template>
-
-      <div v-else class="text-body-2 text-medium-emphasis">尚無費用資料</div>
+      <component :is="BodyContent" />
     </v-card-text>
   </v-card>
 </template>
@@ -154,12 +31,13 @@
 import { computed, onMounted, watch, defineComponent, h, resolveComponent } from 'vue'
 import { useFeeStore } from '@/stores/fee'
 
-const props = defineProps<{ projectId: number }>()
+const props = defineProps<{ projectId: number; embedded?: boolean }>()
 const feeStore = useFeeStore()
 
 const summary = computed(() => feeStore.summaryByProject[props.projectId])
 const loading = computed(() => feeStore.loading.summary && !summary.value)
 const isManagerView = computed(() => summary.value?.scope === 'all')
+const embedded = computed(() => !!props.embedded)
 
 const usagePct = computed(() => {
   const s = summary.value
@@ -178,7 +56,6 @@ function fmt(n: number | undefined | null) {
   return 'NT$' + Number(n).toLocaleString()
 }
 
-// inline cell to avoid splitting into another file
 const FeeCell = defineComponent({
   props: {
     tone: { type: String, default: 'neutral' },
@@ -203,6 +80,98 @@ const FeeCell = defineComponent({
         ? h('div', { class: 'text-caption text-medium-emphasis mt-1' }, `占預算 ${p.ratio}%`)
         : null,
     ])
+  },
+})
+
+const BodyContent = defineComponent({
+  setup() {
+    const VSkeleton  = resolveComponent('VSkeletonLoader')
+    const VRow       = resolveComponent('VRow')
+    const VCol       = resolveComponent('VCol')
+    const VProgress  = resolveComponent('VProgressCircular')
+    const VAlert     = resolveComponent('VAlert')
+
+    return () => {
+      if (loading.value) return h(VSkeleton as never, { type: 'article' })
+      const s = summary.value
+      if (!s) return h('div', { class: 'text-body-2 text-medium-emphasis' }, '尚無費用資料')
+
+      if (s.scope === 'all') {
+        return h('div', null, [
+          h('div', { class: 'd-flex flex-wrap align-center justify-space-between gap-4 mb-4' }, [
+            h('div', null, [
+              h('div', { class: 'text-caption text-medium-emphasis mb-1' }, '專案總預算'),
+              h('div', { class: 'text-h4 font-weight-bold pms-tnum text-primary' }, fmt(s.total_budget)),
+              h('div', { class: 'text-caption text-medium-emphasis mt-1' }, `總費用 ${fmt(s.total)}`),
+            ]),
+            h('div', { class: 'd-flex align-center gap-3' }, [
+              h(VProgress as never, {
+                modelValue: Math.min(usagePct.value, 100),
+                size: 76,
+                width: 9,
+                color: usagePct.value > 100 ? 'error' : usagePct.value >= 80 ? 'warning' : 'primary',
+                class: 'pms-gauge',
+              }, () => h('span', { class: 'text-body-2 font-weight-bold pms-tnum' }, `${usagePct.value}%`)),
+              h('div', null, [
+                h('div', { class: 'text-caption text-medium-emphasis' }, '預算使用率'),
+                h('div', { class: 'text-caption' }, [
+                  '已使用 ',
+                  h('span', { class: 'font-weight-semibold pms-tnum' }, fmt(s.total)),
+                ]),
+                h('div', { class: `text-caption${s.over_budget ? ' text-error' : ''}` }, [
+                  s.over_budget ? '超出 ' : '剩餘 ',
+                  h('span', { class: 'font-weight-semibold pms-tnum' }, fmt(Math.abs(s.remaining))),
+                ]),
+              ]),
+            ]),
+          ]),
+          s.over_budget
+            ? h(VAlert as never, {
+                type: 'error', variant: 'tonal', density: 'compact',
+                class: 'mb-3', icon: 'mdi-alert',
+              }, () => '已用費用已超出總預算')
+            : null,
+          h(VRow as never, { dense: true }, () => [
+            h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+              tone: 'success', icon: 'mdi-check-circle',
+              label: '已核定任務費用', amount: s.task_fees_approved, ratio: pctOf(s.task_fees_approved),
+            })),
+            h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+              tone: 'warning', icon: 'mdi-clock-outline',
+              label: '待審任務費用', amount: s.task_fees_pending, ratio: pctOf(s.task_fees_pending),
+            })),
+            h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+              tone: 'info', icon: 'mdi-briefcase-outline',
+              label: '行政費用', amount: s.admin_fees, ratio: pctOf(s.admin_fees),
+            })),
+            h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+              tone: s.over_budget ? 'error' : 'neutral', icon: 'mdi-wallet-outline',
+              label: s.over_budget ? '超出預算' : '剩餘預算',
+              amount: Math.abs(s.remaining), ratio: pctOf(Math.abs(s.remaining)),
+            })),
+          ]),
+        ])
+      }
+
+      // self
+      return h('div', null, [
+        h('div', { class: 'text-caption text-medium-emphasis mb-3' }, '我提交的費用'),
+        h(VRow as never, { dense: true }, () => [
+          h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+            tone: 'success', icon: 'mdi-check-circle', label: '已核定', amount: s.own_approved,
+          })),
+          h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+            tone: 'warning', icon: 'mdi-clock-outline', label: '審核中', amount: s.own_pending,
+          })),
+          h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+            tone: 'error', icon: 'mdi-close-circle', label: '退件中', amount: s.own_rejected,
+          })),
+          h(VCol as never, { cols: 6, md: 3 }, () => h(FeeCell, {
+            tone: 'neutral', icon: 'mdi-sigma', label: '目前支出總額', amount: s.own_total,
+          })),
+        ]),
+      ])
+    }
   },
 })
 

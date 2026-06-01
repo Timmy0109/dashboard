@@ -189,34 +189,36 @@
       </v-col>
     </v-row>
 
-    <!-- ── Fee Summary ────────────────────────────────────────────── -->
-    <ProjectFeeSummary :project-id="project.id" />
+    <!-- ── Mid section：Gantt（左 58%）+ Fees Panel（右 42%） ─────── -->
+    <v-row class="mb-5" dense>
+      <v-col cols="12" lg="7">
+        <v-card rounded="xl" class="pms-gantt-card">
+          <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3 d-flex align-center gap-2">
+            <v-icon icon="mdi-chart-gantt" size="18" color="primary" />
+            甘特圖
+          </v-card-title>
+          <v-divider />
+          <v-card-text class="pt-4 pms-gantt-body">
+            <EmptyState
+              v-if="project.tasks.length === 0"
+              icon="mdi-chart-gantt"
+              title="尚無任務"
+              sub="新增任務後甘特圖將自動顯示"
+            />
+            <GanttChart
+              v-else
+              :tasks="project.tasks"
+              @task-click="openEditTask"
+              @task-date-change="handleGanttDateChange"
+            />
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-    <!-- ── Gantt Chart Card ───────────────────────────────────────── -->
-    <v-card rounded="xl" class="mb-5">
-      <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3 d-flex align-center gap-2">
-        <v-icon icon="mdi-chart-gantt" size="18" color="primary" />
-        甘特圖
-      </v-card-title>
-      <v-divider />
-      <v-card-text class="pt-4">
-        <EmptyState
-          v-if="project.tasks.length === 0"
-          icon="mdi-chart-gantt"
-          title="尚無任務"
-          sub="新增任務後甘特圖將自動顯示"
-        />
-        <GanttChart
-          v-else
-          :tasks="project.tasks"
-          @task-click="openEditTask"
-          @task-date-change="handleGanttDateChange"
-        />
-      </v-card-text>
-    </v-card>
-
-    <!-- ── Project Admin Fees ─────────────────────────────────────── -->
-    <ProjectAdminFeesTab v-if="canManageAdminFees" :project-id="project.id" />
+      <v-col cols="12" lg="5">
+        <ProjectFeesPanel :project-id="project.id" />
+      </v-col>
+    </v-row>
 
     <!-- ── Task Table Card ─────────────────────────────────────────── -->
     <v-card rounded="xl" class="mb-5">
@@ -427,8 +429,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import ChipGroup from "@/components/ui/ChipGroup.vue";
 import TaskMetaBadges from "@/components/ui/TaskMetaBadges.vue";
 import AttachmentsPanel from "@/components/project/AttachmentsPanel.vue";
-import ProjectFeeSummary from "@/components/fee/ProjectFeeSummary.vue";
-import ProjectAdminFeesTab from "@/components/fee/ProjectAdminFeesTab.vue";
+import ProjectFeesPanel from "@/components/fee/ProjectFeesPanel.vue";
 import getEcho from "@/lib/echo";
 import api from "@/lib/axios";
 
@@ -477,9 +478,6 @@ const inProgressCount = computed(
 );
 
 const memberNames = computed(() => project.value?.members.map((m) => m.name) ?? []);
-
-// 行政費用只開放給 admin / manager
-const canManageAdminFees = computed(() => auth.isAdmin || auth.isManager);
 
 // Manager 是否有此專案的編輯權（自己是 owner，或是 admin）
 const canEdit = computed(() => {
@@ -652,6 +650,16 @@ onBeforeUnmount(() => {
 <style scoped>
 .pms-tnum {
   font-variant-numeric: tabular-nums;
+}
+.pms-gantt-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.pms-gantt-body {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  min-height: 320px;
 }
 .pms-ws-dot {
   display: inline-block;

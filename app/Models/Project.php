@@ -15,6 +15,7 @@ class Project extends Model
         'category_id', 'owner_id', 'priority_id', 'status_id',
         'start_date', 'due_date', 'completed_date',
         'progress_percent', 'is_completed', 'created_by', 'company_id',
+        'total_budget',
     ];
 
     protected function casts(): array
@@ -24,6 +25,7 @@ class Project extends Model
             'due_date' => 'date',
             'completed_date' => 'date',
             'is_completed' => 'boolean',
+            'total_budget' => 'decimal:2',
         ];
     }
 

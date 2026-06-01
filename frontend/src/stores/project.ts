@@ -25,6 +25,7 @@ export interface ProjectDetail {
   due_date: string | null
   completed_date: string | null
   progress_percent: number
+  total_budget: string
   is_completed: boolean
   owner: { id: number; name: string } | null
   category: { id: number; name: string; color: string } | null
@@ -42,6 +43,7 @@ export interface ProjectListItem {
   start_date: string
   due_date: string | null
   progress_percent: number
+  total_budget: string
   is_completed: boolean
   owner: { id: number; name: string } | null
   category: { id: number; name: string; color: string } | null

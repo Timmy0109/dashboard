@@ -71,10 +71,33 @@ export interface ProjectAdminFee {
   updated_at: string
 }
 
-export interface FeeSummary {
-  total: number
-  task_fees_approved: number
-  task_fees_pending: number
-  /** Only present for admin / project-owning manager. Member 看不到. */
-  admin_fees?: number
+/**
+ * Member only sees own contributions (scope: 'self');
+ * manager/admin see project-wide totals + budget (scope: 'all').
+ */
+export type FeeSummary =
+  | {
+      scope: 'self'
+      own_approved: number
+      own_pending: number
+    }
+  | {
+      scope: 'all'
+      total: number
+      task_fees_approved: number
+      task_fees_pending: number
+      admin_fees: number
+      total_budget: number
+      remaining: number
+      over_budget: boolean
+    }
+
+export interface ProjectBudgetLog {
+  id: number
+  project_id: number
+  actor_id: number
+  from_amount: string
+  to_amount: string
+  actor?: UserRef
+  created_at: string
 }

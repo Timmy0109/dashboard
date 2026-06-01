@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\ProjectBudgetLog;
 use App\Models\ProjectMember;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class ProjectController extends Controller
             'start_date' => 'required|date',
             'due_date' => 'nullable|date|after_or_equal:start_date',
             'company_id' => 'sometimes|nullable|exists:companies,id',
+            'total_budget' => 'required|numeric|min:0|max:9999999999.99',
         ]);
 
         $creator = $request->user();
@@ -86,11 +88,40 @@ class ProjectController extends Controller
             'due_date' => 'nullable|date',
             'completed_date' => 'nullable|date',
             'is_completed' => 'sometimes|boolean',
+            'total_budget' => 'sometimes|required|numeric|min:0|max:9999999999.99',
         ]);
 
+        $oldBudget = (float) $project->total_budget;
         $project->update($validated);
 
+        if (array_key_exists('total_budget', $validated)) {
+            $newBudget = (float) $validated['total_budget'];
+            if (abs($oldBudget - $newBudget) > 0.001) {
+                ProjectBudgetLog::create([
+                    'project_id'  => $project->id,
+                    'actor_id'    => $request->user()->id,
+                    'from_amount' => $oldBudget,
+                    'to_amount'   => $newBudget,
+                    'created_at'  => now(),
+                ]);
+            }
+        }
+
         return response()->json($project->load(['owner', 'category', 'priority', 'status']));
+    }
+
+    // GET /api/projects/{project}/budget-logs — manager/admin only
+    public function budgetLogs(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('update', $project); // 與編輯權同等：只有 manager/admin 看得到
+
+        $logs = ProjectBudgetLog::where('project_id', $project->id)
+            ->with('actor:id,name')
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        return response()->json($logs);
     }
 
     public function destroy(Request $request, Project $project): JsonResponse

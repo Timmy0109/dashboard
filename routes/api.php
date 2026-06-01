@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('projects', ProjectController::class);
     Route::prefix('projects/{project}')->group(function () {
         Route::get('export', [ExportController::class, 'project']);
+        Route::get('budget-logs', [ProjectController::class, 'budgetLogs']);
         Route::get('members', [ProjectController::class, 'members']);
         Route::post('members', [ProjectController::class, 'addMember']);
         Route::delete('members/{userId}', [ProjectController::class, 'removeMember']);

@@ -80,6 +80,8 @@ export type FeeSummary =
       scope: 'self'
       own_approved: number
       own_pending: number
+      own_rejected: number
+      own_total: number
     }
   | {
       scope: 'all'

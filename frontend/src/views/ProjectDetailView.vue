@@ -199,14 +199,7 @@
           </v-card-title>
           <v-divider />
           <v-card-text class="pt-4 pms-gantt-body">
-            <EmptyState
-              v-if="project.tasks.length === 0"
-              icon="mdi-chart-gantt"
-              title="尚無任務"
-              sub="新增任務後甘特圖將自動顯示"
-            />
             <GanttChart
-              v-else
               :tasks="project.tasks"
               @task-click="openEditTask"
               @task-date-change="handleGanttDateChange"

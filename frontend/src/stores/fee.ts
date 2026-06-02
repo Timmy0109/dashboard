@@ -10,12 +10,25 @@ import type {
 export const useFeeStore = defineStore('fee', () => {
   // task fees keyed by task_id
   const byTask = ref<Record<number, TaskFee[]>>({})
+  // task fees aggregated by project (for ProjectFeesPanel detail list)
+  const taskFeesByProject = ref<Record<number, TaskFee[]>>({})
   // admin fees keyed by project_id
   const adminByProject = ref<Record<number, ProjectAdminFee[]>>({})
   // fee summary keyed by project_id
   const summaryByProject = ref<Record<number, FeeSummary>>({})
 
-  const loading = reactive({ task: false, admin: false, summary: false })
+  const loading = reactive({ task: false, admin: false, summary: false, projectTask: false })
+
+  // ── Project-level task fees (panel detail list) ───────────────
+  async function fetchProjectTaskFees(projectId: number) {
+    loading.projectTask = true
+    try {
+      const res = await api.get<TaskFee[]>(`/projects/${projectId}/task-fees`)
+      taskFeesByProject.value[projectId] = res.data
+    } finally {
+      loading.projectTask = false
+    }
+  }
 
   // ── Task fees ─────────────────────────────────────────────────
   async function fetchTaskFees(projectId: number, taskId: number) {
@@ -164,6 +177,7 @@ export const useFeeStore = defineStore('fee', () => {
   function invalidateSummary(projectId: number) {
     // Lazy-refresh: drop cache; consumers re-fetch on next read
     delete summaryByProject.value[projectId]
+    delete taskFeesByProject.value[projectId]
   }
 
   // ── Internals ───────────────────────────────────────────────
@@ -176,10 +190,12 @@ export const useFeeStore = defineStore('fee', () => {
 
   return {
     byTask,
+    taskFeesByProject,
     adminByProject,
     summaryByProject,
     loading,
 
+    fetchProjectTaskFees,
     fetchTaskFees,
     createTaskFee,
     updateTaskFee,

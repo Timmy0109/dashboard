@@ -134,6 +134,34 @@ class TaskFeeTest extends TestCase
         $this->assertCount(2, $res->json());
     }
 
+    public function test_project_index_member_sees_only_own(): void
+    {
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->otherMember->id, 'amount' => 500, 'status' => 'approved']);
+
+        $res = $this->actingAs($this->member)
+            ->getJson("/api/projects/{$this->project->id}/task-fees")
+            ->assertOk();
+
+        $this->assertCount(1, $res->json());
+        $this->assertEquals($this->member->id, $res->json('0.submitted_by'));
+        // 必須帶 task 關聯讓前端顯示任務名稱
+        $this->assertNotNull($res->json('0.task'));
+        $this->assertEquals($this->task->id, $res->json('0.task.id'));
+    }
+
+    public function test_project_index_manager_sees_all(): void
+    {
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->otherMember->id, 'amount' => 500, 'status' => 'pending']);
+
+        $res = $this->actingAs($this->manager)
+            ->getJson("/api/projects/{$this->project->id}/task-fees")
+            ->assertOk();
+
+        $this->assertCount(2, $res->json());
+    }
+
     public function test_manager_approves_fee_creates_state_log_and_notifies(): void
     {
         $fee = TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'pending']);

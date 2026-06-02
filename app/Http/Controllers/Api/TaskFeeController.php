@@ -33,6 +33,32 @@ class TaskFeeController extends Controller
         return response()->json($fees);
     }
 
+    // GET /api/projects/{project}/task-fees — 整個專案的任務費用
+    //  - admin / manager: 全部
+    //  - member: 只看自己提的
+    public function projectIndex(Request $request, \App\Models\Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $user = $request->user();
+        $query = $project->taskFees()
+            ->with([
+                'task:id,name,project_id',
+                'submitter:id,name',
+                'reviewer:id,name',
+                'unapprover:id,name',
+                'attachments',
+            ]);
+
+        if (! $user->isAdmin() && ! $user->isManager()) {
+            $query->where('submitted_by', $user->id);
+        }
+
+        $fees = $query->orderByDesc('created_at')->limit(100)->get();
+
+        return response()->json($fees);
+    }
+
     // POST /api/projects/{project}/tasks/{task}/fees
     public function store(Request $request, $project, Task $task): JsonResponse
     {

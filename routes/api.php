@@ -133,6 +133,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('tasks/{task}/attachments/{attachment}', [TaskAttachmentController::class, 'destroy']);
 
         // Fees
+        Route::get('task-fees',          [TaskFeeController::class, 'projectIndex']);
         Route::get('tasks/{task}/fees',  [TaskFeeController::class, 'index']);
         Route::post('tasks/{task}/fees', [TaskFeeController::class, 'store']);
         Route::get('admin-fees',  [ProjectAdminFeeController::class, 'index']);

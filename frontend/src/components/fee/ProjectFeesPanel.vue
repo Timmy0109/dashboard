@@ -36,6 +36,77 @@
       <!-- 上半：費用 summary（embedded 模式） -->
       <ProjectFeeSummary :project-id="projectId" embedded />
 
+      <!-- 中段：任務費用明細（manager 看全部、member 看自己） -->
+      <v-divider class="my-5" />
+
+      <div class="d-flex align-center gap-2 mb-3">
+        <v-icon icon="mdi-file-document-multiple-outline" size="16" color="primary" />
+        <span class="text-body-2 font-weight-semibold">
+          {{ isManagerView ? '任務費用明細' : '我提交的任務費用' }}
+        </span>
+        <v-chip v-if="taskFees.length > 0" size="x-small" variant="tonal" class="ml-1">
+          {{ taskFees.length }} 筆
+        </v-chip>
+        <v-spacer />
+        <span class="text-caption text-medium-emphasis">
+          {{ isManagerView ? '審核任務費用請從任務內進入' : '由你的負責人審核' }}
+        </span>
+      </div>
+
+      <v-skeleton-loader
+        v-if="loadingTaskFees && taskFees.length === 0"
+        type="list-item-two-line@2"
+      />
+
+      <EmptyState
+        v-else-if="taskFees.length === 0"
+        icon="mdi-file-document-outline"
+        :title="isManagerView ? '尚無任務費用' : '你還沒提交過任務費用'"
+        :sub="isManagerView ? '成員提交後將顯示在這' : '可從任務內的「費用」分頁提交'"
+      />
+
+      <v-list v-else density="compact" class="bg-transparent pa-0">
+        <v-list-item
+          v-for="(fee, idx) in taskFees"
+          :key="fee.id"
+          class="pms-task-fee-row rounded-lg mb-1"
+          :class="{ 'mb-2': idx === taskFees.length - 1 }"
+        >
+          <v-list-item-title class="d-flex align-center gap-2 flex-wrap">
+            <v-chip
+              :color="statusColor(fee.status)"
+              size="x-small"
+              variant="flat"
+              density="compact"
+              class="pms-status-chip"
+            >
+              {{ statusLabel(fee.status) }}
+            </v-chip>
+            <span class="text-body-2 font-weight-medium flex-grow-1 text-truncate">
+              {{ fee.task?.name ?? `任務 #${fee.task_id}` }}
+            </span>
+            <span class="text-body-2 font-weight-bold pms-tnum text-primary">
+              NT${{ Number(fee.amount).toLocaleString() }}
+            </span>
+          </v-list-item-title>
+
+          <v-list-item-subtitle class="d-flex align-center gap-2 text-caption mt-1">
+            <span>{{ (fee.submitter?.name ?? '—') }}</span>
+            <span>·</span>
+            <span>{{ fee.created_at.slice(0, 10) }}</span>
+            <v-chip
+              v-if="(fee.attachments?.length ?? 0) > 0"
+              size="x-small"
+              variant="tonal"
+              density="compact"
+            >
+              <v-icon start icon="mdi-paperclip" size="11" />
+              {{ fee.attachments!.length }}
+            </v-chip>
+          </v-list-item-subtitle>
+        </v-list-item>
+      </v-list>
+
       <!-- 下半：行政費用明細（僅 manager/admin） -->
       <template v-if="canManageAdminFees">
         <v-divider class="my-5" />
@@ -153,14 +224,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useFeeStore } from '@/stores/fee'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import ProjectFeeSummary from './ProjectFeeSummary.vue'
 import ProjectAdminFeeForm from './ProjectAdminFeeForm.vue'
-import type { ProjectAdminFee } from '@/types/fee'
+import type { ProjectAdminFee, TaskFee, FeeStatus } from '@/types/fee'
 
 const props = defineProps<{ projectId: number }>()
 const feeStore = useFeeStore()
@@ -174,6 +245,16 @@ const loading = computed(() => feeStore.loading.admin)
 const summary = computed(() => feeStore.summaryByProject[props.projectId])
 const isManagerView = computed(() => summary.value?.scope === 'all')
 const adminTotal = computed(() => fees.value.reduce((s, f) => s + Number(f.amount), 0))
+
+const taskFees = computed<TaskFee[]>(() => feeStore.taskFeesByProject[props.projectId] ?? [])
+const loadingTaskFees = computed(() => feeStore.loading.projectTask)
+
+function statusColor(s: FeeStatus): string {
+  return s === 'approved' ? 'success' : s === 'pending' ? 'warning' : 'error'
+}
+function statusLabel(s: FeeStatus): string {
+  return s === 'approved' ? '已核定' : s === 'pending' ? '審核中' : '退件'
+}
 
 const expanded = reactive<Record<number, boolean>>({})
 const showForm = ref(false)
@@ -214,10 +295,19 @@ async function handleDelete(fee: ProjectAdminFee) {
 }
 
 onMounted(() => {
+  feeStore.fetchProjectTaskFees(props.projectId)
   if (canManageAdminFees.value) {
     feeStore.fetchAdminFees(props.projectId)
   }
 })
+
+// summary 被 invalidate 後 taskFeesByProject 也會被清掉 → 自動 refetch
+watch(
+  () => feeStore.taskFeesByProject[props.projectId],
+  (val) => {
+    if (val === undefined) feeStore.fetchProjectTaskFees(props.projectId)
+  },
+)
 </script>
 
 <style scoped>
@@ -247,5 +337,16 @@ onMounted(() => {
 }
 .pms-att-item {
   background-color: rgba(0, 0, 0, 0.03);
+}
+.pms-task-fee-row {
+  background-color: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+.pms-task-fee-row:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+.pms-status-chip {
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 </style>

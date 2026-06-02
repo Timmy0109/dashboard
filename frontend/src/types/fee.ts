@@ -39,6 +39,7 @@ export interface TaskFee {
   reviewer?: UserRef | null
   unapprover?: UserRef | null
   attachments?: TaskFeeAttachment[]
+  task?: { id: number; name: string; project_id: number }
 
   created_at: string
   updated_at: string

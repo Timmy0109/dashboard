@@ -183,10 +183,26 @@
               @click="onReject(item)"
             >退件</v-btn>
           </div>
-          <span v-else-if="item.receipt_requested_at" class="text-caption text-medium-emphasis">
-            等待成員補件
-          </span>
-          <span v-else class="text-caption text-medium-emphasis">—</span>
+          <div v-else-if="item.status === 'approved'" class="d-flex align-center justify-center" @click.stop>
+            <v-btn
+              size="x-small"
+              variant="outlined"
+              color="grey-darken-1"
+              prepend-icon="mdi-undo-variant"
+              :loading="busyId === item.id && busyAction === 'unapprove'"
+              @click="onUnapprove(item)"
+            >取消核准</v-btn>
+          </div>
+          <div v-else-if="item.status === 'rejected'" class="d-flex align-center justify-center" @click.stop>
+            <v-btn
+              size="x-small"
+              variant="outlined"
+              color="grey-darken-1"
+              prepend-icon="mdi-restore"
+              :loading="busyId === item.id && busyAction === 'resubmit'"
+              @click="onResubmit(item)"
+            >取消退件</v-btn>
+          </div>
         </template>
       </v-data-table>
 
@@ -339,6 +355,26 @@
             @click="onApprove(detailFee).then(() => (detailDialog = false))"
           >核准</v-btn>
         </v-card-actions>
+
+        <v-card-actions v-else-if="detailFee.status === 'approved'" class="px-5 pb-4">
+          <v-spacer />
+          <v-btn
+            variant="outlined"
+            color="grey-darken-1"
+            prepend-icon="mdi-undo-variant"
+            @click="onUnapprove(detailFee)"
+          >取消核准</v-btn>
+        </v-card-actions>
+
+        <v-card-actions v-else-if="detailFee.status === 'rejected'" class="px-5 pb-4">
+          <v-spacer />
+          <v-btn
+            variant="outlined"
+            color="grey-darken-1"
+            prepend-icon="mdi-restore"
+            @click="onResubmit(detailFee).then(() => (detailDialog = false))"
+          >取消退件</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -361,6 +397,37 @@
           <v-spacer />
           <v-btn variant="text" @click="receiptDialog = false">取消</v-btn>
           <v-btn color="warning" @click="confirmReceiptRequest">送出</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Unapprove reason dialog -->
+    <v-dialog v-model="unapproveDialog" max-width="480">
+      <v-card rounded="xl">
+        <v-card-title class="text-body-1 font-weight-semibold">取消核准</v-card-title>
+        <v-card-text>
+          <div class="text-caption text-medium-emphasis mb-2">
+            費用將改回待審狀態，請簡述原因（會通知提交者）
+          </div>
+          <v-textarea
+            v-model="unapproveReason"
+            label="取消原因"
+            rows="3"
+            auto-grow
+            variant="outlined"
+            density="comfortable"
+            :rules="[(v: string) => !!v?.trim() || '請輸入取消原因']"
+          />
+        </v-card-text>
+        <v-card-actions class="px-6 pb-4">
+          <v-spacer />
+          <v-btn variant="text" @click="unapproveDialog = false">取消</v-btn>
+          <v-btn
+            color="grey-darken-1"
+            variant="flat"
+            :disabled="!unapproveReason.trim()"
+            @click="confirmUnapprove"
+          >確認</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -409,7 +476,7 @@ const loading = computed(() => store.loading)
 
 const search = ref(store.search)
 const busyId = ref<number | null>(null)
-const busyAction = ref<'approve' | 'reject' | 'receipt' | null>(null)
+const busyAction = ref<'approve' | 'reject' | 'receipt' | 'unapprove' | 'resubmit' | null>(null)
 const rejectDialog = ref(false)
 const rejectReason = ref('')
 const pendingReject = ref<TaskFee | null>(null)
@@ -420,6 +487,10 @@ const detailFee = ref<TaskFee | null>(null)
 const receiptDialog = ref(false)
 const receiptMessage = ref('')
 const pendingReceipt = ref<TaskFee | null>(null)
+
+const unapproveDialog = ref(false)
+const unapproveReason = ref('')
+const pendingUnapprove = ref<TaskFee | null>(null)
 
 function openDetail(fee: TaskFee) {
   detailFee.value = fee
@@ -435,6 +506,47 @@ function onRequestReceiptFromDetail(fee: TaskFee) {
   pendingReceipt.value = fee
   receiptMessage.value = ''
   receiptDialog.value = true
+}
+
+function onUnapprove(fee: TaskFee) {
+  pendingUnapprove.value = fee
+  unapproveReason.value = ''
+  unapproveDialog.value = true
+}
+
+async function confirmUnapprove() {
+  const fee = pendingUnapprove.value
+  if (!fee) return
+  busyId.value = fee.id
+  busyAction.value = 'unapprove'
+  unapproveDialog.value = false
+  detailDialog.value = false
+  try {
+    await feeStore.unapproveTaskFee(fee, unapproveReason.value.trim())
+    toast.success('已取消核准，回到待審')
+    await store.fetch()
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? '取消核准失敗')
+  } finally {
+    busyId.value = null
+    busyAction.value = null
+    pendingUnapprove.value = null
+  }
+}
+
+async function onResubmit(fee: TaskFee) {
+  busyId.value = fee.id
+  busyAction.value = 'resubmit'
+  try {
+    await feeStore.resubmitTaskFee(fee)
+    toast.success('已取消退件，回到待審')
+    await store.fetch()
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? '取消退件失敗')
+  } finally {
+    busyId.value = null
+    busyAction.value = null
+  }
 }
 
 const tabItems = computed(() => [

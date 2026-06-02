@@ -66,7 +66,9 @@ class TaskFeePolicy
 
     public function resubmit(User $user, TaskFee $fee): bool
     {
-        return $fee->submitted_by === $user->id && $fee->isRejected();
+        if (! $fee->isRejected()) return false;
+        // submitter 自己重送，或 manager/admin 取消退件
+        return $fee->submitted_by === $user->id || $this->isProjectManager($user, $fee);
     }
 
     public function requestReceipt(User $user, TaskFee $fee): bool

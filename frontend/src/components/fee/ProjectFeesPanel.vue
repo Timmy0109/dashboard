@@ -240,14 +240,17 @@
     <!-- All task fees dialog -->
     <v-dialog v-model="showTaskFeesDialog" max-width="720" scrollable>
       <v-card rounded="xl">
-        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
-          <v-icon icon="mdi-file-document-multiple-outline" color="primary" />
-          <span class="text-body-1 font-weight-semibold">
-            {{ isManagerView ? '任務費用明細' : '我提交的任務費用' }}
-          </span>
-          <v-chip size="x-small" variant="tonal" class="ml-1">{{ taskFees.length }} 筆</v-chip>
-          <v-spacer />
-          <v-btn icon="mdi-close" variant="text" size="small" @click="showTaskFeesDialog = false" />
+        <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+          <div class="d-flex align-center gap-2">
+            <v-icon icon="mdi-file-document-multiple-outline" color="white" />
+            <span class="text-body-1 font-weight-bold text-white">
+              {{ isManagerView ? '任務費用明細' : '我提交的任務費用' }}
+            </span>
+            <v-chip size="x-small" variant="flat" color="white" class="ml-1 pms-header-chip">
+              {{ taskFees.length }} 筆
+            </v-chip>
+          </div>
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="showTaskFeesDialog = false" />
         </v-card-title>
         <v-card-text class="pa-5">
           <v-list density="compact" class="bg-transparent pa-0">
@@ -279,20 +282,25 @@
             </v-list-item>
           </v-list>
         </v-card-text>
+        <v-divider />
+        <v-card-actions class="pa-4">
+          <v-btn variant="text" @click="showTaskFeesDialog = false">關閉</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- All admin fees dialog -->
     <v-dialog v-model="showAdminFeesDialog" max-width="720" scrollable>
       <v-card rounded="xl">
-        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
-          <v-icon icon="mdi-format-list-bulleted" color="primary" />
-          <span class="text-body-1 font-weight-semibold">行政費用明細</span>
-          <v-chip size="x-small" variant="tonal" class="ml-1">
-            {{ fees.length }} 筆 · NT${{ adminTotal.toLocaleString() }}
-          </v-chip>
-          <v-spacer />
-          <v-btn icon="mdi-close" variant="text" size="small" @click="showAdminFeesDialog = false" />
+        <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+          <div class="d-flex align-center gap-2">
+            <v-icon icon="mdi-format-list-bulleted" color="white" />
+            <span class="text-body-1 font-weight-bold text-white">行政費用明細</span>
+            <v-chip size="x-small" variant="flat" color="white" class="ml-1 pms-header-chip">
+              {{ fees.length }} 筆 · NT${{ adminTotal.toLocaleString() }}
+            </v-chip>
+          </div>
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="showAdminFeesDialog = false" />
         </v-card-title>
         <v-card-text class="pa-5">
           <v-list density="comfortable" class="bg-transparent pa-0">
@@ -329,6 +337,18 @@
             </template>
           </v-list>
         </v-card-text>
+        <v-divider />
+        <v-card-actions class="pa-4">
+          <v-btn variant="text" @click="showAdminFeesDialog = false">關閉</v-btn>
+          <v-spacer />
+          <v-btn
+            v-if="canManageAdminFees"
+            color="primary"
+            variant="flat"
+            prepend-icon="mdi-plus"
+            @click="showAdminFeesDialog = false; openCreate()"
+          >新增行政費用</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -474,5 +494,9 @@ watch(
 .pms-status-chip {
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+.pms-header-chip {
+  color: rgb(var(--v-theme-primary)) !important;
+  font-weight: 600;
 }
 </style>

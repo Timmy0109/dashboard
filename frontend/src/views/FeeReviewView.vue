@@ -214,32 +214,34 @@
     <!-- Detail dialog -->
     <v-dialog v-model="detailDialog" max-width="640" scrollable>
       <v-card v-if="detailFee" rounded="xl">
-        <v-card-title class="d-flex align-center gap-3 px-5 py-4 border-b">
-          <v-avatar :color="avatarColor(detailFee.submitter?.id ?? 0)" size="36">
-            <span class="text-body-2 text-white font-weight-bold">
-              {{ detailFee.submitter?.name?.charAt(0) ?? '?' }}
-            </span>
-          </v-avatar>
-          <div class="flex-1-1">
-            <div class="d-flex align-center gap-2">
-              <span class="text-body-1 font-weight-semibold">
-                {{ detailFee.submitter?.name ?? '—' }}
+        <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+          <div class="d-flex align-center gap-3">
+            <v-avatar color="white" size="40">
+              <span class="text-body-1 font-weight-bold text-primary">
+                {{ detailFee.submitter?.name?.charAt(0) ?? '?' }}
               </span>
-              <v-chip
-                :color="statusColor(detailFee)"
-                size="x-small"
-                variant="flat"
-                density="compact"
-                class="pms-status-chip"
-              >
-                {{ statusLabel(detailFee) }}
-              </v-chip>
-            </div>
-            <div class="text-caption text-medium-emphasis">
-              {{ detailFee.task?.project?.name ?? '—' }} · {{ detailFee.task?.name ?? '—' }}
+            </v-avatar>
+            <div>
+              <div class="d-flex align-center gap-2">
+                <span class="text-body-1 font-weight-bold text-white">
+                  {{ detailFee.submitter?.name ?? '—' }}
+                </span>
+                <v-chip
+                  :color="statusColor(detailFee)"
+                  size="x-small"
+                  variant="flat"
+                  density="compact"
+                  class="pms-status-chip"
+                >
+                  {{ statusLabel(detailFee) }}
+                </v-chip>
+              </div>
+              <div class="text-caption" style="color: rgba(255,255,255,.78)">
+                {{ detailFee.task?.project?.name ?? '—' }} · {{ detailFee.task?.name ?? '—' }}
+              </div>
             </div>
           </div>
-          <v-btn icon="mdi-close" variant="text" size="small" @click="detailDialog = false" />
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="detailDialog = false" />
         </v-card-title>
 
         <v-card-text class="pa-5">
@@ -350,7 +352,9 @@
           </template>
         </v-card-text>
 
-        <v-card-actions v-if="detailFee.status === 'pending'" class="px-5 pb-4">
+        <v-divider />
+        <v-card-actions v-if="detailFee.status === 'pending'" class="pa-4">
+          <v-btn variant="text" @click="detailDialog = false">關閉</v-btn>
           <v-spacer />
           <v-btn
             variant="outlined"
@@ -366,26 +370,29 @@
           >補件</v-btn>
           <v-btn
             color="success"
+            variant="flat"
             prepend-icon="mdi-check"
             @click="onApprove(detailFee).then(() => (detailDialog = false))"
           >核准</v-btn>
         </v-card-actions>
 
-        <v-card-actions v-else-if="detailFee.status === 'approved'" class="px-5 pb-4">
+        <v-card-actions v-else-if="detailFee.status === 'approved'" class="pa-4">
+          <v-btn variant="text" @click="detailDialog = false">關閉</v-btn>
           <v-spacer />
           <v-btn
-            variant="outlined"
-            color="grey-darken-1"
+            color="primary"
+            variant="flat"
             prepend-icon="mdi-undo-variant"
             @click="onUnapprove(detailFee)"
           >改回待審</v-btn>
         </v-card-actions>
 
-        <v-card-actions v-else-if="detailFee.status === 'rejected'" class="px-5 pb-4">
+        <v-card-actions v-else-if="detailFee.status === 'rejected'" class="pa-4">
+          <v-btn variant="text" @click="detailDialog = false">關閉</v-btn>
           <v-spacer />
           <v-btn
-            variant="outlined"
-            color="grey-darken-1"
+            color="primary"
+            variant="flat"
             prepend-icon="mdi-restore"
             @click="onResubmit(detailFee).then(() => (detailDialog = false))"
           >改回待審</v-btn>
@@ -396,11 +403,12 @@
     <!-- Receipt request message dialog -->
     <v-dialog v-model="receiptDialog" max-width="480">
       <v-card rounded="xl">
-        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
-          <v-icon icon="mdi-email-outline" color="warning" size="20" />
-          <span class="text-body-1 font-weight-semibold">通知補件</span>
-          <v-spacer />
-          <v-btn icon="mdi-close" variant="text" size="small" @click="receiptDialog = false" />
+        <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+          <div class="d-flex align-center gap-2">
+            <v-icon icon="mdi-email-outline" color="white" size="20" />
+            <span class="text-body-1 font-weight-bold text-white">通知補件</span>
+          </div>
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="receiptDialog = false" />
         </v-card-title>
         <v-card-text class="pa-5">
           <div class="text-caption text-medium-emphasis mb-2">
@@ -415,12 +423,14 @@
             variant="outlined"
             density="comfortable"
             hide-details="auto"
+            class="pms-reason-input"
           />
         </v-card-text>
-        <v-card-actions class="px-5 pb-4">
-          <v-spacer />
+        <v-divider />
+        <v-card-actions class="pa-4">
           <v-btn variant="text" @click="receiptDialog = false">取消</v-btn>
-          <v-btn color="warning" variant="flat" @click="confirmReceiptRequest">送出</v-btn>
+          <v-spacer />
+          <v-btn color="primary" variant="flat" prepend-icon="mdi-send" @click="confirmReceiptRequest">送出</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -428,11 +438,12 @@
     <!-- 改回待審 reason dialog -->
     <v-dialog v-model="unapproveDialog" max-width="480">
       <v-card rounded="xl">
-        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
-          <v-icon icon="mdi-undo-variant" color="grey-darken-1" size="20" />
-          <span class="text-body-1 font-weight-semibold">改回待審</span>
-          <v-spacer />
-          <v-btn icon="mdi-close" variant="text" size="small" @click="unapproveDialog = false" />
+        <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+          <div class="d-flex align-center gap-2">
+            <v-icon icon="mdi-undo-variant" color="white" size="20" />
+            <span class="text-body-1 font-weight-bold text-white">改回待審</span>
+          </div>
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="unapproveDialog = false" />
         </v-card-title>
         <v-card-text class="pa-5">
           <div class="text-caption text-medium-emphasis mb-2">
@@ -446,15 +457,18 @@
             variant="outlined"
             density="comfortable"
             hide-details="auto"
+            class="pms-reason-input"
             :rules="[(v: string) => !!v?.trim() || '請輸入原因']"
           />
         </v-card-text>
-        <v-card-actions class="px-5 pb-4">
-          <v-spacer />
+        <v-divider />
+        <v-card-actions class="pa-4">
           <v-btn variant="text" @click="unapproveDialog = false">取消</v-btn>
+          <v-spacer />
           <v-btn
-            color="grey-darken-1"
+            color="primary"
             variant="flat"
+            prepend-icon="mdi-check"
             :disabled="!unapproveReason.trim()"
             @click="confirmUnapprove"
           >確認</v-btn>
@@ -465,11 +479,12 @@
     <!-- Reject reason dialog -->
     <v-dialog v-model="rejectDialog" max-width="480">
       <v-card rounded="xl">
-        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
-          <v-icon icon="mdi-close-circle-outline" color="error" size="20" />
-          <span class="text-body-1 font-weight-semibold">退件費用</span>
-          <v-spacer />
-          <v-btn icon="mdi-close" variant="text" size="small" @click="rejectDialog = false" />
+        <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
+          <div class="d-flex align-center gap-2">
+            <v-icon icon="mdi-close-circle-outline" color="white" size="20" />
+            <span class="text-body-1 font-weight-bold text-white">退件費用</span>
+          </div>
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="rejectDialog = false" />
         </v-card-title>
         <v-card-text class="pa-5">
           <div class="text-caption text-medium-emphasis mb-2">
@@ -483,13 +498,15 @@
             variant="outlined"
             density="comfortable"
             hide-details="auto"
+            class="pms-reason-input"
             :rules="[(v: string) => !!v?.trim() || '請輸入退件原因']"
           />
         </v-card-text>
-        <v-card-actions class="px-5 pb-4">
-          <v-spacer />
+        <v-divider />
+        <v-card-actions class="pa-4">
           <v-btn variant="text" @click="rejectDialog = false">取消</v-btn>
-          <v-btn color="error" variant="flat" :disabled="!rejectReason.trim()" @click="confirmReject">確認退件</v-btn>
+          <v-spacer />
+          <v-btn color="error" variant="flat" prepend-icon="mdi-close" :disabled="!rejectReason.trim()" @click="confirmReject">確認退件</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -731,5 +748,11 @@ onMounted(() => store.fetch())
   background: rgba(0, 0, 0, 0.025);
   padding: 14px 16px;
   border-radius: 12px;
+}
+/* 強制 reason / message textarea 內容用實心黑色，避免 Vuetify medium-emphasis 看起來灰 */
+.pms-reason-input :deep(textarea),
+.pms-reason-input :deep(input) {
+  color: rgba(0, 0, 0, 0.92) !important;
+  font-weight: 500;
 }
 </style>

@@ -52,9 +52,9 @@
       </v-col>
       <v-col cols="12" sm="6" md="3">
         <KPICard
-          label="已駁回"
+          label="已退件"
           :value="kpi?.rejected_count ?? 0"
-          sub="本月內被駁回的費用"
+          sub="本月內被退件的費用"
           icon="mdi-close-circle-outline"
           icon-color="error"
           accent="error"
@@ -72,7 +72,7 @@
       class="mb-4"
     >
       有 {{ kpi?.pending_count ?? 0 }} 筆費用等待審核，另有
-      {{ kpi?.receipt_requested_count ?? 0 }} 筆已退回補件。逐筆核准、駁回或請成員補件。
+      {{ kpi?.receipt_requested_count ?? 0 }} 筆已退回補件。逐筆核准、退件或請成員補件。
     </v-alert>
 
     <!-- 主表 -->
@@ -191,7 +191,7 @@
               prepend-icon="mdi-undo-variant"
               :loading="busyId === item.id && busyAction === 'unapprove'"
               @click="onUnapprove(item)"
-            >取消核准</v-btn>
+            >改回待審</v-btn>
           </div>
           <div v-else-if="item.status === 'rejected'" class="d-flex align-center justify-center" @click.stop>
             <v-btn
@@ -201,7 +201,7 @@
               prepend-icon="mdi-restore"
               :loading="busyId === item.id && busyAction === 'resubmit'"
               @click="onResubmit(item)"
-            >取消退件</v-btn>
+            >改回待審</v-btn>
           </div>
         </template>
       </v-data-table>
@@ -301,12 +301,12 @@
           </v-list>
           <div v-else class="text-caption text-medium-emphasis">尚未上傳收據</div>
 
-          <!-- 取消核准原因 -->
+          <!-- 改回待審原因 -->
           <template v-if="detailFee.unapprove_reason">
             <v-divider class="my-4" />
             <div class="d-flex align-center gap-2 mb-2">
               <v-icon icon="mdi-undo-variant" size="16" color="grey-darken-1" />
-              <span class="text-body-2 font-weight-semibold">取消核准原因</span>
+              <span class="text-body-2 font-weight-semibold">改回待審原因</span>
               <span v-if="detailFee.unapprover" class="text-caption text-medium-emphasis">
                 · {{ detailFee.unapprover.name }} · {{ detailFee.unapproved_at ? formatDate(detailFee.unapproved_at) : '' }}
               </span>
@@ -378,7 +378,7 @@
             color="grey-darken-1"
             prepend-icon="mdi-undo-variant"
             @click="onUnapprove(detailFee)"
-          >取消核准</v-btn>
+          >改回待審</v-btn>
         </v-card-actions>
 
         <v-card-actions v-else-if="detailFee.status === 'rejected'" class="px-5 pb-4">
@@ -388,7 +388,7 @@
             color="grey-darken-1"
             prepend-icon="mdi-restore"
             @click="onResubmit(detailFee).then(() => (detailDialog = false))"
-          >取消退件</v-btn>
+          >改回待審</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -396,8 +396,16 @@
     <!-- Receipt request message dialog -->
     <v-dialog v-model="receiptDialog" max-width="480">
       <v-card rounded="xl">
-        <v-card-title class="text-body-1 font-weight-semibold">通知補件</v-card-title>
-        <v-card-text>
+        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
+          <v-icon icon="mdi-email-outline" color="warning" size="20" />
+          <span class="text-body-1 font-weight-semibold">通知補件</span>
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="receiptDialog = false" />
+        </v-card-title>
+        <v-card-text class="pa-5">
+          <div class="text-caption text-medium-emphasis mb-2">
+            提交者將收到通知，可留言說明需要補上哪些資料
+          </div>
           <v-textarea
             v-model="receiptMessage"
             label="留言給提交者（可選）"
@@ -406,35 +414,42 @@
             auto-grow
             variant="outlined"
             density="comfortable"
+            hide-details="auto"
           />
         </v-card-text>
-        <v-card-actions class="px-6 pb-4">
+        <v-card-actions class="px-5 pb-4">
           <v-spacer />
           <v-btn variant="text" @click="receiptDialog = false">取消</v-btn>
-          <v-btn color="warning" @click="confirmReceiptRequest">送出</v-btn>
+          <v-btn color="warning" variant="flat" @click="confirmReceiptRequest">送出</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Unapprove reason dialog -->
+    <!-- 改回待審 reason dialog -->
     <v-dialog v-model="unapproveDialog" max-width="480">
       <v-card rounded="xl">
-        <v-card-title class="text-body-1 font-weight-semibold">取消核准</v-card-title>
-        <v-card-text>
+        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
+          <v-icon icon="mdi-undo-variant" color="grey-darken-1" size="20" />
+          <span class="text-body-1 font-weight-semibold">改回待審</span>
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="unapproveDialog = false" />
+        </v-card-title>
+        <v-card-text class="pa-5">
           <div class="text-caption text-medium-emphasis mb-2">
-            費用將改回待審狀態，請簡述原因（會通知提交者）
+            費用會回到待審狀態，請簡述原因（會通知提交者）
           </div>
           <v-textarea
             v-model="unapproveReason"
-            label="取消原因"
+            label="原因"
             rows="3"
             auto-grow
             variant="outlined"
             density="comfortable"
-            :rules="[(v: string) => !!v?.trim() || '請輸入取消原因']"
+            hide-details="auto"
+            :rules="[(v: string) => !!v?.trim() || '請輸入原因']"
           />
         </v-card-text>
-        <v-card-actions class="px-6 pb-4">
+        <v-card-actions class="px-5 pb-4">
           <v-spacer />
           <v-btn variant="text" @click="unapproveDialog = false">取消</v-btn>
           <v-btn
@@ -450,22 +465,31 @@
     <!-- Reject reason dialog -->
     <v-dialog v-model="rejectDialog" max-width="480">
       <v-card rounded="xl">
-        <v-card-title class="text-body-1 font-weight-semibold">駁回費用</v-card-title>
-        <v-card-text>
+        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
+          <v-icon icon="mdi-close-circle-outline" color="error" size="20" />
+          <span class="text-body-1 font-weight-semibold">退件費用</span>
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="rejectDialog = false" />
+        </v-card-title>
+        <v-card-text class="pa-5">
+          <div class="text-caption text-medium-emphasis mb-2">
+            提交者會收到通知，請簡述原因
+          </div>
           <v-textarea
             v-model="rejectReason"
-            label="駁回原因"
+            label="退件原因"
             rows="3"
             auto-grow
             variant="outlined"
             density="comfortable"
-            :rules="[(v: string) => !!v?.trim() || '請輸入駁回原因']"
+            hide-details="auto"
+            :rules="[(v: string) => !!v?.trim() || '請輸入退件原因']"
           />
         </v-card-text>
-        <v-card-actions class="px-6 pb-4">
+        <v-card-actions class="px-5 pb-4">
           <v-spacer />
           <v-btn variant="text" @click="rejectDialog = false">取消</v-btn>
-          <v-btn color="error" :disabled="!rejectReason.trim()" @click="confirmReject">確認駁回</v-btn>
+          <v-btn color="error" variant="flat" :disabled="!rejectReason.trim()" @click="confirmReject">確認退件</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -538,10 +562,10 @@ async function confirmUnapprove() {
   detailDialog.value = false
   try {
     await feeStore.unapproveTaskFee(fee, unapproveReason.value.trim())
-    toast.success('已取消核准，回到待審')
+    toast.success('已改回待審')
     await store.fetch()
   } catch (e: any) {
-    toast.error(e?.response?.data?.message ?? '取消核准失敗')
+    toast.error(e?.response?.data?.message ?? '改回待審失敗')
   } finally {
     busyId.value = null
     busyAction.value = null
@@ -554,10 +578,10 @@ async function onResubmit(fee: TaskFee) {
   busyAction.value = 'resubmit'
   try {
     await feeStore.resubmitTaskFee(fee)
-    toast.success('已取消退件，回到待審')
+    toast.success('已改回待審')
     await store.fetch()
   } catch (e: any) {
-    toast.error(e?.response?.data?.message ?? '取消退件失敗')
+    toast.error(e?.response?.data?.message ?? '改回待審失敗')
   } finally {
     busyId.value = null
     busyAction.value = null
@@ -567,7 +591,7 @@ async function onResubmit(fee: TaskFee) {
 const tabItems = computed(() => [
   { value: 'pending', label: `待處理 (${kpi.value?.pending_count ?? 0})` },
   { value: 'approved', label: `已核准 (${kpi.value?.approved_this_month ?? 0})` },
-  { value: 'rejected', label: `已駁回 (${kpi.value?.rejected_count ?? 0})` },
+  { value: 'rejected', label: `已退件 (${kpi.value?.rejected_count ?? 0})` },
   { value: 'all', label: `全部 (${kpi.value?.total_count ?? 0})` },
 ])
 
@@ -598,7 +622,7 @@ function statusColor(fee: TaskFee): string {
 }
 function statusLabel(fee: TaskFee): string {
   if (fee.status === 'approved') return '已核准'
-  if (fee.status === 'rejected') return '已駁回'
+  if (fee.status === 'rejected') return '已退件'
   if (fee.receipt_requested_at) return '補件'
   return '待審核'
 }
@@ -647,10 +671,10 @@ async function confirmReject() {
   rejectDialog.value = false
   try {
     await feeStore.rejectTaskFee(fee, rejectReason.value.trim())
-    toast.success('已駁回')
+    toast.success('已退件')
     await store.fetch()
   } catch (e: any) {
-    toast.error(e?.response?.data?.message ?? '駁回失敗')
+    toast.error(e?.response?.data?.message ?? '退件失敗')
   } finally {
     busyId.value = null
     busyAction.value = null

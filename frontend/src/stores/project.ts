@@ -14,6 +14,8 @@ export interface Task {
   assignee: { id: number; name: string } | null
   status: { id: number; name: string; icon: string; color: string } | null
   priority: { id: number; name: string; color: string } | null
+  fees_count?: number
+  fees_pending_count?: number
 }
 
 export interface ProjectDetail {

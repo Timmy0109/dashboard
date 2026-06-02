@@ -259,7 +259,11 @@
             >
               {{ item.name }}
             </span>
-            <TaskMetaBadges :attachments-count="attachmentCountForTask(item.id)" />
+            <TaskMetaBadges
+              :attachments-count="attachmentCountForTask(item.id)"
+              :fees-count="item.fees_count ?? 0"
+              :fees-pending-count="item.fees_pending_count ?? 0"
+            />
           </div>
         </template>
 

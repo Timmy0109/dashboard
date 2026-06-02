@@ -68,9 +68,27 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        return response()->json(
-            $project->load(['owner', 'category', 'priority', 'status', 'tasks.assignee', 'tasks.status', 'tasks.priority', 'members'])
-        );
+        $user = $request->user();
+        $project->load([
+            'owner', 'category', 'priority', 'status', 'members',
+            'tasks' => function ($q) use ($user) {
+                $scope = function ($qq) use ($user) {
+                    if (! $user->isAdmin() && ! $user->isManager()) {
+                        $qq->where('submitted_by', $user->id);
+                    }
+                };
+                $q->with(['assignee', 'status', 'priority'])
+                    ->withCount([
+                        'fees as fees_count' => $scope,
+                        'fees as fees_pending_count' => function ($qq) use ($scope) {
+                            $qq->where('status', \App\Models\TaskFee::STATUS_PENDING);
+                            $scope($qq);
+                        },
+                    ]);
+            },
+        ]);
+
+        return response()->json($project);
     }
 
     public function update(Request $request, Project $project): JsonResponse

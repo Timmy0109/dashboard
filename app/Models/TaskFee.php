@@ -22,7 +22,7 @@ class TaskFee extends Model
         'status',
         'reviewed_by', 'reviewed_at', 'reject_reason',
         'unapproved_by', 'unapproved_at', 'unapprove_reason',
-        'receipt_requested_at', 'receipt_requested_by',
+        'receipt_requested_at', 'receipt_requested_by', 'receipt_request_message',
     ];
 
     protected function casts(): array
@@ -114,8 +114,9 @@ class TaskFee extends Model
             // 任何 status 變更都視為「補件需求已完成 / 失效」，清掉旗標避免殘留
             $updates = [
                 'status' => $newStatus,
-                'receipt_requested_at' => null,
-                'receipt_requested_by' => null,
+                'receipt_requested_at'    => null,
+                'receipt_requested_by'    => null,
+                'receipt_request_message' => null,
             ];
 
             if ($newStatus === self::STATUS_APPROVED) {

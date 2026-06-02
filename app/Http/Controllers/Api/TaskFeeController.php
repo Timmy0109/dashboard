@@ -244,8 +244,9 @@ class TaskFeeController extends Controller
         ]);
 
         $fee->update([
-            'receipt_requested_at' => now(),
-            'receipt_requested_by' => $request->user()->id,
+            'receipt_requested_at'      => now(),
+            'receipt_requested_by'      => $request->user()->id,
+            'receipt_request_message'   => $data['message'] ?? null,
         ]);
 
         $this->notify($fee->submitted_by, 'fee_receipt_requested', [

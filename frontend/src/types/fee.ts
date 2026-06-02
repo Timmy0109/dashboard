@@ -42,6 +42,7 @@ export interface TaskFee {
   task?: { id: number; name: string; project_id: number; project?: { id: number; name: string } }
   receipt_requested_at: string | null
   receipt_requested_by: number | null
+  receipt_request_message: string | null
   receipt_requester?: UserRef | null
 
   created_at: string

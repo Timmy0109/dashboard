@@ -100,6 +100,7 @@
         :loading="loading.list"
         item-value="id"
         hover
+        @click:row="(_e: Event, { item }: { item: TaskFee }) => openDetail(item)"
       >
         <template #item.submitter="{ item }">
           <div class="d-flex align-center gap-2 py-1">
@@ -156,7 +157,7 @@
         </template>
 
         <template #item.actions="{ item }">
-          <div v-if="item.status === 'pending'" class="d-flex align-center gap-1">
+          <div v-if="item.status === 'pending'" class="d-flex align-center justify-center gap-1" @click.stop>
             <v-btn
               color="success"
               size="x-small"
@@ -174,13 +175,13 @@
               @click="onRequestReceipt(item)"
             >補件</v-btn>
             <v-btn
-              icon="mdi-close"
               size="x-small"
-              variant="text"
+              variant="outlined"
               color="error"
+              prepend-icon="mdi-close"
               :loading="busyId === item.id && busyAction === 'reject'"
               @click="onReject(item)"
-            />
+            >退件</v-btn>
           </div>
           <span v-else-if="item.receipt_requested_at" class="text-caption text-medium-emphasis">
             等待成員補件
@@ -193,6 +194,176 @@
         顯示 {{ items.length }} 筆
       </div>
     </v-card>
+
+    <!-- Detail dialog -->
+    <v-dialog v-model="detailDialog" max-width="640" scrollable>
+      <v-card v-if="detailFee" rounded="xl">
+        <v-card-title class="d-flex align-center gap-3 px-5 py-4 border-b">
+          <v-avatar :color="avatarColor(detailFee.submitter?.id ?? 0)" size="36">
+            <span class="text-body-2 text-white font-weight-bold">
+              {{ detailFee.submitter?.name?.charAt(0) ?? '?' }}
+            </span>
+          </v-avatar>
+          <div class="flex-1-1">
+            <div class="d-flex align-center gap-2">
+              <span class="text-body-1 font-weight-semibold">
+                {{ detailFee.submitter?.name ?? '—' }}
+              </span>
+              <v-chip
+                :color="statusColor(detailFee)"
+                size="x-small"
+                variant="flat"
+                density="compact"
+                class="pms-status-chip"
+              >
+                {{ statusLabel(detailFee) }}
+              </v-chip>
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              {{ detailFee.task?.project?.name ?? '—' }} · {{ detailFee.task?.name ?? '—' }}
+            </div>
+          </div>
+          <v-btn icon="mdi-close" variant="text" size="small" @click="detailDialog = false" />
+        </v-card-title>
+
+        <v-card-text class="pa-5">
+          <!-- 基本資訊 -->
+          <div class="pms-detail-section">
+            <div class="d-flex align-baseline gap-3 mb-2">
+              <span class="text-caption text-medium-emphasis">金額</span>
+              <span class="text-h5 font-weight-bold pms-tnum text-primary">
+                NT${{ Number(detailFee.amount).toLocaleString() }}
+              </span>
+            </div>
+            <div v-if="detailFee.note" class="text-body-2" style="white-space: pre-wrap">
+              {{ detailFee.note }}
+            </div>
+            <div v-else class="text-caption text-medium-emphasis">無備註</div>
+            <div class="text-caption text-medium-emphasis mt-2">
+              提交於 {{ formatDate(detailFee.created_at) }}
+            </div>
+          </div>
+
+          <!-- 收據附件 -->
+          <v-divider class="my-4" />
+          <div class="d-flex align-center gap-2 mb-3">
+            <v-icon icon="mdi-paperclip" size="16" color="primary" />
+            <span class="text-body-2 font-weight-semibold">收據／附件</span>
+            <v-chip
+              v-if="(detailFee.attachments?.length ?? 0) > 0"
+              size="x-small"
+              variant="tonal"
+              class="ml-1"
+            >{{ detailFee.attachments!.length }}</v-chip>
+          </div>
+          <v-list
+            v-if="(detailFee.attachments?.length ?? 0) > 0"
+            density="compact"
+            class="bg-transparent pa-0"
+          >
+            <v-list-item
+              v-for="att in detailFee.attachments"
+              :key="att.id"
+              class="px-2 mb-1 rounded-lg pms-att-item"
+            >
+              <template #prepend>
+                <v-icon icon="mdi-file-document-outline" size="18" />
+              </template>
+              <v-list-item-title class="text-body-2">{{ att.original_name }}</v-list-item-title>
+              <v-list-item-subtitle class="text-caption">{{ att.size_human }}</v-list-item-subtitle>
+              <template #append>
+                <v-btn
+                  :href="att.download_url"
+                  target="_blank"
+                  icon="mdi-download"
+                  size="x-small"
+                  variant="text"
+                  color="primary"
+                />
+              </template>
+            </v-list-item>
+          </v-list>
+          <div v-else class="text-caption text-medium-emphasis">尚未上傳收據</div>
+
+          <!-- 退件原因 -->
+          <template v-if="detailFee.reject_reason">
+            <v-divider class="my-4" />
+            <div class="d-flex align-center gap-2 mb-2">
+              <v-icon icon="mdi-close-circle-outline" size="16" color="error" />
+              <span class="text-body-2 font-weight-semibold">退件原因</span>
+              <span v-if="detailFee.reviewer" class="text-caption text-medium-emphasis">
+                · {{ detailFee.reviewer.name }} · {{ detailFee.reviewed_at ? formatDate(detailFee.reviewed_at) : '' }}
+              </span>
+            </div>
+            <v-alert type="error" variant="tonal" density="compact">
+              <div style="white-space: pre-wrap">{{ detailFee.reject_reason }}</div>
+            </v-alert>
+          </template>
+
+          <!-- 補件留言 -->
+          <template v-if="detailFee.receipt_requested_at">
+            <v-divider class="my-4" />
+            <div class="d-flex align-center gap-2 mb-2">
+              <v-icon icon="mdi-email-outline" size="16" color="info" />
+              <span class="text-body-2 font-weight-semibold">補件留言</span>
+              <span v-if="detailFee.receipt_requester" class="text-caption text-medium-emphasis">
+                · {{ detailFee.receipt_requester.name }} · {{ formatDate(detailFee.receipt_requested_at) }}
+              </span>
+            </div>
+            <v-alert type="info" variant="tonal" density="compact">
+              <div v-if="detailFee.receipt_request_message" style="white-space: pre-wrap">
+                {{ detailFee.receipt_request_message }}
+              </div>
+              <div v-else class="text-caption">無留言（已請成員補件）</div>
+            </v-alert>
+          </template>
+        </v-card-text>
+
+        <v-card-actions v-if="detailFee.status === 'pending'" class="px-5 pb-4">
+          <v-spacer />
+          <v-btn
+            variant="outlined"
+            color="error"
+            prepend-icon="mdi-close"
+            @click="onReject(detailFee); detailDialog = false"
+          >退件</v-btn>
+          <v-btn
+            variant="outlined"
+            color="warning"
+            prepend-icon="mdi-email-outline"
+            @click="onRequestReceiptFromDetail(detailFee)"
+          >補件</v-btn>
+          <v-btn
+            color="success"
+            prepend-icon="mdi-check"
+            @click="onApprove(detailFee).then(() => (detailDialog = false))"
+          >核准</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Receipt request message dialog -->
+    <v-dialog v-model="receiptDialog" max-width="480">
+      <v-card rounded="xl">
+        <v-card-title class="text-body-1 font-weight-semibold">通知補件</v-card-title>
+        <v-card-text>
+          <v-textarea
+            v-model="receiptMessage"
+            label="留言給提交者（可選）"
+            placeholder="例：請補上正式發票，謝謝"
+            rows="3"
+            auto-grow
+            variant="outlined"
+            density="comfortable"
+          />
+        </v-card-text>
+        <v-card-actions class="px-6 pb-4">
+          <v-spacer />
+          <v-btn variant="text" @click="receiptDialog = false">取消</v-btn>
+          <v-btn color="warning" @click="confirmReceiptRequest">送出</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Reject reason dialog -->
     <v-dialog v-model="rejectDialog" max-width="480">
@@ -243,6 +414,29 @@ const rejectDialog = ref(false)
 const rejectReason = ref('')
 const pendingReject = ref<TaskFee | null>(null)
 
+const detailDialog = ref(false)
+const detailFee = ref<TaskFee | null>(null)
+
+const receiptDialog = ref(false)
+const receiptMessage = ref('')
+const pendingReceipt = ref<TaskFee | null>(null)
+
+function openDetail(fee: TaskFee) {
+  detailFee.value = fee
+  detailDialog.value = true
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString('zh-TW', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function onRequestReceiptFromDetail(fee: TaskFee) {
+  pendingReceipt.value = fee
+  receiptMessage.value = ''
+  receiptDialog.value = true
+}
+
 const tabItems = computed(() => [
   { value: 'pending', label: `待處理 (${kpi.value?.pending_count ?? 0})` },
   { value: 'approved', label: `已核准 (${kpi.value?.approved_this_month ?? 0})` },
@@ -257,7 +451,7 @@ const headers = [
   { title: '收據', key: 'receipt', sortable: false, align: 'center' as const },
   { title: '送出時間', key: 'created_at', sortable: false },
   { title: '狀態', key: 'status', sortable: false, align: 'center' as const },
-  { title: '審核', key: 'actions', sortable: false, align: 'end' as const },
+  { title: '審核', key: 'actions', sortable: false, align: 'center' as const, width: 280 },
 ]
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -337,11 +531,22 @@ async function confirmReject() {
   }
 }
 
-async function onRequestReceipt(fee: TaskFee) {
+function onRequestReceipt(fee: TaskFee) {
+  // 從 row inline 也走 message dialog，留言可選
+  pendingReceipt.value = fee
+  receiptMessage.value = ''
+  receiptDialog.value = true
+}
+
+async function confirmReceiptRequest() {
+  const fee = pendingReceipt.value
+  if (!fee) return
   busyId.value = fee.id
   busyAction.value = 'receipt'
+  receiptDialog.value = false
+  detailDialog.value = false
   try {
-    await feeStore.requestReceipt(fee)
+    await feeStore.requestReceipt(fee, receiptMessage.value.trim() || undefined)
     toast.success('已通知提交者補件')
     await store.fetch()
   } catch (e: any) {
@@ -349,6 +554,7 @@ async function onRequestReceipt(fee: TaskFee) {
   } finally {
     busyId.value = null
     busyAction.value = null
+    pendingReceipt.value = null
   }
 }
 
@@ -366,5 +572,13 @@ onMounted(() => store.fetch())
 .pms-status-chip {
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+.pms-att-item {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+.pms-detail-section {
+  background: rgba(0, 0, 0, 0.025);
+  padding: 14px 16px;
+  border-radius: 12px;
 }
 </style>

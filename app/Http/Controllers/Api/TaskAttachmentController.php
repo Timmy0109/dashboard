@@ -37,7 +37,8 @@ class TaskAttachmentController extends Controller
         $this->authorize('view', $project);
 
         $request->validate([
-            'file' => ['required', 'file', 'max:51200'], // 50 MB in KB for Laravel validator
+            'file'        => ['required', 'file', 'max:51200'], // 50 MB in KB for Laravel validator
+            'task_fee_id' => ['nullable', 'integer', 'exists:task_fees,id'],
         ]);
 
         $file = $request->file('file');
@@ -50,6 +51,7 @@ class TaskAttachmentController extends Controller
 
         $attachment = $task->attachments()->create([
             'uploader_id'   => $request->user()->id,
+            'task_fee_id'   => $request->input('task_fee_id'),
             'original_name' => $file->getClientOriginalName(),
             'disk_path'     => $path,
             'mime_type'     => $file->getMimeType(),
@@ -159,6 +161,7 @@ class TaskAttachmentController extends Controller
     {
         return [
             'id'            => $a->id,
+            'task_fee_id'   => $a->task_fee_id,
             'original_name' => $a->original_name,
             'mime_type'     => $a->mime_type,
             'size_human'    => $a->size_human,

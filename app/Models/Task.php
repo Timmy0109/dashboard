@@ -60,6 +60,11 @@ class Task extends Model
         return $this->hasMany(TaskAttachment::class);
     }
 
+    public function fees(): HasMany
+    {
+        return $this->hasMany(TaskFee::class);
+    }
+
     public function isOverdue(): bool
     {
         return ! $this->is_completed && $this->end_date->isPast();

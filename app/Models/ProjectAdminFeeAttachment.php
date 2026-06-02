@@ -6,20 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\URL;
 
-class TaskAttachment extends Model
+class ProjectAdminFeeAttachment extends Model
 {
-    protected $fillable = ['task_id', 'task_fee_id', 'uploader_id', 'original_name', 'disk_path', 'mime_type', 'size'];
+    protected $fillable = [
+        'project_admin_fee_id', 'uploader_id',
+        'original_name', 'disk_path', 'mime_type', 'size',
+    ];
 
     protected $appends = ['download_url', 'size_human', 'is_previewable'];
 
-    public function task(): BelongsTo
+    public function fee(): BelongsTo
     {
-        return $this->belongsTo(Task::class);
-    }
-
-    public function taskFee(): BelongsTo
-    {
-        return $this->belongsTo(TaskFee::class);
+        return $this->belongsTo(ProjectAdminFee::class, 'project_admin_fee_id');
     }
 
     public function uploader(): BelongsTo
@@ -29,7 +27,11 @@ class TaskAttachment extends Model
 
     public function getDownloadUrlAttribute(): string
     {
-        return URL::signedRoute('attachments.download', ['attachment' => $this->id], now()->addMinutes(60));
+        return URL::signedRoute(
+            'admin-fee-attachments.download',
+            ['attachment' => $this->id],
+            now()->addMinutes(60),
+        );
     }
 
     public function getSizeHumanAttribute(): string

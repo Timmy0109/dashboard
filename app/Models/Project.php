@@ -59,6 +59,29 @@ class Project extends Model
             ->withTimestamps();
     }
 
+    public function taskFees(): HasMany
+    {
+        return $this->hasMany(TaskFee::class);
+    }
+
+    public function adminFees(): HasMany
+    {
+        return $this->hasMany(ProjectAdminFee::class);
+    }
+
+    /**
+     * 該專案總費用 = Σ 已核定的 task fees + Σ 行政費用
+     * 注意：lazy 計算，不要無腦掛在 list endpoint 上（hot path）
+     */
+    public function totalFee(): float
+    {
+        $taskFeeApproved = $this->taskFees()
+            ->where('status', TaskFee::STATUS_APPROVED)
+            ->sum('amount');
+        $adminFees = $this->adminFees()->sum('amount');
+        return (float) ($taskFeeApproved + $adminFees);
+    }
+
     public function recalculateProgress(): void
     {
         DB::transaction(function () {

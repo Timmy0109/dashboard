@@ -399,6 +399,11 @@
             </v-list-item>
           </v-list>
         </div>
+
+        <!-- 費用 -->
+        <div v-else-if="activeTab === 'fees' && task" class="pms-tab-pane">
+          <TaskFeesPanel :project-id="projectId" :task-id="task.id" />
+        </div>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -417,6 +422,7 @@ import { useToast } from '@/composables/useToast'
 import Tabs from '@/components/ui/Tabs.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import CommentBlock from '@/components/task/CommentBlock.vue'
+import TaskFeesPanel from '@/components/fee/TaskFeesPanel.vue'
 import type { Comment } from '@/types/comment'
 import type { Attachment } from '@/types/attachment'
 import type { HistoryEvent } from '@/types/history'
@@ -434,7 +440,7 @@ const toast = useToast()
 
 const saving = ref(false)
 const errorMsg = ref('')
-type TabValue = 'detail' | 'comments' | 'history' | 'attachments'
+type TabValue = 'detail' | 'comments' | 'history' | 'attachments' | 'fees'
 const activeTab = ref<TabValue>('detail')
 
 const taskIdRef = computed<number | null>(() => props.task?.id ?? null)
@@ -455,6 +461,7 @@ const tabItems = computed(() => [
   { value: 'comments', label: '留言', count: taskComments.value.reduce((s, c) => s + 1 + (c.replies?.length ?? 0), 0) },
   { value: 'history', label: '歷史', count: taskHistory.value.length },
   { value: 'attachments', label: '附件', count: taskAttachments.value.length },
+  { value: 'fees', label: '費用' },
 ])
 
 // ── WebSocket realtime ────────────────────────────────────────────────────

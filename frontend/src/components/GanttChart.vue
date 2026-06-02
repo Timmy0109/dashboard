@@ -134,7 +134,7 @@ onBeforeUnmount(destroyGantt)
 <style>
 .gantt-outer {
   overflow: auto;
-  height: 720px;
+  max-height: 720px;
   border-radius: 8px;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   background: rgb(var(--v-theme-surface));

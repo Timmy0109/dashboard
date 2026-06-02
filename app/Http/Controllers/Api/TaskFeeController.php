@@ -243,6 +243,11 @@ class TaskFeeController extends Controller
             'message' => 'nullable|string|max:500',
         ]);
 
+        $fee->update([
+            'receipt_requested_at' => now(),
+            'receipt_requested_by' => $request->user()->id,
+        ]);
+
         $this->notify($fee->submitted_by, 'fee_receipt_requested', [
             'task_fee_id' => $fee->id,
             'task_id'     => $fee->task_id,
@@ -252,7 +257,7 @@ class TaskFeeController extends Controller
             'message'     => $data['message'] ?? null,
         ]);
 
-        return response()->json(['message' => '已通知提交者補件']);
+        return response()->json($fee->fresh(['submitter:id,name', 'attachments']));
     }
 
     private function notify(int $userId, string $type, array $payload): void

@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\ProjectAdminFeeController;
 use App\Http\Controllers\Api\TaskAttachmentController;
 use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\FeeReviewController;
 use App\Http\Controllers\Api\TaskFeeController;
 use App\Http\Controllers\Api\TodoController;
 use App\Http\Controllers\Api\UserController;
@@ -96,6 +97,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{company}/invite-code', [CompanyController::class, 'regenerateInviteCode']);
         Route::get('{company}/users', [CompanyController::class, 'users']);
     });
+
+    // Manager — fee reviews (cross-project)
+    Route::get('manager/fee-reviews', [FeeReviewController::class, 'index']);
 
     // Manager — member approval
     Route::prefix('manager/members')->group(function () {

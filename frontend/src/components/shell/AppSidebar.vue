@@ -28,6 +28,7 @@ const navItems = computed<NavItem[]>(() => {
     // 成員管理已整合進系統管理頁面，admin 側欄不再單獨列出
     return [
       { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
+      { to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' },
       { to: '/settings', icon: 'mdi-cog', label: '設定管理' },
       { to: '/system', icon: 'mdi-domain', label: '系統管理' },
     ]
@@ -41,6 +42,10 @@ const navItems = computed<NavItem[]>(() => {
 
   if (feature.has('report.stats_dashboard')) {
     items.push({ to: '/stats', icon: 'mdi-chart-bar', label: '統計分析' })
+  }
+
+  if (auth.isManager) {
+    items.push({ to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' })
   }
 
   if (auth.isManager && feature.has('member.approval_required')) {

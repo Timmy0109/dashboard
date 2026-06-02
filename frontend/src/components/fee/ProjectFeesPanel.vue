@@ -67,10 +67,10 @@
 
       <v-list v-else density="compact" class="bg-transparent pa-0">
         <v-list-item
-          v-for="(fee, idx) in taskFees"
+          v-for="(fee, idx) in visibleTaskFees"
           :key="fee.id"
           class="pms-task-fee-row rounded-lg mb-1"
-          :class="{ 'mb-2': idx === taskFees.length - 1 }"
+          :class="{ 'mb-2': idx === visibleTaskFees.length - 1 }"
         >
           <v-list-item-title class="d-flex align-center gap-2 flex-wrap">
             <v-chip
@@ -107,6 +107,18 @@
         </v-list-item>
       </v-list>
 
+      <div v-if="taskFees.length > TASK_FEES_PREVIEW" class="mt-2 text-center">
+        <v-btn
+          variant="text"
+          size="small"
+          color="primary"
+          append-icon="mdi-chevron-right"
+          @click="showTaskFeesDialog = true"
+        >
+          查看全部 {{ taskFees.length }} 筆
+        </v-btn>
+      </div>
+
       <!-- 下半：行政費用明細（僅 manager/admin） -->
       <template v-if="canManageAdminFees">
         <v-divider class="my-5" />
@@ -131,7 +143,7 @@
         />
 
         <v-list v-else density="comfortable" class="bg-transparent pa-0">
-          <template v-for="(fee, idx) in fees" :key="fee.id">
+          <template v-for="(fee, idx) in visibleAdminFees" :key="fee.id">
             <v-list-item class="pms-fee-row rounded-lg mb-2" @click="toggleExpand(fee.id)">
               <template #prepend>
                 <v-avatar v-if="fee.creator" color="primary" size="28" class="mr-2">
@@ -207,11 +219,118 @@
               </div>
             </v-expand-transition>
 
-            <v-divider v-if="idx < fees.length - 1" class="my-1" />
+            <v-divider v-if="idx < visibleAdminFees.length - 1" class="my-1" />
           </template>
         </v-list>
+
+        <div v-if="fees.length > ADMIN_FEES_PREVIEW" class="mt-2 text-center">
+          <v-btn
+            variant="text"
+            size="small"
+            color="primary"
+            append-icon="mdi-chevron-right"
+            @click="showAdminFeesDialog = true"
+          >
+            查看全部 {{ fees.length }} 筆
+          </v-btn>
+        </div>
       </template>
     </div>
+
+    <!-- All task fees dialog -->
+    <v-dialog v-model="showTaskFeesDialog" max-width="720" scrollable>
+      <v-card rounded="xl">
+        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
+          <v-icon icon="mdi-file-document-multiple-outline" color="primary" />
+          <span class="text-body-1 font-weight-semibold">
+            {{ isManagerView ? '任務費用明細' : '我提交的任務費用' }}
+          </span>
+          <v-chip size="x-small" variant="tonal" class="ml-1">{{ taskFees.length }} 筆</v-chip>
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showTaskFeesDialog = false" />
+        </v-card-title>
+        <v-card-text class="pa-5">
+          <v-list density="compact" class="bg-transparent pa-0">
+            <v-list-item
+              v-for="fee in taskFees"
+              :key="fee.id"
+              class="pms-task-fee-row rounded-lg mb-1"
+            >
+              <v-list-item-title class="d-flex align-center gap-2 flex-wrap">
+                <v-chip :color="statusColor(fee.status)" size="x-small" variant="flat" density="compact" class="pms-status-chip">
+                  {{ statusLabel(fee.status) }}
+                </v-chip>
+                <span class="text-body-2 font-weight-medium flex-grow-1 text-truncate">
+                  {{ fee.task?.name ?? `任務 #${fee.task_id}` }}
+                </span>
+                <span class="text-body-2 font-weight-bold pms-tnum text-primary">
+                  NT${{ Number(fee.amount).toLocaleString() }}
+                </span>
+              </v-list-item-title>
+              <v-list-item-subtitle class="d-flex align-center gap-2 text-caption mt-1">
+                <span>{{ fee.submitter?.name ?? '—' }}</span>
+                <span>·</span>
+                <span>{{ fee.created_at.slice(0, 10) }}</span>
+                <v-chip v-if="(fee.attachments?.length ?? 0) > 0" size="x-small" variant="tonal" density="compact">
+                  <v-icon start icon="mdi-paperclip" size="11" />
+                  {{ fee.attachments!.length }}
+                </v-chip>
+              </v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- All admin fees dialog -->
+    <v-dialog v-model="showAdminFeesDialog" max-width="720" scrollable>
+      <v-card rounded="xl">
+        <v-card-title class="d-flex align-center gap-2 px-5 py-4 border-b">
+          <v-icon icon="mdi-format-list-bulleted" color="primary" />
+          <span class="text-body-1 font-weight-semibold">行政費用明細</span>
+          <v-chip size="x-small" variant="tonal" class="ml-1">
+            {{ fees.length }} 筆 · NT${{ adminTotal.toLocaleString() }}
+          </v-chip>
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showAdminFeesDialog = false" />
+        </v-card-title>
+        <v-card-text class="pa-5">
+          <v-list density="comfortable" class="bg-transparent pa-0">
+            <template v-for="(fee, idx) in fees" :key="fee.id">
+              <v-list-item class="pms-fee-row rounded-lg mb-2">
+                <template #prepend>
+                  <v-avatar v-if="fee.creator" color="primary" size="28" class="mr-2">
+                    <span class="text-caption text-white font-weight-bold">{{ fee.creator.name.charAt(0) }}</span>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="d-flex align-center gap-3 flex-wrap">
+                  <span class="text-body-2 font-weight-semibold flex-grow-1">
+                    {{ fee.note ? truncate(fee.note, 40) : '行政費用' }}
+                  </span>
+                  <span class="text-body-1 font-weight-bold pms-tnum text-primary">{{ fmt(fee.amount) }}</span>
+                </v-list-item-title>
+                <v-list-item-subtitle class="d-flex align-center gap-2 text-caption mt-1">
+                  <span>{{ fee.incurred_on?.slice(0, 10) ?? fee.created_at.slice(0, 10) }}</span>
+                  <span>·</span>
+                  <span>{{ fee.creator?.name ?? '—' }}</span>
+                  <v-chip v-if="(fee.attachments?.length ?? 0) > 0" size="x-small" variant="tonal" density="compact">
+                    <v-icon start icon="mdi-paperclip" size="12" />
+                    {{ fee.attachments!.length }}
+                  </v-chip>
+                </v-list-item-subtitle>
+                <template #append>
+                  <div class="d-flex align-center" @click.stop>
+                    <v-btn icon="mdi-pencil" size="x-small" variant="text" color="grey" @click="openEdit(fee)" />
+                    <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="handleDelete(fee)" />
+                  </div>
+                </template>
+              </v-list-item>
+              <v-divider v-if="idx < fees.length - 1" class="my-1" />
+            </template>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
 
     <ProjectAdminFeeForm
       v-if="showForm"
@@ -259,6 +378,13 @@ function statusLabel(s: FeeStatus): string {
 const expanded = reactive<Record<number, boolean>>({})
 const showForm = ref(false)
 const editingFee = ref<ProjectAdminFee | null>(null)
+
+const TASK_FEES_PREVIEW = 3
+const ADMIN_FEES_PREVIEW = 1
+const showTaskFeesDialog = ref(false)
+const showAdminFeesDialog = ref(false)
+const visibleTaskFees = computed(() => taskFees.value.slice(0, TASK_FEES_PREVIEW))
+const visibleAdminFees = computed(() => fees.value.slice(0, ADMIN_FEES_PREVIEW))
 
 function fmt(amount: string | number) {
   return 'NT$' + Number(amount).toLocaleString()

@@ -120,13 +120,20 @@ class TaskFee extends Model
             ];
 
             if ($newStatus === self::STATUS_APPROVED) {
-                $updates['reviewed_by']   = $actor->id;
-                $updates['reviewed_at']   = $now;
-                $updates['reject_reason'] = null;
+                $updates['reviewed_by']      = $actor->id;
+                $updates['reviewed_at']      = $now;
+                $updates['reject_reason']    = null;
+                // 重新核准 → 清掉先前的取消核准紀錄
+                $updates['unapproved_by']    = null;
+                $updates['unapproved_at']    = null;
+                $updates['unapprove_reason'] = null;
             } elseif ($newStatus === self::STATUS_REJECTED) {
-                $updates['reviewed_by']   = $actor->id;
-                $updates['reviewed_at']   = $now;
-                $updates['reject_reason'] = $reason;
+                $updates['reviewed_by']      = $actor->id;
+                $updates['reviewed_at']      = $now;
+                $updates['reject_reason']    = $reason;
+                $updates['unapproved_by']    = null;
+                $updates['unapproved_at']    = null;
+                $updates['unapprove_reason'] = null;
             } elseif ($from === self::STATUS_APPROVED && $newStatus === self::STATUS_PENDING) {
                 // unapprove
                 $updates['unapproved_by']    = $actor->id;

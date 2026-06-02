@@ -301,6 +301,21 @@
           </v-list>
           <div v-else class="text-caption text-medium-emphasis">尚未上傳收據</div>
 
+          <!-- 取消核准原因 -->
+          <template v-if="detailFee.unapprove_reason">
+            <v-divider class="my-4" />
+            <div class="d-flex align-center gap-2 mb-2">
+              <v-icon icon="mdi-undo-variant" size="16" color="grey-darken-1" />
+              <span class="text-body-2 font-weight-semibold">取消核准原因</span>
+              <span v-if="detailFee.unapprover" class="text-caption text-medium-emphasis">
+                · {{ detailFee.unapprover.name }} · {{ detailFee.unapproved_at ? formatDate(detailFee.unapproved_at) : '' }}
+              </span>
+            </div>
+            <v-alert color="grey-lighten-3" variant="tonal" density="compact">
+              <div style="white-space: pre-wrap">{{ detailFee.unapprove_reason }}</div>
+            </v-alert>
+          </template>
+
           <!-- 退件原因 -->
           <template v-if="detailFee.reject_reason">
             <v-divider class="my-4" />

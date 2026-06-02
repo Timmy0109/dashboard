@@ -51,6 +51,7 @@ class FeeReviewController extends Controller
                 'task.project:id,name',
                 'submitter:id,name',
                 'reviewer:id,name',
+                'unapprover:id,name',
                 'receiptRequester:id,name',
                 'attachments',
             ]);

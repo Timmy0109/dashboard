@@ -22,14 +22,16 @@ class TaskFee extends Model
         'status',
         'reviewed_by', 'reviewed_at', 'reject_reason',
         'unapproved_by', 'unapproved_at', 'unapprove_reason',
+        'receipt_requested_at', 'receipt_requested_by', 'receipt_request_message',
     ];
 
     protected function casts(): array
     {
         return [
-            'amount'         => 'decimal:2',
-            'reviewed_at'    => 'datetime',
-            'unapproved_at'  => 'datetime',
+            'amount'               => 'decimal:2',
+            'reviewed_at'          => 'datetime',
+            'unapproved_at'        => 'datetime',
+            'receipt_requested_at' => 'datetime',
         ];
     }
 
@@ -56,6 +58,11 @@ class TaskFee extends Model
     public function unapprover(): BelongsTo
     {
         return $this->belongsTo(User::class, 'unapproved_by');
+    }
+
+    public function receiptRequester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'receipt_requested_by');
     }
 
     public function attachments(): HasMany
@@ -104,16 +111,29 @@ class TaskFee extends Model
             }
 
             $now = now();
-            $updates = ['status' => $newStatus];
+            // 任何 status 變更都視為「補件需求已完成 / 失效」，清掉旗標避免殘留
+            $updates = [
+                'status' => $newStatus,
+                'receipt_requested_at'    => null,
+                'receipt_requested_by'    => null,
+                'receipt_request_message' => null,
+            ];
 
             if ($newStatus === self::STATUS_APPROVED) {
-                $updates['reviewed_by']   = $actor->id;
-                $updates['reviewed_at']   = $now;
-                $updates['reject_reason'] = null;
+                $updates['reviewed_by']      = $actor->id;
+                $updates['reviewed_at']      = $now;
+                $updates['reject_reason']    = null;
+                // 重新核准 → 清掉先前的取消核准紀錄
+                $updates['unapproved_by']    = null;
+                $updates['unapproved_at']    = null;
+                $updates['unapprove_reason'] = null;
             } elseif ($newStatus === self::STATUS_REJECTED) {
-                $updates['reviewed_by']   = $actor->id;
-                $updates['reviewed_at']   = $now;
-                $updates['reject_reason'] = $reason;
+                $updates['reviewed_by']      = $actor->id;
+                $updates['reviewed_at']      = $now;
+                $updates['reject_reason']    = $reason;
+                $updates['unapproved_by']    = null;
+                $updates['unapproved_at']    = null;
+                $updates['unapprove_reason'] = null;
             } elseif ($from === self::STATUS_APPROVED && $newStatus === self::STATUS_PENDING) {
                 // unapprove
                 $updates['unapproved_by']    = $actor->id;

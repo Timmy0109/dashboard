@@ -77,25 +77,41 @@ class ProjectAdminFeeController extends Controller
         $this->authorize('view', $project);
 
         $user = $request->user();
-        $canSeeAdminFees = $user->isAdmin()
+        $canSeeAll = $user->isAdmin()
             || ($user->isManager() && (new \App\Policies\ProjectPolicy())->update($user, $project));
+
+        // Member: 只看得到自己提交的費用，看不到專案總額 / 預算 / 行政費用
+        if (! $canSeeAll) {
+            $base = $project->taskFees()->where('submitted_by', $user->id);
+            $ownApproved = (float) (clone $base)->where('status', \App\Models\TaskFee::STATUS_APPROVED)->sum('amount');
+            $ownPending  = (float) (clone $base)->where('status', \App\Models\TaskFee::STATUS_PENDING)->sum('amount');
+            $ownRejected = (float) (clone $base)->where('status', \App\Models\TaskFee::STATUS_REJECTED)->sum('amount');
+            return response()->json([
+                'scope'        => 'self',
+                'own_approved' => $ownApproved,
+                'own_pending'  => $ownPending,
+                'own_rejected' => $ownRejected,
+                'own_total'    => $ownApproved + $ownPending, // 已支出 + in-flight
+            ]);
+        }
 
         $taskApproved = $project->taskFees()
             ->where('status', \App\Models\TaskFee::STATUS_APPROVED)->sum('amount');
         $taskPending = $project->taskFees()
             ->where('status', \App\Models\TaskFee::STATUS_PENDING)->sum('amount');
         $adminTotal = $project->adminFees()->sum('amount');
+        $spent      = $taskApproved + $adminTotal;
+        $budget     = (float) $project->total_budget;
 
-        $payload = [
-            'total'                  => (float) ($taskApproved + $adminTotal),
-            'task_fees_approved'     => (float) $taskApproved,
-            'task_fees_pending'      => (float) $taskPending,
-        ];
-
-        if ($canSeeAdminFees) {
-            $payload['admin_fees'] = (float) $adminTotal;
-        }
-
-        return response()->json($payload);
+        return response()->json([
+            'scope'              => 'all',
+            'total'              => (float) $spent,
+            'task_fees_approved' => (float) $taskApproved,
+            'task_fees_pending'  => (float) $taskPending,
+            'admin_fees'         => (float) $adminTotal,
+            'total_budget'       => $budget,
+            'remaining'          => (float) ($budget - $spent),
+            'over_budget'        => $spent > $budget,
+        ]);
     }
 }

@@ -17,8 +17,25 @@ class TaskController extends Controller
     {
         $this->authorize('view', $project);
 
+        $user = $request->user();
+        $scope = function ($q) use ($user) {
+            if (! $user->isAdmin() && ! $user->isManager()) {
+                $q->where('submitted_by', $user->id);
+            }
+        };
+
         return response()->json(
-            $project->tasks()->with(['assignee', 'status', 'priority'])->orderBy('start_date')->get()
+            $project->tasks()
+                ->with(['assignee', 'status', 'priority'])
+                ->withCount([
+                    'fees as fees_count' => $scope,
+                    'fees as fees_pending_count' => function ($q) use ($scope) {
+                        $q->where('status', \App\Models\TaskFee::STATUS_PENDING);
+                        $scope($q);
+                    },
+                ])
+                ->orderBy('start_date')
+                ->get()
         );
     }
 

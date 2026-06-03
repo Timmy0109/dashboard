@@ -417,6 +417,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCommentStore } from '@/stores/comment'
 import { useAttachmentStore } from '@/stores/attachment'
 import { useHistoryStore } from '@/stores/history'
+import { useFeeStore } from '@/stores/fee'
 import { useTaskChannel } from '@/composables/useTaskChannel'
 import { useToast } from '@/composables/useToast'
 import Tabs from '@/components/ui/Tabs.vue'
@@ -436,6 +437,7 @@ const auth = useAuthStore()
 const commentStore = useCommentStore()
 const attachmentStore = useAttachmentStore()
 const historyStore = useHistoryStore()
+const feeStore = useFeeStore()
 const toast = useToast()
 
 const saving = ref(false)
@@ -461,7 +463,7 @@ const tabItems = computed(() => [
   { value: 'comments', label: '留言', count: taskComments.value.reduce((s, c) => s + 1 + (c.replies?.length ?? 0), 0) },
   { value: 'history', label: '歷史', count: taskHistory.value.length },
   { value: 'attachments', label: '附件', count: taskAttachments.value.length },
-  { value: 'fees', label: '費用' },
+  { value: 'fees', label: '費用', count: props.task?.fees_count ?? feeStore.byTask[props.task?.id ?? -1]?.length ?? 0 },
 ])
 
 // ── WebSocket realtime ────────────────────────────────────────────────────

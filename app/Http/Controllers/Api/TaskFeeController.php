@@ -33,6 +33,32 @@ class TaskFeeController extends Controller
         return response()->json($fees);
     }
 
+    // GET /api/projects/{project}/task-fees — 整個專案的任務費用
+    //  - admin / manager: 全部
+    //  - member: 只看自己提的
+    public function projectIndex(Request $request, \App\Models\Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $user = $request->user();
+        $query = $project->taskFees()
+            ->with([
+                'task:id,name,project_id',
+                'submitter:id,name',
+                'reviewer:id,name',
+                'unapprover:id,name',
+                'attachments',
+            ]);
+
+        if (! $user->isAdmin() && ! $user->isManager()) {
+            $query->where('submitted_by', $user->id);
+        }
+
+        $fees = $query->orderByDesc('created_at')->limit(100)->get();
+
+        return response()->json($fees);
+    }
+
     // POST /api/projects/{project}/tasks/{task}/fees
     public function store(Request $request, $project, Task $task): JsonResponse
     {
@@ -217,6 +243,12 @@ class TaskFeeController extends Controller
             'message' => 'nullable|string|max:500',
         ]);
 
+        $fee->update([
+            'receipt_requested_at'      => now(),
+            'receipt_requested_by'      => $request->user()->id,
+            'receipt_request_message'   => $data['message'] ?? null,
+        ]);
+
         $this->notify($fee->submitted_by, 'fee_receipt_requested', [
             'task_fee_id' => $fee->id,
             'task_id'     => $fee->task_id,
@@ -226,7 +258,7 @@ class TaskFeeController extends Controller
             'message'     => $data['message'] ?? null,
         ]);
 
-        return response()->json(['message' => '已通知提交者補件']);
+        return response()->json($fee->fresh(['submitter:id,name', 'attachments']));
     }
 
     private function notify(int $userId, string $type, array $payload): void

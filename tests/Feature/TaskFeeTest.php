@@ -134,6 +134,34 @@ class TaskFeeTest extends TestCase
         $this->assertCount(2, $res->json());
     }
 
+    public function test_project_index_member_sees_only_own(): void
+    {
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->otherMember->id, 'amount' => 500, 'status' => 'approved']);
+
+        $res = $this->actingAs($this->member)
+            ->getJson("/api/projects/{$this->project->id}/task-fees")
+            ->assertOk();
+
+        $this->assertCount(1, $res->json());
+        $this->assertEquals($this->member->id, $res->json('0.submitted_by'));
+        // 必須帶 task 關聯讓前端顯示任務名稱
+        $this->assertNotNull($res->json('0.task'));
+        $this->assertEquals($this->task->id, $res->json('0.task.id'));
+    }
+
+    public function test_project_index_manager_sees_all(): void
+    {
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->otherMember->id, 'amount' => 500, 'status' => 'pending']);
+
+        $res = $this->actingAs($this->manager)
+            ->getJson("/api/projects/{$this->project->id}/task-fees")
+            ->assertOk();
+
+        $this->assertCount(2, $res->json());
+    }
+
     public function test_manager_approves_fee_creates_state_log_and_notifies(): void
     {
         $fee = TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'pending']);
@@ -249,17 +277,26 @@ class TaskFeeTest extends TestCase
         $this->assertEquals(1000.0, $res->json('admin_fees'));
     }
 
-    public function test_fee_summary_hides_admin_fees_from_member(): void
+    public function test_fee_summary_member_sees_only_own_contributions(): void
     {
+        // 行政費用 + 其他人的 task fee：member 都不該看到
         $this->project->adminFees()->create(['created_by' => $this->manager->id, 'amount' => 1000]);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->manager->id, 'amount' => 500, 'status' => 'approved']);
+
+        // member 自己的
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80,  'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 30,  'status' => 'pending']);
 
         $res = $this->actingAs($this->member)
             ->getJson("/api/projects/{$this->project->id}/fee-summary")
             ->assertOk();
 
+        $this->assertEquals('self', $res->json('scope'));
+        $this->assertEquals(80.0, $res->json('own_approved'));
+        $this->assertEquals(30.0, $res->json('own_pending'));
+        $this->assertArrayNotHasKey('total', $res->json());
+        $this->assertArrayNotHasKey('total_budget', $res->json());
         $this->assertArrayNotHasKey('admin_fees', $res->json());
-        // total still includes admin fees but admin fees breakdown is hidden
-        $this->assertEquals(1000.0, $res->json('total'));
     }
 
     public function test_admin_fee_create_and_list(): void

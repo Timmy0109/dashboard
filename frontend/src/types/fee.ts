@@ -39,6 +39,11 @@ export interface TaskFee {
   reviewer?: UserRef | null
   unapprover?: UserRef | null
   attachments?: TaskFeeAttachment[]
+  task?: { id: number; name: string; project_id: number; project?: { id: number; name: string } }
+  receipt_requested_at: string | null
+  receipt_requested_by: number | null
+  receipt_request_message: string | null
+  receipt_requester?: UserRef | null
 
   created_at: string
   updated_at: string
@@ -71,10 +76,35 @@ export interface ProjectAdminFee {
   updated_at: string
 }
 
-export interface FeeSummary {
-  total: number
-  task_fees_approved: number
-  task_fees_pending: number
-  /** Only present for admin / project-owning manager. Member 看不到. */
-  admin_fees?: number
+/**
+ * Member only sees own contributions (scope: 'self');
+ * manager/admin see project-wide totals + budget (scope: 'all').
+ */
+export type FeeSummary =
+  | {
+      scope: 'self'
+      own_approved: number
+      own_pending: number
+      own_rejected: number
+      own_total: number
+    }
+  | {
+      scope: 'all'
+      total: number
+      task_fees_approved: number
+      task_fees_pending: number
+      admin_fees: number
+      total_budget: number
+      remaining: number
+      over_budget: boolean
+    }
+
+export interface ProjectBudgetLog {
+  id: number
+  project_id: number
+  actor_id: number
+  from_amount: string
+  to_amount: string
+  actor?: UserRef
+  created_at: string
 }

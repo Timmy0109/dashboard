@@ -100,6 +100,29 @@
             </v-row>
           </div>
 
+          <!-- 預算 -->
+          <div class="pms-section">
+            <div class="pms-section-title">
+              <v-icon icon="mdi-cash-multiple" size="16" class="mr-1" />專案總預算
+            </div>
+            <v-text-field
+              v-model.number="form.total_budget"
+              label="總預算 (NT$)"
+              type="number"
+              min="0"
+              step="100"
+              prefix="NT$"
+              variant="outlined"
+              density="comfortable"
+              hide-details="auto"
+              :rules="[
+                (v: number | '') => (v !== '' && v !== null && v !== undefined) || '請輸入專案總預算',
+                (v: number) => v >= 0 || '總預算需 ≥ 0',
+              ]"
+              required
+            />
+          </div>
+
           <!-- 期程 -->
           <div class="pms-section">
             <div class="pms-section-title">
@@ -238,6 +261,7 @@ const form = reactive({
   due_date: '',
   is_completed: false,
   note: '',
+  total_budget: 0 as number | '',
   member_ids: [] as number[],
 })
 
@@ -256,6 +280,7 @@ onMounted(async () => {
     form.start_date  = props.project.start_date?.slice(0, 10) ?? ''
     form.due_date    = props.project.due_date?.slice(0, 10) ?? ''
     form.is_completed = props.project.is_completed ?? false
+    form.total_budget = Number(props.project.total_budget ?? 0)
   } else {
     form.start_date = new Date().toISOString().slice(0, 10)
     if (lookup.statuses.length)   form.status_id   = lookup.statuses[0]!.id
@@ -282,6 +307,7 @@ async function handleSubmit() {
       start_date: form.start_date,
       due_date: form.due_date || null,
       note: form.note || null,
+      total_budget: form.total_budget === '' ? 0 : Number(form.total_budget),
     }
     if (props.project) payload.is_completed = form.is_completed
     if (!props.project && props.companyId != null) payload.company_id = props.companyId

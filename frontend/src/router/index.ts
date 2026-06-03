@@ -76,6 +76,12 @@ const router = createRouter({
           component: () => import('@/views/MemberApprovalsView.vue'),
           meta: { requiresAuth: true, managerOnly: true },
         },
+        {
+          path: 'manager/fee-reviews',
+          name: 'fee-reviews',
+          component: () => import('@/views/FeeReviewView.vue'),
+          meta: { requiresAuth: true, managerOrAdmin: true },
+        },
       ],
     },
   ],
@@ -104,6 +110,11 @@ router.beforeEach(async (to) => {
 
   // managerOnly：成員審核頁面僅限 manager，admin 走「系統管理」整合入口
   if (to.meta.managerOnly && !auth.isManager) {
+    return { name: 'dashboard' }
+  }
+
+  // managerOrAdmin：費用審核 manager + admin 都可進
+  if (to.meta.managerOrAdmin && !auth.isManager && !auth.isAdmin) {
     return { name: 'dashboard' }
   }
 })

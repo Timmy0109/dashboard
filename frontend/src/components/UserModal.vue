@@ -130,6 +130,21 @@
                   hide-details="auto"
                 />
               </v-col>
+              <v-col cols="12" sm="6">
+                <v-select
+                  v-model="form.job_title"
+                  label="職稱"
+                  :items="lookup.jobTitles"
+                  item-title="name"
+                  item-value="name"
+                  clearable
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details="auto"
+                  no-data-text="尚無職稱，請至設定管理新增"
+                  hint="於「設定管理 → 職稱」維護清單"
+                />
+              </v-col>
             </v-row>
           </div>
 
@@ -155,8 +170,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/lib/axios'
+import { useLookupStore } from '@/stores/lookup'
 
 const props = defineProps<{
   user: Record<string, unknown> | null
@@ -164,6 +180,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: []; saved: [] }>()
+
+const lookup = useLookupStore()
+onMounted(() => lookup.fetch(props.companyId))
 
 const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const saving = ref(false)
@@ -177,6 +196,7 @@ const defaultForm = () => ({
   password: '',
   role: 'member' as string,
   status: 'active' as string,
+  job_title: null as string | null,
 })
 
 const form = ref(defaultForm())
@@ -205,6 +225,7 @@ watch(() => props.user, (val) => {
     password: '',
     role: String(val.role ?? 'member'),
     status: String(val.status ?? 'active'),
+    job_title: (val.job_title as string | null) ?? null,
   } : defaultForm()
   errorMsg.value = ''
   showPassword.value = false
@@ -222,6 +243,7 @@ async function handleSubmit() {
       email: form.value.email,
       role: form.value.role,
       status: form.value.status,
+      job_title: form.value.job_title,
     }
     if (form.value.password) payload.password = form.value.password
 

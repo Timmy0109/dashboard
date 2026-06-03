@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\JobTitle;
 use App\Models\Priority;
 use App\Models\Project;
 use App\Models\StatusRule;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -144,6 +146,54 @@ class SettingController extends Controller
             return response()->json(['message' => '此狀態已被專案或任務使用，無法刪除'], 422);
         }
         $status->delete();
+        return response()->json(null, 204);
+    }
+
+    // ── Job Titles（職稱）─────────────────────────────────────────────────────
+
+    public function jobTitlesIndex(Request $request): JsonResponse
+    {
+        $this->adminOnly($request);
+        return response()->json(JobTitle::orderBy('sort_order')->orderBy('name')->get());
+    }
+
+    public function jobTitlesStore(Request $request): JsonResponse
+    {
+        $this->adminOnly($request);
+        $data = $request->validate([
+            'name' => 'required|string|max:64|unique:job_titles,name',
+            'sort_order' => 'integer|min:0',
+        ]);
+        return response()->json(JobTitle::create($data), 201);
+    }
+
+    public function jobTitlesUpdate(Request $request, JobTitle $jobTitle): JsonResponse
+    {
+        $this->adminOnly($request);
+        $data = $request->validate([
+            'name' => 'sometimes|string|max:64|unique:job_titles,name,' . $jobTitle->id,
+            'sort_order' => 'sometimes|integer|min:0',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $oldName = $jobTitle->name;
+        $jobTitle->update($data);
+
+        // 改名時把指派此職稱的使用者顯示字串一併同步（denormalized 傳播）
+        if (isset($data['name']) && $data['name'] !== $oldName) {
+            User::where('job_title', $oldName)->update(['job_title' => $data['name']]);
+        }
+
+        return response()->json($jobTitle);
+    }
+
+    public function jobTitlesDestroy(Request $request, JobTitle $jobTitle): JsonResponse
+    {
+        $this->adminOnly($request);
+        if (User::where('job_title', $jobTitle->name)->exists()) {
+            return response()->json(['message' => '此職稱已被使用者指派，無法刪除'], 422);
+        }
+        $jobTitle->delete();
         return response()->json(null, 204);
     }
 

@@ -129,6 +129,32 @@
             @delete="handleDelete('statuses', $event)"
           />
         </v-tabs-window-item>
+
+        <v-tabs-window-item value="jobtitles">
+          <div v-if="!loading && jobtitles.length === 0" class="py-8">
+            <EmptyState
+              icon="mdi-badge-account-outline"
+              title="尚未建立職稱"
+              sub="新增職稱供建立／編輯使用者時指派。"
+            >
+              <template #action>
+                <v-btn class="mt-4" color="primary" rounded="lg" prepend-icon="mdi-plus" @click="openAdd('jobtitles')">
+                  新增職稱
+                </v-btn>
+              </template>
+            </EmptyState>
+          </div>
+          <SettingTable
+            v-else
+            title="職稱"
+            :items="jobtitles"
+            :loading="loading"
+            :fields="jobTitleFields"
+            @add="openAdd('jobtitles')"
+            @edit="openEdit('jobtitles', $event)"
+            @delete="handleDelete('jobtitles', $event)"
+          />
+        </v-tabs-window-item>
       </v-tabs-window>
     </v-card>
 
@@ -162,7 +188,7 @@ interface SettingRow {
   [key: string]: unknown
 }
 
-type SettingType = 'categories' | 'priorities' | 'statuses'
+type SettingType = 'categories' | 'priorities' | 'statuses' | 'jobtitles'
 
 const toast = useToast()
 const loading = ref(false)
@@ -174,12 +200,20 @@ const editingItem = ref<Record<string, unknown> | null>(null)
 const categories = ref<SettingRow[]>([])
 const priorities = ref<SettingRow[]>([])
 const statuses = ref<SettingRow[]>([])
+const jobtitles = ref<SettingRow[]>([])
 
 const tabItems = computed(() => [
   { value: 'categories' as const, label: '專案類型', count: categories.value.length },
   { value: 'priorities' as const, label: '優先級',   count: priorities.value.length },
   { value: 'statuses'   as const, label: '狀態規則', count: statuses.value.length },
+  { value: 'jobtitles'  as const, label: '職稱',     count: jobtitles.value.length },
 ])
+
+const jobTitleFields = [
+  { key: 'name',       label: '名稱' },
+  { key: 'sort_order', label: '排序' },
+  { key: 'is_active',  label: '啟用',  type: 'bool' },
+]
 
 const categoryFields = [
   { key: 'name',      label: '名稱' },
@@ -205,14 +239,16 @@ const statusFields = [
 async function fetchAll() {
   loading.value = true
   try {
-    const [cat, pri, sta] = await Promise.all([
+    const [cat, pri, sta, job] = await Promise.all([
       api.get('/settings/categories'),
       api.get('/settings/priorities'),
       api.get('/settings/statuses'),
+      api.get('/settings/jobtitles'),
     ])
     categories.value = cat.data
     priorities.value = pri.data
     statuses.value   = sta.data
+    jobtitles.value  = job.data
   } finally {
     loading.value = false
   }

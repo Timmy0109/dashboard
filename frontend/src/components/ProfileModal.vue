@@ -1,15 +1,18 @@
 <script setup lang="ts">
 // ProfileModal — 個人資料 + 變更密碼
 // 保留 emit('close') 對外 API
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useLookupStore } from '@/stores/lookup'
 import { useToast } from '@/composables/useToast'
 import Tabs from '@/components/ui/Tabs.vue'
 
 const emit = defineEmits<{ close: [] }>()
 
 const auth = useAuthStore()
+const lookup = useLookupStore()
 const toast = useToast()
+onMounted(() => lookup.fetch())
 
 const tab = ref<'profile' | 'password'>('profile')
 
@@ -20,7 +23,7 @@ const tabItems = [
 
 // ---------- 個人資料 ----------
 const name = ref(auth.user?.name ?? '')
-const jobTitle = ref(auth.user?.job_title ?? '')
+const jobTitle = ref<string | null>(auth.user?.job_title ?? '')
 const savingName = ref(false)
 const uploadingAvatar = ref(false)
 const nameError = ref('')
@@ -77,7 +80,7 @@ async function saveName() {
   profileError.value = ''
   savingName.value = true
   try {
-    await auth.updateProfile(trimmed, jobTitle.value.trim() || null)
+    await auth.updateProfile(trimmed, (jobTitle.value || '').trim() || null)
     toast.success('個人資料已更新')
   } catch (err) {
     const e = err as { response?: { data?: { message?: string } } }
@@ -198,15 +201,19 @@ async function savePassword() {
             :error-messages="nameError"
           />
 
-          <v-text-field
+          <v-select
             v-model="jobTitle"
-            label="職稱（業助 / 美編 / 出納 / PM…）"
+            label="職稱"
             placeholder="可選"
+            :items="lookup.jobTitles"
+            item-title="name"
+            item-value="name"
+            clearable
             prepend-inner-icon="mdi-card-account-details-outline"
             variant="outlined"
             density="comfortable"
             class="mb-2"
-            maxlength="64"
+            no-data-text="尚無職稱（由管理員於設定管理維護）"
             hint="僅顯示用，不影響權限"
             persistent-hint
           />

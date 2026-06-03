@@ -66,8 +66,8 @@
             />
           </div>
 
-          <!-- 顏色 -->
-          <div class="pms-section">
+          <!-- 顏色 (職稱不需要) -->
+          <div v-if="type !== 'jobtitles'" class="pms-section">
             <div class="pms-section-title">
               <v-icon icon="mdi-palette-outline" size="16" class="mr-1" />顏色
             </div>
@@ -178,12 +178,14 @@ const typeLabel: Record<string, string> = {
   categories: '專案類型',
   priorities: '優先級',
   statuses: '狀態規則',
+  jobtitles: '職稱',
 }
 
 const typeIcon: Record<string, string> = {
   categories: 'mdi-shape-outline',
   priorities: 'mdi-flag-outline',
   statuses: 'mdi-traffic-light-outline',
+  jobtitles: 'mdi-badge-account-outline',
 }
 
 const presetColors = [
@@ -228,9 +230,9 @@ async function handleSubmit() {
   try {
     const payload: Record<string, unknown> = {
       name: form.value.name,
-      color: form.value.color,
       is_active: form.value.is_active,
     }
+    if (props.type !== 'jobtitles') payload.color = form.value.color
     if (props.type !== 'categories') payload.sort_order = form.value.sort_order
     if (props.type === 'statuses') payload.icon = form.value.icon
 

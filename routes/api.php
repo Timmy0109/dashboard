@@ -75,12 +75,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('statuses', [SettingController::class, 'statusesStore']);
         Route::put('statuses/{status}', [SettingController::class, 'statusesUpdate']);
         Route::delete('statuses/{status}', [SettingController::class, 'statusesDestroy']);
+
+        Route::get('jobtitles', [SettingController::class, 'jobTitlesIndex']);
+        Route::post('jobtitles', [SettingController::class, 'jobTitlesStore']);
+        Route::put('jobtitles/{jobTitle}', [SettingController::class, 'jobTitlesUpdate']);
+        Route::delete('jobtitles/{jobTitle}', [SettingController::class, 'jobTitlesDestroy']);
     });
 
     Route::prefix('lookups')->group(function () {
         Route::get('categories', [LookupController::class, 'categories']);
         Route::get('priorities', [LookupController::class, 'priorities']);
         Route::get('statuses', [LookupController::class, 'statuses']);
+        Route::get('jobtitles', [LookupController::class, 'jobTitles']);
         Route::get('users', [LookupController::class, 'users']);
         Route::get('features', [LookupController::class, 'myFeatures']);
     });

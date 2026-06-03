@@ -9,10 +9,16 @@ use App\Models\User;
 class TaskFeePolicy
 {
     /** 三階段流程：
-     *  pending → reviewed (一階審核：accountant/boss/admin)
-     *  reviewed → disbursed (二階核發：boss/admin)
+     *  pending → reviewed (一階審核：accountant/boss)
+     *  reviewed → disbursed (二階核發：boss)
      *  rejected ⇄ pending
      */
+
+    /** admin 只管系統層面，完全不參與費用流程（看 / 審核 / 核發 / 管理皆拒絕） */
+    public function before(User $user): ?bool
+    {
+        return $user->isAdmin() ? false : null;
+    }
 
     public function viewAny(User $user, Task $task): bool
     {

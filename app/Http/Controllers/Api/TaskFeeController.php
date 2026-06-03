@@ -23,8 +23,8 @@ class TaskFeeController extends Controller
         $query = $task->fees()
             ->with(['submitter:id,name', 'reviewer:id,name', 'disburser:id,name', 'unapprover:id,name', 'receiptRequester:id,name', 'attachments']);
 
-        // 審核者 (boss/accountant) 與 admin（唯讀稽核）看全部；member 只看自己提的
-        if (! $user->canReviewFee() && ! $user->isAdmin()) {
+        // 審核者 (boss/accountant) 看全部；member 只看自己提的（admin 不參與費用）
+        if (! $user->canReviewFee()) {
             $query->where('submitted_by', $user->id);
         }
 

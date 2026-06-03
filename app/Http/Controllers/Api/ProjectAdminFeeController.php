@@ -77,8 +77,10 @@ class ProjectAdminFeeController extends Controller
         $this->authorize('view', $project);
 
         $user = $request->user();
-        $canSeeAll = $user->isAdmin()
-            || ($user->canManage() && (new \App\Policies\ProjectPolicy())->update($user, $project));
+        // admin 不參與費用：看不到專案總額 / 預算 / 行政費用（落入 member self scope）
+        $canSeeAll = ! $user->isAdmin()
+            && $user->canManage()
+            && (new \App\Policies\ProjectPolicy())->update($user, $project);
 
         // Member: 只看得到自己提交的費用，看不到專案總額 / 預算 / 行政費用
         if (! $canSeeAll) {

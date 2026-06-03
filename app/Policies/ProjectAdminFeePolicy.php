@@ -8,10 +8,15 @@ use App\Models\User;
 
 class ProjectAdminFeePolicy
 {
-    /** 只有 admin / boss 可建/改/刪行政費用；accountant 不在此 scope */
+    /** admin 只管系統層面，不參與行政費用 */
+    public function before(User $user): ?bool
+    {
+        return $user->isAdmin() ? false : null;
+    }
+
+    /** 只有 boss（專案擁有者）可建/改/刪行政費用；accountant 不在此 scope */
     public function viewAny(User $user, Project $project): bool
     {
-        if ($user->isAdmin()) return true;
         return $user->canManage() && (new ProjectPolicy())->update($user, $project);
     }
 

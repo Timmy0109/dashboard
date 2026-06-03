@@ -136,8 +136,8 @@ class TaskFeeTest extends TestCase
 
     public function test_project_index_member_sees_only_own(): void
     {
-        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'approved']);
-        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->otherMember->id, 'amount' => 500, 'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'disbursed']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->otherMember->id, 'amount' => 500, 'status' => 'disbursed']);
 
         $res = $this->actingAs($this->member)
             ->getJson("/api/projects/{$this->project->id}/task-fees")
@@ -152,7 +152,7 @@ class TaskFeeTest extends TestCase
 
     public function test_project_index_manager_sees_all(): void
     {
-        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80, 'status' => 'disbursed']);
         TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->otherMember->id, 'amount' => 500, 'status' => 'pending']);
 
         $res = $this->actingAs($this->manager)
@@ -366,10 +366,10 @@ class TaskFeeTest extends TestCase
     {
         // 行政費用 + 其他人的 task fee：member 都不該看到
         $this->project->adminFees()->create(['created_by' => $this->manager->id, 'amount' => 1000]);
-        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->manager->id, 'amount' => 500, 'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->manager->id, 'amount' => 500, 'status' => 'disbursed']);
 
         // member 自己的
-        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80,  'status' => 'approved']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 80,  'status' => 'disbursed']);
         TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 30,  'status' => 'pending']);
 
         $res = $this->actingAs($this->member)

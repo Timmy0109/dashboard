@@ -40,13 +40,14 @@ class ProjectTest extends TestCase
     private function projectPayload(User $owner): array
     {
         return [
-            'name'        => 'Test Project',
-            'start_date'  => '2026-01-01',
-            'due_date'    => '2026-03-31',
-            'status_id'   => $this->status->id,
-            'priority_id' => $this->priority->id,
-            'category_id' => $this->category->id,
-            'owner_id'    => $owner->id,
+            'name'         => 'Test Project',
+            'start_date'   => '2026-01-01',
+            'due_date'     => '2026-03-31',
+            'status_id'    => $this->status->id,
+            'priority_id'  => $this->priority->id,
+            'category_id'  => $this->category->id,
+            'owner_id'     => $owner->id,
+            'total_budget' => 100000,
         ];
     }
 

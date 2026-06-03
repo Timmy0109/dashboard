@@ -15,7 +15,7 @@ class DemoProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        $manager = User::where('email', 'manager@demo.com')->first();
+        $manager = User::where('email', 'boss@demo.com')->first();
         $member = User::where('email', 'member@demo.com')->first();
         $category = Category::where('name', '網站建置')->first();
         $highPriority = Priority::where('name', '高')->first();
@@ -29,11 +29,13 @@ class DemoProjectSeeder extends Seeder
             'name' => '官網改版專案',
             'note' => 'Demo 用途：公司官網全面改版，包含前後台重構',
             'category_id' => $category->id,
+            'company_id' => $manager->company_id,
             'owner_id' => $manager->id,
             'priority_id' => $highPriority->id,
             'status_id' => $statusInProgress->id,
             'start_date' => '2026-05-01',
             'due_date' => '2026-07-31',
+            'total_budget' => 800000,
             'created_by' => $manager->id,
         ]);
 

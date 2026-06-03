@@ -19,10 +19,20 @@ class UserSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => '王經理',
-            'email' => 'manager@demo.com',
+            'name' => '王老闆',
+            'email' => 'boss@demo.com',
             'password' => Hash::make('password'),
-            'role' => 'manager',
+            'role' => 'boss',
+            'job_title' => '老闆',
+            'status' => 'active',
+        ]);
+
+        User::create([
+            'name' => '陳會計',
+            'email' => 'accountant@demo.com',
+            'password' => Hash::make('password'),
+            'role' => 'accountant',
+            'job_title' => '會計',
             'status' => 'active',
         ]);
 
@@ -31,6 +41,7 @@ class UserSeeder extends Seeder
             'email' => 'member@demo.com',
             'password' => Hash::make('password'),
             'role' => 'member',
+            'job_title' => '業務助理',
             'status' => 'active',
         ]);
     }

@@ -21,20 +21,18 @@ class TaskFeeController extends Controller
 
         $user = $request->user();
         $query = $task->fees()
-            ->with(['submitter:id,name', 'reviewer:id,name', 'unapprover:id,name', 'attachments']);
+            ->with(['submitter:id,name', 'reviewer:id,name', 'disburser:id,name', 'unapprover:id,name', 'attachments']);
 
-        // Member 只看自己提的明細
-        if (! $user->isAdmin() && ! $user->isManager()) {
+        // 只有可審核者 (admin/boss/accountant) 看全部；member 只看自己提的
+        if (! $user->canReviewFee()) {
             $query->where('submitted_by', $user->id);
         }
 
-        $fees = $query->orderByDesc('created_at')->get();
-
-        return response()->json($fees);
+        return response()->json($query->orderByDesc('created_at')->get());
     }
 
     // GET /api/projects/{project}/task-fees — 整個專案的任務費用
-    //  - admin / manager: 全部
+    //  - admin / boss / 會計（canReviewFee）: 全部
     //  - member: 只看自己提的
     public function projectIndex(Request $request, \App\Models\Project $project): JsonResponse
     {
@@ -50,7 +48,7 @@ class TaskFeeController extends Controller
                 'attachments',
             ]);
 
-        if (! $user->isAdmin() && ! $user->isManager()) {
+        if (! $user->canReviewFee()) {
             $query->where('submitted_by', $user->id);
         }
 
@@ -71,12 +69,12 @@ class TaskFeeController extends Controller
 
         $user = $request->user();
         $fee = TaskFee::create([
-            'task_id'       => $task->id,
-            'project_id'    => $task->project_id,
-            'submitted_by'  => $user->id,
-            'amount'        => $data['amount'],
-            'note'          => $data['note'] ?? null,
-            'status'        => TaskFee::STATUS_PENDING,
+            'task_id'      => $task->id,
+            'project_id'   => $task->project_id,
+            'submitted_by' => $user->id,
+            'amount'       => $data['amount'],
+            'note'         => $data['note'] ?? null,
+            'status'       => TaskFee::STATUS_PENDING,
         ]);
 
         TaskFeeStateLog::create([
@@ -88,7 +86,6 @@ class TaskFeeController extends Controller
             'created_at'  => now(),
         ]);
 
-        // Notify project owner (manager) — 只通知 owner 一個人即可避免 spam
         $ownerId = $task->project->owner_id;
         if ($ownerId && $ownerId !== $user->id) {
             $this->notify($ownerId, 'fee_submitted', [
@@ -116,7 +113,7 @@ class TaskFeeController extends Controller
         ]);
 
         $fee->update($data);
-        $fee->load(['submitter:id,name', 'reviewer:id,name', 'attachments']);
+        $fee->load(['submitter:id,name', 'reviewer:id,name', 'disburser:id,name', 'attachments']);
         return response()->json($fee);
     }
 
@@ -156,17 +153,17 @@ class TaskFeeController extends Controller
         return response()->json($fee);
     }
 
-    // POST /api/task-fees/{fee}/approve
-    public function approve(Request $request, TaskFee $fee): JsonResponse
+    // POST /api/task-fees/{fee}/review  ← 一階審核：pending → reviewed
+    public function review(Request $request, TaskFee $fee): JsonResponse
     {
-        $this->authorize('approve', $fee);
+        $this->authorize('review', $fee);
         try {
-            $fee->transitionTo(TaskFee::STATUS_APPROVED, $request->user());
+            $fee->transitionTo(TaskFee::STATUS_REVIEWED, $request->user());
         } catch (\RuntimeException $e) {
             return response()->json(['message' => '此費用狀態已被其他人變更，請重新整理'], 409);
         }
 
-        $this->notify($fee->submitted_by, 'fee_approved', [
+        $this->notify($fee->submitted_by, 'fee_reviewed', [
             'task_fee_id' => $fee->id,
             'task_id'     => $fee->task_id,
             'project_id'  => $fee->project_id,
@@ -178,7 +175,29 @@ class TaskFeeController extends Controller
         return response()->json($fee);
     }
 
-    // POST /api/task-fees/{fee}/reject
+    // POST /api/task-fees/{fee}/disburse  ← 二階核發：reviewed → disbursed
+    public function disburse(Request $request, TaskFee $fee): JsonResponse
+    {
+        $this->authorize('disburse', $fee);
+        try {
+            $fee->transitionTo(TaskFee::STATUS_DISBURSED, $request->user());
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => '此費用狀態已被其他人變更，請重新整理'], 409);
+        }
+
+        $this->notify($fee->submitted_by, 'fee_disbursed', [
+            'task_fee_id' => $fee->id,
+            'task_id'     => $fee->task_id,
+            'project_id'  => $fee->project_id,
+            'amount'      => (float) $fee->amount,
+            'disburser'   => $request->user()->name,
+        ]);
+
+        $fee->load(['submitter:id,name', 'reviewer:id,name', 'disburser:id,name']);
+        return response()->json($fee);
+    }
+
+    // POST /api/task-fees/{fee}/reject  ← 退件（pending 或 reviewed → rejected）
     public function reject(Request $request, TaskFee $fee): JsonResponse
     {
         $this->authorize('reject', $fee);
@@ -194,22 +213,22 @@ class TaskFeeController extends Controller
         }
 
         $this->notify($fee->submitted_by, 'fee_rejected', [
-            'task_fee_id'    => $fee->id,
-            'task_id'        => $fee->task_id,
-            'project_id'     => $fee->project_id,
-            'amount'         => (float) $fee->amount,
-            'reviewer'       => $request->user()->name,
-            'reject_reason'  => $data['reject_reason'],
+            'task_fee_id'   => $fee->id,
+            'task_id'       => $fee->task_id,
+            'project_id'    => $fee->project_id,
+            'amount'        => (float) $fee->amount,
+            'reviewer'      => $request->user()->name,
+            'reject_reason' => $data['reject_reason'],
         ]);
 
         $fee->load(['submitter:id,name', 'reviewer:id,name']);
         return response()->json($fee);
     }
 
-    // POST /api/task-fees/{fee}/unapprove
-    public function unapprove(Request $request, TaskFee $fee): JsonResponse
+    // POST /api/task-fees/{fee}/unreview  ← reviewed → pending（改回待審）
+    public function unreview(Request $request, TaskFee $fee): JsonResponse
     {
-        $this->authorize('unapprove', $fee);
+        $this->authorize('unreview', $fee);
 
         $data = $request->validate([
             'unapprove_reason' => 'required|string|max:500',
@@ -231,6 +250,34 @@ class TaskFeeController extends Controller
         ]);
 
         $fee->load(['submitter:id,name', 'reviewer:id,name', 'unapprover:id,name']);
+        return response()->json($fee);
+    }
+
+    // POST /api/task-fees/{fee}/undisburse  ← disbursed → reviewed（撤回核發）
+    public function undisburse(Request $request, TaskFee $fee): JsonResponse
+    {
+        $this->authorize('undisburse', $fee);
+
+        $data = $request->validate([
+            'unapprove_reason' => 'required|string|max:500',
+        ]);
+
+        try {
+            $fee->transitionTo(TaskFee::STATUS_REVIEWED, $request->user(), $data['unapprove_reason']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => '此費用狀態已被其他人變更，請重新整理'], 409);
+        }
+
+        $this->notify($fee->submitted_by, 'fee_unapproved', [
+            'task_fee_id'      => $fee->id,
+            'task_id'          => $fee->task_id,
+            'project_id'       => $fee->project_id,
+            'amount'           => (float) $fee->amount,
+            'reviewer'         => $request->user()->name,
+            'unapprove_reason' => $data['unapprove_reason'],
+        ]);
+
+        $fee->load(['submitter:id,name', 'reviewer:id,name', 'disburser:id,name', 'unapprover:id,name']);
         return response()->json($fee);
     }
 

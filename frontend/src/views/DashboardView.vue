@@ -67,9 +67,7 @@ const headerSub = computed(() => {
   return `${today.value} · 進行中 ${store.stats.active_projects} · 逾期任務 ${store.stats.overdue_tasks}`
 })
 
-const canCreateProject = computed(() =>
-  auth.user?.role === 'manager' || auth.user?.role === 'admin'
-)
+const canCreateProject = computed(() => auth.canManage)
 
 // KPI cards
 interface KPI {

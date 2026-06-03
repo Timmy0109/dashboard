@@ -108,13 +108,13 @@ router.beforeEach(async (to) => {
     return { name: 'dashboard' }
   }
 
-  // managerOnly：成員審核頁面僅限 manager，admin 走「系統管理」整合入口
-  if (to.meta.managerOnly && !auth.isManager) {
+  // managerOnly：成員審核頁面 boss / admin 都可進
+  if (to.meta.managerOnly && !auth.canManage) {
     return { name: 'dashboard' }
   }
 
-  // managerOrAdmin：費用審核 manager + admin 都可進
-  if (to.meta.managerOrAdmin && !auth.isManager && !auth.isAdmin) {
+  // managerOrAdmin：費用審核 admin / boss / 會計（可審核費用者）都可進
+  if (to.meta.managerOrAdmin && !auth.canReviewFee) {
     return { name: 'dashboard' }
   }
 })

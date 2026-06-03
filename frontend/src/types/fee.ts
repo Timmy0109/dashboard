@@ -2,7 +2,14 @@
  * Fee types — aligned with backend TaskFee / ProjectAdminFee models.
  */
 
-export type FeeStatus = 'pending' | 'approved' | 'rejected'
+/**
+ * 3-stage fee workflow:
+ *   pending   — 待會計審核
+ *   reviewed  — 會計已審，待老闆核發
+ *   disbursed — 老闆已核發（最終）
+ *   rejected  — 任一階段退件
+ */
+export type FeeStatus = 'pending' | 'reviewed' | 'disbursed' | 'rejected'
 
 interface UserRef { id: number; name: string }
 
@@ -31,12 +38,16 @@ export interface TaskFee {
   reviewed_at: string | null
   reject_reason: string | null
 
+  disbursed_by: number | null
+  disbursed_at: string | null
+
   unapproved_by: number | null
   unapproved_at: string | null
   unapprove_reason: string | null
 
   submitter?: UserRef
   reviewer?: UserRef | null
+  disburser?: UserRef | null
   unapprover?: UserRef | null
   attachments?: TaskFeeAttachment[]
   task?: { id: number; name: string; project_id: number; project?: { id: number; name: string } }

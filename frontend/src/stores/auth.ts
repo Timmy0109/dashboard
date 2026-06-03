@@ -3,11 +3,14 @@ import { ref, computed } from 'vue'
 import api from '@/lib/axios'
 import axios from 'axios'
 
+export type UserRole = 'admin' | 'boss' | 'accountant' | 'member'
+
 interface User {
   id: number
   name: string
   email: string
-  role: 'admin' | 'manager' | 'member'
+  role: UserRole
+  job_title: string | null
   avatar_url: string | null
 }
 
@@ -17,8 +20,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
-  const isManager = computed(() => user.value?.role === 'manager')
-  const canManageMembers = computed(() => user.value?.role === 'admin' || user.value?.role === 'manager')
+  const isBoss = computed(() => user.value?.role === 'boss')
+  const isAccountant = computed(() => user.value?.role === 'accountant')
+  const isMember = computed(() => user.value?.role === 'member')
+
+  // 階層：admin ⊇ boss ⊇ accountant ⊇ (fee 一階審核)
+  //       admin ⊇ boss              ⊇ (fee 二階核發 + 管理權)
+  const canReviewFee   = computed(() => ['admin', 'boss', 'accountant'].includes(user.value?.role ?? ''))
+  const canDisburseFee = computed(() => ['admin', 'boss'].includes(user.value?.role ?? ''))
+  const canManage      = computed(() => ['admin', 'boss'].includes(user.value?.role ?? ''))
+
+  // 沿用舊名字當 alias，避免散布的 isManager check 全爆
+  // canManageMembers 行為等同 canManage
+  const canManageMembers = canManage
 
   async function fetchUser() {
     try {
@@ -45,10 +59,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  async function updateProfile(name: string) {
-    const { data } = await api.put('/profile', { name })
+  async function updateProfile(name: string, jobTitle: string | null = null) {
+    const { data } = await api.put('/profile', { name, job_title: jobTitle })
     if (user.value) {
       user.value.name = data.name
+      user.value.job_title = data.job_title ?? null
       user.value.avatar_url = data.avatar_url
     }
   }
@@ -66,5 +81,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value) user.value.avatar_url = data.avatar_url
   }
 
-  return { user, loading, isLoggedIn, isAdmin, isManager, canManageMembers, fetchUser, login, logout, updateProfile, updatePassword, updateAvatar }
+  return {
+    user, loading, isLoggedIn,
+    isAdmin, isBoss, isAccountant, isMember,
+    canReviewFee, canDisburseFee, canManage, canManageMembers,
+    fetchUser, login, logout, updateProfile, updatePassword, updateAvatar,
+  }
 })

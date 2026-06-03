@@ -40,13 +40,14 @@ class ProjectTest extends TestCase
     private function projectPayload(User $owner): array
     {
         return [
-            'name'        => 'Test Project',
-            'start_date'  => '2026-01-01',
-            'due_date'    => '2026-03-31',
-            'status_id'   => $this->status->id,
-            'priority_id' => $this->priority->id,
-            'category_id' => $this->category->id,
-            'owner_id'    => $owner->id,
+            'name'         => 'Test Project',
+            'start_date'   => '2026-01-01',
+            'due_date'     => '2026-03-31',
+            'status_id'    => $this->status->id,
+            'priority_id'  => $this->priority->id,
+            'category_id'  => $this->category->id,
+            'owner_id'     => $owner->id,
+            'total_budget' => 100000,
         ];
     }
 
@@ -64,7 +65,7 @@ class ProjectTest extends TestCase
     {
         $admin   = $this->admin();
         $company = $this->makeCompany($admin, 'ABCD1234');
-        $manager = User::factory()->create(['role' => 'manager', 'status' => 'active', 'company_id' => $company->id]);
+        $manager = User::factory()->create(['role' => 'boss', 'status' => 'active', 'company_id' => $company->id]);
 
         $this->actingAs($manager)
             ->postJson('/api/projects', $this->projectPayload($manager))

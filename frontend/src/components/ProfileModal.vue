@@ -20,6 +20,7 @@ const tabItems = [
 
 // ---------- 個人資料 ----------
 const name = ref(auth.user?.name ?? '')
+const jobTitle = ref(auth.user?.job_title ?? '')
 const savingName = ref(false)
 const uploadingAvatar = ref(false)
 const nameError = ref('')
@@ -27,9 +28,14 @@ const profileError = ref('')
 const previewUrl = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
-const nameChanged = computed(
-  () => name.value.trim() !== '' && name.value.trim() !== auth.user?.name,
-)
+const profileChanged = computed(() => {
+  if (name.value.trim() === '') return false
+  const nameDelta = name.value.trim() !== auth.user?.name
+  const titleDelta = (jobTitle.value || '') !== (auth.user?.job_title ?? '')
+  return nameDelta || titleDelta
+})
+// 保留舊名字 alias 不破壞別處
+const nameChanged = profileChanged
 
 const initial = computed(() => auth.user?.name?.charAt(0)?.toUpperCase() ?? '?')
 
@@ -71,8 +77,8 @@ async function saveName() {
   profileError.value = ''
   savingName.value = true
   try {
-    await auth.updateProfile(trimmed)
-    toast.success('名稱已更新')
+    await auth.updateProfile(trimmed, jobTitle.value.trim() || null)
+    toast.success('個人資料已更新')
   } catch (err) {
     const e = err as { response?: { data?: { message?: string } } }
     profileError.value = e?.response?.data?.message ?? '儲存失敗，請重試'
@@ -192,7 +198,20 @@ async function savePassword() {
             :error-messages="nameError"
           />
 
-          <div class="text-caption text-medium-emphasis mb-4 d-flex align-center">
+          <v-text-field
+            v-model="jobTitle"
+            label="職稱（業助 / 美編 / 出納 / PM…）"
+            placeholder="可選"
+            prepend-inner-icon="mdi-card-account-details-outline"
+            variant="outlined"
+            density="comfortable"
+            class="mb-2"
+            maxlength="64"
+            hint="僅顯示用，不影響權限"
+            persistent-hint
+          />
+
+          <div class="text-caption text-medium-emphasis mb-4 d-flex align-center mt-3">
             <v-icon size="14" icon="mdi-email-outline" class="mr-1" />
             {{ auth.user?.email }}
           </div>

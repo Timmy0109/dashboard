@@ -80,8 +80,8 @@ class ActivityController extends Controller
     /** Returns project ids the user can see activity from. */
     private function visibleProjectIds($user): array
     {
-        // admin / manager: all projects in same company
-        if ($user->isAdmin() || $user->isManager()) {
+        // admin / boss / accountant: 同公司全部
+        if ($user->isAdmin() || $user->canManage() || $user->isAccountant()) {
             return Project::where('company_id', $user->company_id)->pluck('id')->toArray();
         }
 

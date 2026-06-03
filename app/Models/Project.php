@@ -78,7 +78,7 @@ class Project extends Model
     public function totalFee(): float
     {
         $taskFeeApproved = $this->taskFees()
-            ->where('status', TaskFee::STATUS_APPROVED)
+            ->where('status', TaskFee::STATUS_DISBURSED)
             ->sum('amount');
         $adminFees = $this->adminFees()->sum('amount');
         return (float) ($taskFeeApproved + $adminFees);

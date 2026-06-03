@@ -7,13 +7,21 @@ export interface FeeReviewKpi {
   pending_count: number
   pending_amount: number
   receipt_requested_count: number
-  approved_this_month: number
-  approved_this_month_amount: number
+  reviewed_count: number
+  reviewed_amount: number
+  disbursed_this_month: number
+  disbursed_this_month_amount: number
   rejected_count: number
   total_count: number
 }
 
-export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'receipt_requested' | 'all'
+export type ReviewStatus =
+  | 'pending'
+  | 'reviewed'
+  | 'disbursed'
+  | 'rejected'
+  | 'receipt_requested'
+  | 'all'
 
 export const useFeeReviewStore = defineStore('feeReview', () => {
   const kpi = ref<FeeReviewKpi | null>(null)

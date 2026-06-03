@@ -187,7 +187,8 @@ const features = [
 
 const demoAccounts = [
   { label: 'Admin', email: 'admin@demo.com', color: '#3b82f6' },
-  { label: '王經理 (Manager)', email: 'manager@demo.com', color: '#ef4444' },
+  { label: '老闆 (Boss)', email: 'boss@demo.com', color: '#ef4444' },
+  { label: '會計 (Accountant)', email: 'accountant@demo.com', color: '#6366f1' },
   { label: '李小明 (Member)', email: 'member@demo.com', color: '#00897B' },
 ]
 

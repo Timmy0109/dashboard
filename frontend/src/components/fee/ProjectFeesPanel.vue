@@ -377,7 +377,8 @@ const feeStore = useFeeStore()
 const auth = useAuthStore()
 const toast = useToast()
 
-const canManageAdminFees = computed(() => auth.canManage)
+// admin 不參與費用；行政費用僅老闆可管理
+const canManageAdminFees = computed(() => auth.canManage && !auth.isAdmin)
 const fees = computed<ProjectAdminFee[]>(() => feeStore.adminByProject[props.projectId] ?? [])
 const loading = computed(() => feeStore.loading.admin)
 

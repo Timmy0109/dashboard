@@ -176,7 +176,7 @@ const feeStore = useFeeStore()
 const auth = useAuthStore()
 const toast = useToast()
 
-const canManageAdminFees = computed(() => auth.canManage)
+const canManageAdminFees = computed(() => auth.canManage && !auth.isAdmin)
 const fees = computed<ProjectAdminFee[]>(() => feeStore.adminByProject[props.projectId] ?? [])
 const loading = computed(() => feeStore.loading.admin)
 

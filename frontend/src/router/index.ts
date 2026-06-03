@@ -113,7 +113,7 @@ router.beforeEach(async (to) => {
     return { name: 'dashboard' }
   }
 
-  // managerOrAdmin：費用審核 admin / boss / 會計（可審核費用者）都可進
+  // 費用審核：僅可審核費用者（老闆 / 會計）可進；admin 不參與費用
   if (to.meta.managerOrAdmin && !auth.canReviewFee) {
     return { name: 'dashboard' }
   }

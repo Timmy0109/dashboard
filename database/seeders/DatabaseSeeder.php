@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             DemoProjectSeeder::class,
             DemoFeeSeeder::class,
+            DemoMultiCompanySeeder::class,
         ]);
     }
 }

@@ -429,7 +429,7 @@ const emptySub = computed(() => {
 });
 
 function canEditTask(task: TodoTask) {
-  if (auth.isAdmin || auth.isManager) return true;
+  if (auth.canManage) return true;
   return task.assignee?.id === auth.user?.id;
 }
 

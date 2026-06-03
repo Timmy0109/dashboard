@@ -44,11 +44,11 @@ const navItems = computed<NavItem[]>(() => {
     items.push({ to: '/stats', icon: 'mdi-chart-bar', label: '統計分析' })
   }
 
-  if (auth.isManager) {
+  if (auth.canReviewFee) {
     items.push({ to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' })
   }
 
-  if (auth.isManager && feature.has('member.approval_required')) {
+  if (auth.canManage && feature.has('member.approval_required')) {
     items.push({ to: '/manager/approvals', icon: 'mdi-account-check', label: '成員管理' })
   }
 

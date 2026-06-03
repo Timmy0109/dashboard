@@ -76,8 +76,17 @@ export const useFeeStore = defineStore('fee', () => {
     invalidateSummary(fee.project_id)
   }
 
-  async function approveTaskFee(fee: TaskFee): Promise<TaskFee> {
-    const res = await api.post<TaskFee>(`/task-fees/${fee.id}/approve`)
+  /** 一階審核：pending → reviewed（accountant / boss / admin） */
+  async function reviewTaskFee(fee: TaskFee): Promise<TaskFee> {
+    const res = await api.post<TaskFee>(`/task-fees/${fee.id}/review`)
+    replaceLocal(fee.task_id, res.data)
+    invalidateSummary(fee.project_id)
+    return res.data
+  }
+
+  /** 二階核發：reviewed → disbursed（boss / admin） */
+  async function disburseTaskFee(fee: TaskFee): Promise<TaskFee> {
+    const res = await api.post<TaskFee>(`/task-fees/${fee.id}/disburse`)
     replaceLocal(fee.task_id, res.data)
     invalidateSummary(fee.project_id)
     return res.data
@@ -92,8 +101,19 @@ export const useFeeStore = defineStore('fee', () => {
     return res.data
   }
 
-  async function unapproveTaskFee(fee: TaskFee, reason: string): Promise<TaskFee> {
-    const res = await api.post<TaskFee>(`/task-fees/${fee.id}/unapprove`, {
+  /** reviewed → pending（會計 / 老闆 / admin） */
+  async function unreviewTaskFee(fee: TaskFee, reason: string): Promise<TaskFee> {
+    const res = await api.post<TaskFee>(`/task-fees/${fee.id}/unreview`, {
+      unapprove_reason: reason,
+    })
+    replaceLocal(fee.task_id, res.data)
+    invalidateSummary(fee.project_id)
+    return res.data
+  }
+
+  /** disbursed → reviewed（boss / admin，撤回核發） */
+  async function undisburseTaskFee(fee: TaskFee, reason: string): Promise<TaskFee> {
+    const res = await api.post<TaskFee>(`/task-fees/${fee.id}/undisburse`, {
       unapprove_reason: reason,
     })
     replaceLocal(fee.task_id, res.data)
@@ -200,9 +220,11 @@ export const useFeeStore = defineStore('fee', () => {
     createTaskFee,
     updateTaskFee,
     deleteTaskFee,
-    approveTaskFee,
+    reviewTaskFee,
+    disburseTaskFee,
     rejectTaskFee,
-    unapproveTaskFee,
+    unreviewTaskFee,
+    undisburseTaskFee,
     resubmitTaskFee,
     requestReceipt,
 

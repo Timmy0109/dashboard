@@ -55,8 +55,10 @@ function titleOf(n: Notification): string {
       return p.is_resubmit
         ? `${p.submitter} 重新提交了「${p.task_name}」費用 NT$${p.amount.toLocaleString()}`
         : `${p.submitter} 提交了「${p.task_name}」費用 NT$${p.amount.toLocaleString()}`
-    case 'fee_approved':
-      return `${p.reviewer} 已核准你的費用 NT$${p.amount.toLocaleString()}`
+    case 'fee_reviewed':
+      return `${p.reviewer} 已審核你的費用 NT$${p.amount.toLocaleString()}（待老闆核發）`
+    case 'fee_disbursed':
+      return `${p.disburser} 已核發費用 NT$${p.amount.toLocaleString()}`
     case 'fee_rejected':
       return `${p.reviewer} 駁回了你的費用 NT$${p.amount.toLocaleString()}`
     case 'fee_unapproved':
@@ -86,7 +88,8 @@ function iconOf(n: Notification): string {
     case 'task_status_changed': return 'mdi-flag'
     case 'task_replied': return 'mdi-reply'
     case 'fee_submitted': return 'mdi-cash-plus'
-    case 'fee_approved': return 'mdi-check-circle'
+    case 'fee_reviewed': return 'mdi-check-decagram'
+    case 'fee_disbursed': return 'mdi-cash-check'
     case 'fee_rejected': return 'mdi-close-circle'
     case 'fee_unapproved': return 'mdi-undo-variant'
     case 'fee_receipt_requested': return 'mdi-receipt-text-outline'

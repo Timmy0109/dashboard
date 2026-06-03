@@ -9,9 +9,10 @@ export type NotificationType =
   | 'task_status_changed'
   | 'task_replied'
   | 'fee_submitted'
-  | 'fee_approved'
+  | 'fee_reviewed'    // 一階審核通過（會計按審核）
+  | 'fee_disbursed'   // 二階核發（老闆按核發）
   | 'fee_rejected'
-  | 'fee_unapproved'
+  | 'fee_unapproved'  // 改回待審 / 撤回核發
   | 'fee_receipt_requested'
 
 interface NotificationPayloadByType {
@@ -55,12 +56,19 @@ interface NotificationPayloadByType {
     submitter: string
     is_resubmit?: boolean
   }
-  fee_approved: {
+  fee_reviewed: {
     task_fee_id: number
     task_id: number
     project_id: number
     amount: number
     reviewer: string
+  }
+  fee_disbursed: {
+    task_fee_id: number
+    task_id: number
+    project_id: number
+    amount: number
+    disburser: string
   }
   fee_rejected: {
     task_fee_id: number

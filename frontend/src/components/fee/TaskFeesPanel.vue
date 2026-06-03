@@ -116,7 +116,7 @@
               </v-btn>
 
               <!-- Manager/Admin: pending -->
-              <template v-if="canApprove && fee.status === 'pending'">
+              <template v-if="canReview && fee.status === 'pending'">
                 <v-btn
                   icon
                   size="x-small"
@@ -149,9 +149,9 @@
                 </v-btn>
               </template>
 
-              <!-- Manager/Admin: approved -->
+              <!-- Manager/Admin: disbursed (撤回核發) -->
               <v-btn
-                v-if="canApprove && fee.status === 'approved'"
+                v-if="canDisburse && fee.status === 'disbursed'"
                 icon
                 size="x-small"
                 variant="text"
@@ -290,11 +290,12 @@ const toast = useToast()
 const fees = computed<TaskFee[]>(() => feeStore.byTask[props.taskId] ?? [])
 const approvedTotal = computed(() =>
   fees.value
-    .filter(f => f.status === 'approved')
+    .filter(f => f.status === 'disbursed')
     .reduce((sum, f) => sum + Number(f.amount), 0),
 )
 
-const canApprove = computed(() => auth.isAdmin || auth.isManager)
+const canReview   = computed(() => auth.canReviewFee)
+const canDisburse = computed(() => auth.canDisburseFee)
 const isSubmitter = (fee: TaskFee) => auth.user?.id === fee.submitted_by
 
 const expanded = reactive<Record<number, boolean>>({})
@@ -363,8 +364,8 @@ async function confirmReason() {
       await feeStore.rejectTaskFee(fee, text)
       toast.success('已駁回')
     } else if (reasonDialog.mode === 'unapprove') {
-      await feeStore.unapproveTaskFee(fee, text)
-      toast.success('已反悔')
+      await feeStore.unreviewTaskFee(fee, text)
+      toast.success('已改回待審')
     } else {
       await feeStore.requestReceipt(fee, text || undefined)
       toast.success('已要求補件')
@@ -381,7 +382,10 @@ async function confirmReason() {
 // ── Direct actions ────────────────────────────────────────────────────
 async function onApprove(fee: TaskFee) {
   try {
-    await feeStore.approveTaskFee(fee)
+    // 暫時 C5 過渡：點「核准」=「會計審核通過 + 老闆核發」一次完成
+    // C6 會把按鈕拆成「審核」「核發」
+    if (fee.status === 'pending') await feeStore.reviewTaskFee(fee)
+    if (fee.status === 'reviewed' && auth.canDisburseFee) await feeStore.disburseTaskFee(fee)
     toast.success('已核准')
   } catch (err: unknown) {
     const e = err as { response?: { data?: { message?: string } } }

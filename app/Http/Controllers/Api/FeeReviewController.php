@@ -19,7 +19,7 @@ class FeeReviewController extends Controller
     {
         $user = $request->user();
         if (! $user->canReviewFee()) {
-            abort(403, '僅可審核費用者（admin / boss / 會計）可使用');
+            abort(403, '僅可審核費用者（老闆 / 會計）可使用');
         }
 
         // 可見的 project 範圍

@@ -91,16 +91,16 @@ class User extends Authenticatable
      *      admin ⊇ boss              ⊇ (manage 公司、行政費用…)
      */
 
-    /** 可一階審核費用：pending → reviewed */
+    /** 可一階審核費用：pending → reviewed（僅會計 / 老闆；admin 不參與費用審核） */
     public function canReviewFee(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_BOSS, self::ROLE_ACCOUNTANT], true);
+        return in_array($this->role, [self::ROLE_BOSS, self::ROLE_ACCOUNTANT], true);
     }
 
-    /** 可二階核發費用：reviewed → disbursed */
+    /** 可二階核發費用：reviewed → disbursed（僅老闆；admin 不參與費用審核） */
     public function canDisburseFee(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_BOSS], true);
+        return in_array($this->role, [self::ROLE_BOSS], true);
     }
 
     /** 可管理公司 / 專案 / 行政費用 / 成員 */

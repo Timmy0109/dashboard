@@ -60,6 +60,16 @@
             >
               {{ statusLabel(fee.status) }}
             </v-chip>
+            <v-chip
+              v-if="fee.receipt_requested_at"
+              color="warning"
+              size="small"
+              variant="flat"
+              class="mr-2"
+              prepend-icon="mdi-receipt-text-outline"
+            >
+              需補件
+            </v-chip>
             <v-icon
               v-if="(fee.attachments?.length ?? 0) > 0"
               size="16"
@@ -208,6 +218,15 @@
             <div v-if="fee.unapprove_reason" class="mb-2">
               <div class="text-caption text-grey-darken-1">改回待審 / 撤回核發原因</div>
               <div class="text-body-2">{{ fee.unapprove_reason }}</div>
+            </div>
+            <div v-if="fee.receipt_requested_at" class="mb-2">
+              <div class="text-caption text-warning">
+                需補件<template v-if="fee.receipt_requester"> · {{ fee.receipt_requester.name }}</template>
+                · {{ formatTime(fee.receipt_requested_at) }}
+              </div>
+              <div class="text-body-2">
+                {{ fee.receipt_request_message || '審核者要求補上收據／憑證，請編輯後重新上傳。' }}
+              </div>
             </div>
             <div v-if="fee.attachments && fee.attachments.length" class="mb-1">
               <div class="text-caption text-grey mb-1">收據</div>

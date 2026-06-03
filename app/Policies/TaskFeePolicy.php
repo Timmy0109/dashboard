@@ -101,12 +101,15 @@ class TaskFeePolicy
         return $user->canReviewFee() && $this->canReviewInProject($user, $fee);
     }
 
-    /** 可在此專案做審核（會計/老闆 + 同公司專案） */
+    /** 可在此專案做審核（會計/老闆 + 同公司專案）
+     *  審核者是公司層級角色，不需是專案成員；以同公司為界，
+     *  與 FeeReviewController 的清單可見性（visibleProjectIds = 同公司）一致。 */
     private function canReviewInProject(User $user, TaskFee $fee): bool
     {
         if ($user->isAdmin()) return true;
         if (! $user->canReviewFee()) return false;
-        return (new ProjectPolicy())->view($user, $fee->project);
+        return $user->company_id !== null
+            && $fee->project->company_id === $user->company_id;
     }
 
     /** 可管理此專案（老闆/admin） */

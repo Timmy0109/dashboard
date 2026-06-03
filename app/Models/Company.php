@@ -59,6 +59,11 @@ class Company extends Model
         return $this->hasMany(User::class)->where('role', 'member');
     }
 
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
+    }
+
     public function companyFeatures(): HasMany
     {
         return $this->hasMany(CompanyFeature::class);

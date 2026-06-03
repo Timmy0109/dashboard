@@ -6,15 +6,15 @@
       <template v-if="!selectedCompany">
         <div class="mb-5">
           <h2 class="text-h6 font-weight-bold">專案管理</h2>
-          <p class="text-body-2 text-medium-emphasis">選擇公司以查看其專案</p>
+          <p class="text-body-2 text-medium-emphasis">選擇公司以查看其專案列表</p>
         </div>
 
         <!-- KPI strip -->
         <v-row class="mb-5" dense>
           <v-col cols="12" sm="6" md="3">
             <KPICard
-              label="公司總數"
-              :value="companies.length"
+              label="管理公司"
+              :value="activeCompanies.length"
               icon="mdi-domain"
               icon-color="primary"
               accent="primary"
@@ -22,20 +22,20 @@
           </v-col>
           <v-col cols="12" sm="6" md="3">
             <KPICard
-              label="運作中"
-              :value="companyStats.active"
-              icon="mdi-check-circle"
-              icon-color="success"
-              accent="success"
+              label="全平台專案"
+              :value="companyStats.totalProjects"
+              icon="mdi-folder-multiple-outline"
+              icon-color="primary"
+              accent="primary"
             />
           </v-col>
           <v-col cols="12" sm="6" md="3">
             <KPICard
-              label="已停用"
-              :value="companyStats.suspended"
-              icon="mdi-pause-circle"
-              icon-color="error"
-              accent="error"
+              label="進行中"
+              :value="companyStats.totalInProgress"
+              icon="mdi-progress-clock"
+              icon-color="info"
+              accent="info"
             />
           </v-col>
           <v-col cols="12" sm="6" md="3">
@@ -43,93 +43,49 @@
               label="總成員"
               :value="companyStats.totalMembers"
               icon="mdi-account-group"
-              icon-color="info"
-              accent="info"
+              icon-color="success"
+              accent="success"
             />
           </v-col>
         </v-row>
 
-        <!-- Toolbar -->
-        <v-card rounded="xl">
-          <v-card-title class="text-body-1 font-weight-semibold border-b">
-            <div class="d-flex align-center gap-4 py-4 w-100">
-              <v-icon icon="mdi-format-list-checks" size="18" color="primary" />
-              公司列表
-              <v-text-field
-                v-model="companySearch"
-                prepend-inner-icon="mdi-magnify"
-                placeholder="搜尋公司..."
-                variant="outlined"
-                density="compact"
-                hide-details
-                rounded="lg"
-                style="max-width: 280px"
-              />
-              <ChipGroup v-model="companyStatusFilter" :items="companyStatusOptions" />
-            </div>
-          </v-card-title>
-          <v-data-table
-            :headers="companyHeaders"
-            :items="filteredCompanies"
-            :loading="companiesLoading"
-            hover
-            item-value="id"
-            @click:row="(_e: Event, { item }: { item: Company }) => selectCompany(item)"
-          >
-            <template #item.name="{ item }">
-              <div class="d-flex align-center gap-3 py-2">
-                <v-avatar size="36" color="primary" variant="tonal">
-                  <span class="text-body-2 font-weight-bold">{{ item.name.charAt(0) }}</span>
-                </v-avatar>
-                <span class="text-body-2 font-weight-medium">{{ item.name }}</span>
-              </div>
-            </template>
+        <!-- Search bar -->
+        <div class="mb-4">
+          <v-text-field
+            v-model="companySearch"
+            prepend-inner-icon="mdi-magnify"
+            placeholder="搜尋公司..."
+            variant="outlined"
+            density="compact"
+            hide-details
+            rounded="lg"
+            style="max-width: 320px"
+          />
+        </div>
 
-            <template #item.managers_count="{ item }">
-              <v-chip size="small" variant="tonal" color="primary">
-                {{ item.managers_count ?? 0 }} 人
-              </v-chip>
-            </template>
+        <!-- Company grid -->
+        <div v-if="companiesLoading" class="pms-company-grid">
+          <v-skeleton-loader v-for="i in 6" :key="i" type="card" rounded="xl" />
+        </div>
 
-            <template #item.members_count="{ item }">
-              <v-chip size="small" variant="tonal" color="secondary">
-                {{ item.members_count ?? 0 }} 人
-              </v-chip>
-            </template>
+        <EmptyState
+          v-else-if="filteredCompanies.length === 0"
+          icon="mdi-domain"
+          :title="activeCompanies.length === 0 ? '目前沒有公司' : '找不到符合條件的公司'"
+          :sub="activeCompanies.length === 0 ? '請至系統管理新增公司' : '試試其他關鍵字'"
+        />
 
-            <template #item.status="{ item }">
-              <v-chip
-                :color="item.status === 'active' ? 'success' : 'error'"
-                size="small"
-                variant="tonal"
-              >
-                <v-icon
-                  :icon="item.status === 'active' ? 'mdi-check-circle' : 'mdi-pause-circle'"
-                  size="12"
-                  class="mr-1"
-                />
-                {{ item.status === "active" ? "運作中" : "已停用" }}
-              </v-chip>
-            </template>
-
-            <template #item.action>
-              <v-icon icon="mdi-chevron-right" color="grey" />
-            </template>
-
-            <template #no-data>
-              <div class="py-6">
-                <EmptyState
-                  icon="mdi-domain"
-                  :title="companies.length === 0 ? '目前沒有公司' : '找不到符合條件的公司'"
-                  :sub="companies.length === 0 ? '平台尚未建立任何公司' : '試試其他關鍵字或狀態'"
-                />
-              </div>
-            </template>
-          </v-data-table>
-        </v-card>
+        <div v-else class="pms-company-grid">
+          <CompanyCard
+            v-for="c in filteredCompanies"
+            :key="c.id"
+            :company="c"
+            @select="selectCompany"
+          />
+        </div>
 
         <div class="d-flex justify-end mt-3 text-caption text-medium-emphasis">
-          共 {{ filteredCompanies.length }} / {{ companies.length }} 間公司
+          共 {{ filteredCompanies.length }} / {{ activeCompanies.length }} 間公司
         </div>
       </template>
 
@@ -137,19 +93,18 @@
       <template v-else>
         <div class="mb-6 d-flex align-start justify-space-between gap-4 flex-wrap">
           <div>
-            <v-btn
-              variant="text"
-              color="grey"
-              prepend-icon="mdi-arrow-left"
-              size="small"
-              class="mb-2 px-0"
-              @click="
-                selectedCompany = null;
-                store.list = [];
-              "
+            <v-breadcrumbs
+              :items="[
+                { title: '專案管理', onClick: () => { selectedCompany = null; store.list = [] } },
+                { title: selectedCompany.name, disabled: true },
+              ]"
+              density="compact"
+              class="pa-0 mb-1"
             >
-              返回公司列表
-            </v-btn>
+              <template #divider>
+                <v-icon icon="mdi-chevron-right" size="14" />
+              </template>
+            </v-breadcrumbs>
             <h2 class="text-h6 font-weight-bold">{{ selectedCompany.name }}</h2>
             <p class="text-body-2 text-medium-emphasis">專案列表</p>
           </div>
@@ -289,17 +244,20 @@ import ProjectDataTable from "@/components/ProjectDataTable.vue";
 import ImportDialog from "@/components/ImportDialog.vue";
 import ProjectsChartStrip from "@/components/project/ProjectsChartStrip.vue";
 import ProjectCardGrid from "@/components/project/ProjectCardGrid.vue";
+import CompanyCard from "@/components/admin/CompanyCard.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import KPICard from "@/components/ui/KPICard.vue";
-import ChipGroup from "@/components/ui/ChipGroup.vue";
 import api from "@/lib/axios";
 
-interface Company {
+export interface Company {
   id: number;
   name: string;
   status: "active" | "suspended";
   managers_count: number;
   members_count: number;
+  projects_count: number;
+  projects_in_progress_count: number;
+  avg_progress_percent: number;
 }
 
 const auth = useAuthStore();
@@ -311,42 +269,26 @@ const companies = ref<Company[]>([]);
 const companiesLoading = ref(false);
 const selectedCompany = ref<Company | null>(null);
 const companySearch = ref("");
-const companyStatusFilter = ref<string>("all");
 
-const companyHeaders = [
-  { title: "公司名稱", key: "name", sortable: true },
-  { title: "Manager", key: "managers_count", sortable: true },
-  { title: "成員數", key: "members_count", sortable: true },
-  { title: "狀態", key: "status", sortable: false },
-  { title: "", key: "action", sortable: false, width: "48px" },
-];
+// 停用公司不顯示在這支頁面 — 由系統管理頁面控管
+const activeCompanies = computed(() => companies.value.filter((c) => c.status === "active"));
 
 const companyStats = computed(() => {
-  let active = 0;
-  let suspended = 0;
+  let totalProjects = 0;
+  let totalInProgress = 0;
   let totalMembers = 0;
-  for (const c of companies.value) {
-    if (c.status === "active") active++;
-    else suspended++;
+  for (const c of activeCompanies.value) {
+    totalProjects += c.projects_count ?? 0;
+    totalInProgress += c.projects_in_progress_count ?? 0;
     totalMembers += (c.managers_count ?? 0) + (c.members_count ?? 0);
   }
-  return { active, suspended, totalMembers };
+  return { totalProjects, totalInProgress, totalMembers };
 });
 
-const companyStatusOptions = computed(() => [
-  { value: "all", label: "全部", count: companies.value.length },
-  { value: "active", label: "運作中", count: companyStats.value.active },
-  { value: "suspended", label: "已停用", count: companyStats.value.suspended },
-]);
-
 const filteredCompanies = computed<Company[]>(() => {
-  let list = companies.value;
-  if (companyStatusFilter.value !== "all") {
-    list = list.filter((c) => c.status === companyStatusFilter.value);
-  }
   const q = companySearch.value.trim().toLowerCase();
-  if (q) list = list.filter((c) => c.name.toLowerCase().includes(q));
-  return list;
+  if (!q) return activeCompanies.value;
+  return activeCompanies.value.filter((c) => c.name.toLowerCase().includes(q));
 });
 
 // Import / Export
@@ -461,3 +403,20 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.pms-company-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1280px) {
+  .pms-company-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 960px) {
+  .pms-company-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .pms-company-grid { grid-template-columns: 1fr; }
+}
+</style>

@@ -27,21 +27,39 @@ class CompanyController extends Controller
     {
         if ($err = $this->adminOnly($request)) return $err;
 
-        $query = $request->boolean('with_trashed')
-            ? Company::withTrashed()->with(['creator'])->withCount(['managers', 'members'])
-            : Company::with(['creator'])->withCount(['managers', 'members']);
+        $base = $request->boolean('with_trashed')
+            ? Company::withTrashed()
+            : Company::query();
 
-        $companies = $query->get()->map(fn($c) => [
-            'id'             => $c->id,
-            'name'           => $c->name,
-            'status'         => $c->status,
-            'invite_code'            => $c->invite_code,
-            'invite_code_expires_at' => $c->invite_code_expires_at?->format('Y-m-d'),
-            'managers_count'         => $c->managers_count,
-            'members_count'          => $c->members_count,
-            'created_at'             => $c->created_at?->format('Y-m-d'),
-            'deleted_at'             => $c->deleted_at?->format('Y-m-d'),
-        ]);
+        $companies = $base
+            ->with(['creator'])
+            ->withCount([
+                'managers',
+                'members',
+                'projects',
+                'projects as projects_in_progress_count' => fn($q) =>
+                    $q->where('is_completed', false)->where('progress_percent', '>', 0),
+            ])
+            ->addSelect([
+                'avg_progress_percent' => \App\Models\Project::query()
+                    ->selectRaw('COALESCE(AVG(progress_percent), 0)')
+                    ->whereColumn('company_id', 'companies.id'),
+            ])
+            ->get()
+            ->map(fn($c) => [
+                'id'                          => $c->id,
+                'name'                        => $c->name,
+                'status'                      => $c->status,
+                'invite_code'                 => $c->invite_code,
+                'invite_code_expires_at'      => $c->invite_code_expires_at?->format('Y-m-d'),
+                'managers_count'              => $c->managers_count,
+                'members_count'               => $c->members_count,
+                'projects_count'              => $c->projects_count,
+                'projects_in_progress_count'  => $c->projects_in_progress_count,
+                'avg_progress_percent'        => (int) round((float) $c->avg_progress_percent),
+                'created_at'                  => $c->created_at?->format('Y-m-d'),
+                'deleted_at'                  => $c->deleted_at?->format('Y-m-d'),
+            ]);
 
         return response()->json($companies);
     }

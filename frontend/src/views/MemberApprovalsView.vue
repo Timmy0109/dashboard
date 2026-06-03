@@ -43,8 +43,8 @@
       </v-col>
       <v-col cols="12" sm="6" md="3">
         <KPICard
-          label="經理數"
-          :value="managerCount"
+          label="老闆數"
+          :value="bossCount"
           icon="mdi-account-tie"
           icon-color="info"
           accent="info"
@@ -125,7 +125,7 @@
         <template #item.role="{ item }">
           <v-chip
             size="x-small"
-            :color="item.role === 'manager' ? 'primary' : 'default'"
+            :color="roleColor[item.role ?? 'member'] ?? 'default'"
             variant="tonal"
           >
             {{ roleLabel[item.role ?? "member"] }}
@@ -316,7 +316,7 @@ interface Member {
   id: number;
   name: string;
   email: string;
-  role?: "manager" | "member";
+  role?: "admin" | "boss" | "accountant" | "member";
   status: "active" | "pending" | "inactive";
   company_name?: string | null;
   created_at: string;
@@ -359,13 +359,20 @@ const statusLabel: Record<string, string> = {
 
 const roleLabel: Record<string, string> = {
   admin: "管理員",
-  manager: "經理",
+  boss: "老闆",
+  accountant: "會計",
   member: "成員",
+};
+const roleColor: Record<string, string> = {
+  admin: "deep-purple",
+  boss: "teal",
+  accountant: "indigo",
+  member: "default",
 };
 
 const activeCount = computed(() => members.value.filter((m) => m.status === "active").length);
 const inactiveCount = computed(() => members.value.filter((m) => m.status === "inactive").length);
-const managerCount = computed(() => members.value.filter((m) => m.role === "manager").length);
+const bossCount = computed(() => members.value.filter((m) => m.role === "boss").length);
 
 const filteredMembers = computed(() => {
   if (statusFilter.value === "all") return members.value;

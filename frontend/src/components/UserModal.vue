@@ -107,7 +107,8 @@
                   label="角色"
                   :items="[
                     { title: '管理員', value: 'admin' },
-                    { title: '經理', value: 'manager' },
+                    { title: '老闆', value: 'boss' },
+                    { title: '會計', value: 'accountant' },
                     { title: '成員', value: 'member' },
                   ]"
                   variant="outlined"
@@ -190,9 +191,10 @@ const initials = computed(() => {
 
 const avatarColor = computed(() => {
   switch (form.value.role) {
-    case 'admin':   return 'deep-purple'
-    case 'manager': return 'teal'
-    default:        return 'primary'
+    case 'admin':      return 'deep-purple'
+    case 'boss':       return 'teal'
+    case 'accountant': return 'indigo'
+    default:           return 'primary'
   }
 })
 

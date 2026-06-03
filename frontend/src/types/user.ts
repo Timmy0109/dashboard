@@ -3,7 +3,7 @@
  * additive-only: no breaking changes to existing fields.
  */
 
-export type Role = 'admin' | 'manager' | 'member'
+export type Role = 'admin' | 'boss' | 'accountant' | 'member'
 export type UserStatus = 'pending' | 'active' | 'inactive' | 'suspended'
 
 export interface User {

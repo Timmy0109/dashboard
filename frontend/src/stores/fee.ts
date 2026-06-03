@@ -70,8 +70,9 @@ export const useFeeStore = defineStore('fee', () => {
 
   async function deleteTaskFee(fee: TaskFee): Promise<void> {
     await api.delete(`/task-fees/${fee.id}`)
-    if (byTask.value[fee.task_id]) {
-      byTask.value[fee.task_id] = byTask.value[fee.task_id].filter(f => f.id !== fee.id)
+    const list = byTask.value[fee.task_id]
+    if (list) {
+      byTask.value[fee.task_id] = list.filter(f => f.id !== fee.id)
     }
     invalidateSummary(fee.project_id)
   }
@@ -164,8 +165,8 @@ export const useFeeStore = defineStore('fee', () => {
     payload: { amount?: number; note?: string | null; incurred_on?: string | null },
   ): Promise<ProjectAdminFee> {
     const res = await api.patch<ProjectAdminFee>(`/project-admin-fees/${fee.id}`, payload)
-    if (adminByProject.value[fee.project_id]) {
-      const list = adminByProject.value[fee.project_id]
+    const list = adminByProject.value[fee.project_id]
+    if (list) {
       const i = list.findIndex(f => f.id === fee.id)
       if (i >= 0) list[i] = res.data
     }
@@ -175,9 +176,9 @@ export const useFeeStore = defineStore('fee', () => {
 
   async function deleteAdminFee(fee: ProjectAdminFee): Promise<void> {
     await api.delete(`/project-admin-fees/${fee.id}`)
-    if (adminByProject.value[fee.project_id]) {
-      adminByProject.value[fee.project_id] =
-        adminByProject.value[fee.project_id].filter(f => f.id !== fee.id)
+    const list = adminByProject.value[fee.project_id]
+    if (list) {
+      adminByProject.value[fee.project_id] = list.filter(f => f.id !== fee.id)
     }
     invalidateSummary(fee.project_id)
   }

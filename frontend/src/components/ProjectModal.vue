@@ -266,7 +266,7 @@ const form = reactive({
 })
 
 const memberOptions = computed(() =>
-  lookup.users.filter(u => u.role === 'member' || u.role === 'manager')
+  lookup.users.filter(u => u.role === 'member' || u.role === 'boss')
 )
 
 onMounted(async () => {

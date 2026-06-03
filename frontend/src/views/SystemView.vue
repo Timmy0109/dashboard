@@ -280,7 +280,7 @@
             <template #item.role="{ item }">
               <v-chip
                 size="x-small"
-                :color="item.role === 'admin' ? 'deep-purple' : item.role === 'manager' ? 'primary' : 'default'"
+                :color="roleColor[item.role] ?? 'default'"
                 variant="tonal"
               >
                 {{ roleLabel[item.role] ?? item.role }}
@@ -312,8 +312,11 @@
           <span class="text-caption text-medium-emphasis">
             共 <strong>{{ employees.length }}</strong> 名員工
           </span>
-          <v-chip size="x-small" color="primary" variant="tonal">
-            Manager {{ employees.filter(e => e.role === 'manager').length }}
+          <v-chip size="x-small" color="teal" variant="tonal">
+            老闆 {{ employees.filter(e => e.role === 'boss').length }}
+          </v-chip>
+          <v-chip size="x-small" color="indigo" variant="tonal">
+            會計 {{ employees.filter(e => e.role === 'accountant').length }}
           </v-chip>
           <v-chip size="x-small" color="default" variant="tonal">
             成員 {{ employees.filter(e => e.role === 'member').length }}
@@ -347,7 +350,7 @@ interface Employee {
   id: number
   name: string
   email: string
-  role: 'admin' | 'manager' | 'member'
+  role: 'admin' | 'boss' | 'accountant' | 'member'
   status: 'active' | 'inactive'
   created_at: string
 }
@@ -395,12 +398,13 @@ const employeesLoading = ref(false)
 const employeeSearch = ref('')
 const showUserModal = ref(false)
 
-const roleLabel: Record<string, string> = { admin: '管理員', manager: '經理', member: '成員' }
+const roleLabel: Record<string, string> = { admin: '管理員', boss: '老闆', accountant: '會計', member: '成員' }
+const roleColor: Record<string, string> = { admin: 'deep-purple', boss: 'teal', accountant: 'indigo', member: 'default' }
 
 const companyHeaders = [
   { title: '公司名稱', key: 'name',           sortable: true },
   { title: '狀態',    key: 'status',          sortable: true },
-  { title: 'Manager', key: 'managers_count',  sortable: true },
+  { title: '老闆',    key: 'managers_count',  sortable: true },
   { title: '成員數',   key: 'members_count',   sortable: true },
   { title: '建立日期', key: 'created_at',      sortable: true },
   { title: '',       key: 'actions',          sortable: false, width: '120px' },

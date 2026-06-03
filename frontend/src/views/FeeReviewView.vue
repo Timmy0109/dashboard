@@ -32,19 +32,19 @@
       </v-col>
       <v-col cols="12" sm="6" md="3">
         <KPICard
-          label="待補件"
-          :value="kpi?.receipt_requested_count ?? 0"
-          sub="已退回成員補件"
-          icon="mdi-email-outline"
+          label="待核發"
+          :value="kpi?.reviewed_count ?? 0"
+          :sub="`金額合計 NT$${(kpi?.reviewed_amount ?? 0).toLocaleString()}`"
+          icon="mdi-cash-clock"
           icon-color="info"
           accent="info"
         />
       </v-col>
       <v-col cols="12" sm="6" md="3">
         <KPICard
-          label="本月已核准"
-          :value="kpi?.approved_this_month ?? 0"
-          :sub="`金額合計 NT$${(kpi?.approved_this_month_amount ?? 0).toLocaleString()}`"
+          label="本月已核發"
+          :value="kpi?.disbursed_this_month ?? 0"
+          :sub="`金額合計 NT$${(kpi?.disbursed_this_month_amount ?? 0).toLocaleString()}`"
           icon="mdi-check-circle-outline"
           icon-color="success"
           accent="success"
@@ -163,9 +163,9 @@
               size="x-small"
               variant="flat"
               prepend-icon="mdi-check"
-              :loading="busyId === item.id && busyAction === 'approve'"
-              @click="onApprove(item)"
-            >核准</v-btn>
+              :loading="busyId === item.id && busyAction === 'review'"
+              @click="onReview(item)"
+            >審核</v-btn>
             <v-btn
               size="x-small"
               variant="outlined"
@@ -183,15 +183,36 @@
               @click="onReject(item)"
             >退件</v-btn>
           </div>
-          <div v-else-if="item.status === 'approved'" class="d-flex align-center justify-center" @click.stop>
+          <div v-else-if="item.status === 'reviewed'" class="d-flex align-center justify-center gap-1" @click.stop>
+            <v-btn
+              v-if="canDisburse"
+              color="primary"
+              size="x-small"
+              variant="flat"
+              prepend-icon="mdi-cash-check"
+              :loading="busyId === item.id && busyAction === 'disburse'"
+              @click="onDisburse(item)"
+            >核發</v-btn>
             <v-btn
               size="x-small"
               variant="outlined"
               color="grey-darken-1"
               prepend-icon="mdi-undo-variant"
-              :loading="busyId === item.id && busyAction === 'unapprove'"
-              @click="onUnapprove(item)"
-            >改回待審</v-btn>
+              :loading="busyId === item.id && busyAction === 'unreview'"
+              @click="onUnreview(item)"
+            >退回待審</v-btn>
+          </div>
+          <div v-else-if="item.status === 'disbursed'" class="d-flex align-center justify-center" @click.stop>
+            <v-btn
+              v-if="canDisburse"
+              size="x-small"
+              variant="outlined"
+              color="grey-darken-1"
+              prepend-icon="mdi-undo-variant"
+              :loading="busyId === item.id && busyAction === 'undisburse'"
+              @click="onUndisburse(item)"
+            >撤回核發</v-btn>
+            <span v-else class="text-caption text-medium-emphasis">已核發</span>
           </div>
           <div v-else-if="item.status === 'rejected'" class="d-flex align-center justify-center" @click.stop>
             <v-btn
@@ -372,19 +393,38 @@
             color="success"
             variant="flat"
             prepend-icon="mdi-check"
-            @click="onApprove(detailFee).then(() => (detailDialog = false))"
-          >核准</v-btn>
+            @click="onReview(detailFee).then(() => (detailDialog = false))"
+          >審核</v-btn>
         </v-card-actions>
 
-        <v-card-actions v-else-if="detailFee.status === 'approved'" class="pa-4">
+        <v-card-actions v-else-if="detailFee.status === 'reviewed'" class="pa-4">
           <v-btn variant="text" @click="detailDialog = false">關閉</v-btn>
           <v-spacer />
           <v-btn
+            variant="outlined"
+            color="grey-darken-1"
+            prepend-icon="mdi-undo-variant"
+            @click="onUnreview(detailFee)"
+          >退回待審</v-btn>
+          <v-btn
+            v-if="canDisburse"
+            color="primary"
+            variant="flat"
+            prepend-icon="mdi-cash-check"
+            @click="onDisburse(detailFee).then(() => (detailDialog = false))"
+          >核發</v-btn>
+        </v-card-actions>
+
+        <v-card-actions v-else-if="detailFee.status === 'disbursed'" class="pa-4">
+          <v-btn variant="text" @click="detailDialog = false">關閉</v-btn>
+          <v-spacer />
+          <v-btn
+            v-if="canDisburse"
             color="primary"
             variant="flat"
             prepend-icon="mdi-undo-variant"
-            @click="onUnapprove(detailFee)"
-          >改回待審</v-btn>
+            @click="onUndisburse(detailFee)"
+          >撤回核發</v-btn>
         </v-card-actions>
 
         <v-card-actions v-else-if="detailFee.status === 'rejected'" class="pa-4">
@@ -435,22 +475,22 @@
       </v-card>
     </v-dialog>
 
-    <!-- 改回待審 reason dialog -->
-    <v-dialog v-model="unapproveDialog" max-width="480">
+    <!-- 退回待審 / 撤回核發 reason dialog -->
+    <v-dialog v-model="reasonDialog" max-width="480">
       <v-card rounded="xl">
         <v-card-title class="pa-5 pb-4 d-flex align-center justify-space-between bg-primary rounded-t-xl">
           <div class="d-flex align-center gap-2">
             <v-icon icon="mdi-undo-variant" color="white" size="20" />
-            <span class="text-body-1 font-weight-bold text-white">改回待審</span>
+            <span class="text-body-1 font-weight-bold text-white">{{ reasonTitle }}</span>
           </div>
-          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="unapproveDialog = false" />
+          <v-btn icon="mdi-close" variant="text" size="small" color="white" @click="reasonDialog = false" />
         </v-card-title>
         <v-card-text class="pa-5">
           <div class="text-caption text-medium-emphasis mb-2">
-            費用會回到待審狀態，請簡述原因（會通知提交者）
+            {{ reasonHint }}
           </div>
           <v-textarea
-            v-model="unapproveReason"
+            v-model="reasonText"
             label="原因"
             rows="3"
             auto-grow
@@ -463,14 +503,14 @@
         </v-card-text>
         <v-divider />
         <v-card-actions class="pa-4">
-          <v-btn variant="text" @click="unapproveDialog = false">取消</v-btn>
+          <v-btn variant="text" @click="reasonDialog = false">取消</v-btn>
           <v-spacer />
           <v-btn
             color="primary"
             variant="flat"
             prepend-icon="mdi-check"
-            :disabled="!unapproveReason.trim()"
-            @click="confirmUnapprove"
+            :disabled="!reasonText.trim()"
+            @click="confirmReason"
           >確認</v-btn>
         </v-card-actions>
       </v-card>
@@ -517,6 +557,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useFeeReviewStore, type ReviewStatus } from '@/stores/feeReview'
 import { useFeeStore } from '@/stores/fee'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import KPICard from '@/components/ui/KPICard.vue'
 import ChipGroup from '@/components/ui/ChipGroup.vue'
@@ -524,15 +565,28 @@ import type { TaskFee } from '@/types/fee'
 
 const store = useFeeReviewStore()
 const feeStore = useFeeStore()
+const auth = useAuthStore()
 const toast = useToast()
+
+// 二階核發僅 boss / admin（canDisburseFee）；會計只能一階審核
+const canDisburse = computed(() => auth.canDisburseFee)
 
 const kpi = computed(() => store.kpi)
 const items = computed<TaskFee[]>(() => store.items)
 const loading = computed(() => store.loading)
 
+type BusyAction =
+  | 'review'
+  | 'disburse'
+  | 'reject'
+  | 'receipt'
+  | 'unreview'
+  | 'undisburse'
+  | 'resubmit'
+
 const search = ref(store.search)
 const busyId = ref<number | null>(null)
-const busyAction = ref<'approve' | 'reject' | 'receipt' | 'unapprove' | 'resubmit' | null>(null)
+const busyAction = ref<BusyAction | null>(null)
 const rejectDialog = ref(false)
 const rejectReason = ref('')
 const pendingReject = ref<TaskFee | null>(null)
@@ -544,9 +598,19 @@ const receiptDialog = ref(false)
 const receiptMessage = ref('')
 const pendingReceipt = ref<TaskFee | null>(null)
 
-const unapproveDialog = ref(false)
-const unapproveReason = ref('')
-const pendingUnapprove = ref<TaskFee | null>(null)
+// 退回待審 / 撤回核發 共用一個原因對話框
+const reasonDialog = ref(false)
+const reasonText = ref('')
+const pendingReason = ref<TaskFee | null>(null)
+const pendingReasonKind = ref<'unreview' | 'undisburse'>('unreview')
+const reasonTitle = computed(() =>
+  pendingReasonKind.value === 'undisburse' ? '撤回核發' : '退回待審',
+)
+const reasonHint = computed(() =>
+  pendingReasonKind.value === 'undisburse'
+    ? '費用會退回「已審核」狀態，請簡述原因（會通知提交者）'
+    : '費用會退回「待審核」狀態，請簡述原因（會通知提交者）',
+)
 
 function openDetail(fee: TaskFee) {
   detailFee.value = fee
@@ -564,29 +628,43 @@ function onRequestReceiptFromDetail(fee: TaskFee) {
   receiptDialog.value = true
 }
 
-function onUnapprove(fee: TaskFee) {
-  pendingUnapprove.value = fee
-  unapproveReason.value = ''
-  unapproveDialog.value = true
+function onUnreview(fee: TaskFee) {
+  pendingReason.value = fee
+  pendingReasonKind.value = 'unreview'
+  reasonText.value = ''
+  reasonDialog.value = true
 }
 
-async function confirmUnapprove() {
-  const fee = pendingUnapprove.value
+function onUndisburse(fee: TaskFee) {
+  pendingReason.value = fee
+  pendingReasonKind.value = 'undisburse'
+  reasonText.value = ''
+  reasonDialog.value = true
+}
+
+async function confirmReason() {
+  const fee = pendingReason.value
   if (!fee) return
+  const kind = pendingReasonKind.value
   busyId.value = fee.id
-  busyAction.value = 'unapprove'
-  unapproveDialog.value = false
+  busyAction.value = kind
+  reasonDialog.value = false
   detailDialog.value = false
   try {
-    await feeStore.unapproveTaskFee(fee, unapproveReason.value.trim())
-    toast.success('已改回待審')
+    if (kind === 'undisburse') {
+      await feeStore.undisburseTaskFee(fee, reasonText.value.trim())
+      toast.success('已撤回核發')
+    } else {
+      await feeStore.unreviewTaskFee(fee, reasonText.value.trim())
+      toast.success('已退回待審')
+    }
     await store.fetch()
   } catch (e: any) {
-    toast.error(e?.response?.data?.message ?? '改回待審失敗')
+    toast.error(e?.response?.data?.message ?? '操作失敗')
   } finally {
     busyId.value = null
     busyAction.value = null
-    pendingUnapprove.value = null
+    pendingReason.value = null
   }
 }
 
@@ -606,8 +684,9 @@ async function onResubmit(fee: TaskFee) {
 }
 
 const tabItems = computed(() => [
-  { value: 'pending', label: `待處理 (${kpi.value?.pending_count ?? 0})` },
-  { value: 'approved', label: `已核准 (${kpi.value?.approved_this_month ?? 0})` },
+  { value: 'pending', label: `待審核 (${kpi.value?.pending_count ?? 0})` },
+  { value: 'reviewed', label: `待核發 (${kpi.value?.reviewed_count ?? 0})` },
+  { value: 'disbursed', label: `本月已核發 (${kpi.value?.disbursed_this_month ?? 0})` },
   { value: 'rejected', label: `已退件 (${kpi.value?.rejected_count ?? 0})` },
   { value: 'all', label: `全部 (${kpi.value?.total_count ?? 0})` },
 ])
@@ -632,13 +711,15 @@ function onStatusChange(s: unknown) {
 }
 
 function statusColor(fee: TaskFee): string {
-  if (fee.status === 'approved') return 'success'
+  if (fee.status === 'disbursed') return 'success'
+  if (fee.status === 'reviewed') return 'primary'
   if (fee.status === 'rejected') return 'error'
   if (fee.receipt_requested_at) return 'info'
   return 'warning'
 }
 function statusLabel(fee: TaskFee): string {
-  if (fee.status === 'approved') return '已核准'
+  if (fee.status === 'disbursed') return '已核發'
+  if (fee.status === 'reviewed') return '待核發'
   if (fee.status === 'rejected') return '已退件'
   if (fee.receipt_requested_at) return '補件'
   return '待審核'
@@ -659,15 +740,30 @@ function avatarColor(id: number): string {
   return colors[id % colors.length]!
 }
 
-async function onApprove(fee: TaskFee) {
+async function onReview(fee: TaskFee) {
   busyId.value = fee.id
-  busyAction.value = 'approve'
+  busyAction.value = 'review'
   try {
-    await feeStore.approveTaskFee(fee)
-    toast.success('已核准')
+    await feeStore.reviewTaskFee(fee)
+    toast.success('已審核')
     await store.fetch()
   } catch (e: any) {
-    toast.error(e?.response?.data?.message ?? '核准失敗')
+    toast.error(e?.response?.data?.message ?? '審核失敗')
+  } finally {
+    busyId.value = null
+    busyAction.value = null
+  }
+}
+
+async function onDisburse(fee: TaskFee) {
+  busyId.value = fee.id
+  busyAction.value = 'disburse'
+  try {
+    await feeStore.disburseTaskFee(fee)
+    toast.success('已核發')
+    await store.fetch()
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? '核發失敗')
   } finally {
     busyId.value = null
     busyAction.value = null

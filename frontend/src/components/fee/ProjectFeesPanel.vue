@@ -389,10 +389,16 @@ const taskFees = computed<TaskFee[]>(() => feeStore.taskFeesByProject[props.proj
 const loadingTaskFees = computed(() => feeStore.loading.projectTask)
 
 function statusColor(s: FeeStatus): string {
-  return s === 'approved' ? 'success' : s === 'pending' ? 'warning' : 'error'
+  if (s === 'disbursed') return 'success'
+  if (s === 'reviewed') return 'info'
+  if (s === 'pending') return 'warning'
+  return 'error'
 }
 function statusLabel(s: FeeStatus): string {
-  return s === 'approved' ? '已核定' : s === 'pending' ? '審核中' : '退件'
+  if (s === 'disbursed') return '已核發'
+  if (s === 'reviewed') return '待核發'
+  if (s === 'pending') return '審核中'
+  return '退件'
 }
 
 const expanded = reactive<Record<number, boolean>>({})

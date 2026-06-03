@@ -149,9 +149,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('task-fees/{fee}',  [TaskFeeController::class, 'update']);
     Route::delete('task-fees/{fee}', [TaskFeeController::class, 'destroy']);
     Route::post('task-fees/{fee}/resubmit',         [TaskFeeController::class, 'resubmit']);
-    Route::post('task-fees/{fee}/approve',          [TaskFeeController::class, 'approve']);
+    Route::post('task-fees/{fee}/review',           [TaskFeeController::class, 'review']);
+    Route::post('task-fees/{fee}/disburse',         [TaskFeeController::class, 'disburse']);
     Route::post('task-fees/{fee}/reject',           [TaskFeeController::class, 'reject']);
-    Route::post('task-fees/{fee}/unapprove',        [TaskFeeController::class, 'unapprove']);
+    Route::post('task-fees/{fee}/unreview',         [TaskFeeController::class, 'unreview']);
+    Route::post('task-fees/{fee}/undisburse',       [TaskFeeController::class, 'undisburse']);
     Route::post('task-fees/{fee}/request-receipt',  [TaskFeeController::class, 'requestReceipt']);
 
     // Project admin fee actions

@@ -41,7 +41,7 @@ class TaskFeeTest extends TestCase
         ]);
         $this->admin->update(['company_id' => $company->id]);
 
-        $this->manager     = User::factory()->create(['role' => 'manager', 'status' => 'active', 'company_id' => $company->id]);
+        $this->manager     = User::factory()->create(['role' => 'boss', 'status' => 'active', 'company_id' => $company->id]);
         $this->member      = User::factory()->create(['role' => 'member',  'status' => 'active', 'company_id' => $company->id]);
         $this->otherMember = User::factory()->create(['role' => 'member',  'status' => 'active', 'company_id' => $company->id]);
 
@@ -167,18 +167,18 @@ class TaskFeeTest extends TestCase
         $fee = TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'pending']);
 
         $this->actingAs($this->manager)
-            ->postJson("/api/task-fees/{$fee->id}/approve")
+            ->postJson("/api/task-fees/{$fee->id}/review")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'approved']);
+            ->assertJsonFragment(['status' => 'reviewed']);
 
         $fee->refresh();
         $this->assertEquals($this->manager->id, $fee->reviewed_by);
         $this->assertNotNull($fee->reviewed_at);
 
         $this->assertDatabaseHas('task_fee_state_logs', [
-            'task_fee_id' => $fee->id, 'from_status' => 'pending', 'to_status' => 'approved', 'actor_id' => $this->manager->id,
+            'task_fee_id' => $fee->id, 'from_status' => 'pending', 'to_status' => 'reviewed', 'actor_id' => $this->manager->id,
         ]);
-        $this->assertDatabaseHas('notifications', ['user_id' => $this->member->id, 'type' => 'fee_approved']);
+        $this->assertDatabaseHas('notifications', ['user_id' => $this->member->id, 'type' => 'fee_reviewed']);
     }
 
     public function test_manager_rejects_with_reason(): void
@@ -218,19 +218,19 @@ class TaskFeeTest extends TestCase
     {
         $fee = TaskFee::create([
             'task_id' => $this->task->id, 'project_id' => $this->project->id,
-            'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'approved',
+            'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'reviewed',
             'reviewed_by' => $this->manager->id, 'reviewed_at' => now(),
         ]);
 
         $this->actingAs($this->manager)
-            ->postJson("/api/task-fees/{$fee->id}/unapprove", ['unapprove_reason' => '金額需確認'])
+            ->postJson("/api/task-fees/{$fee->id}/unreview", ['unapprove_reason' => '金額需確認'])
             ->assertOk()
             ->assertJsonFragment(['status' => 'pending', 'unapprove_reason' => '金額需確認']);
 
         $fee->refresh();
         $this->assertEquals($this->manager->id, $fee->unapproved_by);
         $this->assertDatabaseHas('task_fee_state_logs', [
-            'task_fee_id' => $fee->id, 'from_status' => 'approved', 'to_status' => 'pending', 'reason' => '金額需確認',
+            'task_fee_id' => $fee->id, 'from_status' => 'reviewed', 'to_status' => 'pending', 'reason' => '金額需確認',
         ]);
         $this->assertDatabaseHas('notifications', ['user_id' => $this->member->id, 'type' => 'fee_unapproved']);
     }
@@ -240,7 +240,7 @@ class TaskFeeTest extends TestCase
         $fee = TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'pending']);
 
         $this->actingAs($this->member)
-            ->postJson("/api/task-fees/{$fee->id}/approve")
+            ->postJson("/api/task-fees/{$fee->id}/review")
             ->assertForbidden();
     }
 
@@ -256,11 +256,11 @@ class TaskFeeTest extends TestCase
         $this->assertFalse($ids->contains($other->id));
     }
 
-    public function test_fee_summary_aggregates_approved_task_fees_and_admin_fees(): void
+    public function test_fee_summary_aggregates_disbursed_task_fees_and_admin_fees(): void
     {
-        // 2 approved + 1 pending task fees
-        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 100, 'status' => 'approved']);
-        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 200, 'status' => 'approved']);
+        // 2 disbursed + 1 pending task fees
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 100, 'status' => 'disbursed']);
+        TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 200, 'status' => 'disbursed']);
         TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 50,  'status' => 'pending']);
 
         $this->project->adminFees()->create([
@@ -326,7 +326,7 @@ class TaskFeeTest extends TestCase
         // Simulate the second-of-two-managers-race: fee already approved
         $fee = TaskFee::create([
             'task_id' => $this->task->id, 'project_id' => $this->project->id,
-            'submitted_by' => $this->member->id, 'amount' => 100, 'status' => 'approved',
+            'submitted_by' => $this->member->id, 'amount' => 100, 'status' => 'reviewed',
             'reviewed_by' => $this->manager->id, 'reviewed_at' => now(),
         ]);
 
@@ -334,7 +334,7 @@ class TaskFeeTest extends TestCase
         // To exercise the race guard specifically we'd need to bypass policy.
         // Instead assert the policy already prevents the corrupt write:
         $this->actingAs($this->manager)
-            ->postJson("/api/task-fees/{$fee->id}/approve")
+            ->postJson("/api/task-fees/{$fee->id}/review")
             ->assertForbidden();
 
         // And only one state log row regardless of repeated approve attempts:

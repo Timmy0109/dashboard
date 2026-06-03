@@ -22,9 +22,9 @@ class CompanySeeder extends Seeder
             'created_by' => $admin->id,
         ]);
 
-        // Assign manager and member to the company
-        User::where('role', 'manager')->update(['company_id' => $company->id]);
-        User::where('role', 'member')->update(['company_id' => $company->id]);
+        // Assign boss / accountant / member to the company
+        User::whereIn('role', ['boss', 'accountant', 'member'])
+            ->update(['company_id' => $company->id]);
 
         // Seed all default features for the demo company
         $defaultKeys = Feature::defaults();

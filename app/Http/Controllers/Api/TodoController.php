@@ -16,7 +16,7 @@ class TodoController extends Controller
 
         if ($user->isAdmin()) {
             $query = Task::with(['project', 'assignee', 'status', 'priority']);
-        } elseif ($user->isManager()) {
+        } elseif ($user->canManage() || $user->isAccountant()) {
             $projectIds = Project::where('company_id', $user->company_id)->pluck('id');
             $query = Task::with(['project', 'assignee', 'status', 'priority'])
                 ->whereIn('project_id', $projectIds);

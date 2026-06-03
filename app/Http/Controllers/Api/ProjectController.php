@@ -16,11 +16,11 @@ class ProjectController extends Controller
         $user = $request->user();
         $companyId = $request->query('company_id');
 
-        $projects = match ($user->role) {
-            'admin' => Project::with(['owner', 'category', 'priority', 'status'])
+        $projects = match (true) {
+            $user->isAdmin() => Project::with(['owner', 'category', 'priority', 'status'])
                 ->when($companyId, fn($q) => $q->where('company_id', $companyId))
                 ->latest()->get(),
-            'manager' => Project::with(['owner', 'category', 'priority', 'status'])
+            $user->canManage() || $user->isAccountant() => Project::with(['owner', 'category', 'priority', 'status'])
                 ->where('company_id', $user->company_id)
                 ->latest()->get(),
             default => Project::with(['owner', 'category', 'priority', 'status'])

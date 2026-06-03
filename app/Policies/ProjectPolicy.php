@@ -27,7 +27,7 @@ class ProjectPolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isManager();
+        return $user->canManage();
     }
 
     public function update(User $user, Project $project): bool

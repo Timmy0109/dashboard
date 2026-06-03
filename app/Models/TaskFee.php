@@ -12,15 +12,33 @@ class TaskFee extends Model
 {
     use SoftDeletes;
 
-    public const STATUS_PENDING  = 'pending';
-    public const STATUS_APPROVED = 'approved';
-    public const STATUS_REJECTED = 'rejected';
+    /**
+     * 3 階段 fee 工作流：
+     *  PENDING   待會計審核
+     *  REVIEWED  會計已審核，待老闆核發
+     *  DISBURSED 老闆已核發（最終）
+     *  REJECTED  任一階段退件
+     *
+     * Transitions：
+     *  pending  → reviewed   (canReviewFee:    accountant/boss/admin)
+     *  pending  → rejected   (canReviewFee)
+     *  reviewed → disbursed  (canDisburseFee:  boss/admin)
+     *  reviewed → pending    (canReviewFee, 改回待審)
+     *  reviewed → rejected   (canDisburseFee)
+     *  disbursed→ reviewed   (canDisburseFee, 撤回核發)
+     *  rejected → pending    (submitter / canReviewFee, resubmit)
+     */
+    public const STATUS_PENDING   = 'pending';
+    public const STATUS_REVIEWED  = 'reviewed';
+    public const STATUS_DISBURSED = 'disbursed';
+    public const STATUS_REJECTED  = 'rejected';
 
     protected $fillable = [
         'task_id', 'project_id', 'submitted_by',
         'amount', 'note',
         'status',
         'reviewed_by', 'reviewed_at', 'reject_reason',
+        'disbursed_by', 'disbursed_at',
         'unapproved_by', 'unapproved_at', 'unapprove_reason',
         'receipt_requested_at', 'receipt_requested_by', 'receipt_request_message',
     ];
@@ -30,6 +48,7 @@ class TaskFee extends Model
         return [
             'amount'               => 'decimal:2',
             'reviewed_at'          => 'datetime',
+            'disbursed_at'         => 'datetime',
             'unapproved_at'        => 'datetime',
             'receipt_requested_at' => 'datetime',
         ];
@@ -55,6 +74,11 @@ class TaskFee extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function disburser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'disbursed_by');
+    }
+
     public function unapprover(): BelongsTo
     {
         return $this->belongsTo(User::class, 'unapproved_by');
@@ -77,7 +101,8 @@ class TaskFee extends Model
     }
 
     public function isPending(): bool   { return $this->status === self::STATUS_PENDING; }
-    public function isApproved(): bool  { return $this->status === self::STATUS_APPROVED; }
+    public function isReviewed(): bool  { return $this->status === self::STATUS_REVIEWED; }
+    public function isDisbursed(): bool { return $this->status === self::STATUS_DISBURSED; }
     public function isRejected(): bool  { return $this->status === self::STATUS_REJECTED; }
 
     /**
@@ -99,11 +124,12 @@ class TaskFee extends Model
 
             $from = $fresh->status;
 
-            // 合法 transition 守護（防 race / 防 controller 漏判）
+            // 合法 transition 守護
             $valid = match (true) {
-                $from === self::STATUS_PENDING  && in_array($newStatus, [self::STATUS_APPROVED, self::STATUS_REJECTED], true) => true,
-                $from === self::STATUS_REJECTED && $newStatus === self::STATUS_PENDING  => true,
-                $from === self::STATUS_APPROVED && $newStatus === self::STATUS_PENDING  => true,
+                $from === self::STATUS_PENDING   && in_array($newStatus, [self::STATUS_REVIEWED, self::STATUS_REJECTED], true) => true,
+                $from === self::STATUS_REVIEWED  && in_array($newStatus, [self::STATUS_DISBURSED, self::STATUS_REJECTED, self::STATUS_PENDING], true) => true,
+                $from === self::STATUS_DISBURSED && $newStatus === self::STATUS_REVIEWED => true,
+                $from === self::STATUS_REJECTED  && $newStatus === self::STATUS_PENDING  => true,
                 default => false,
             };
             if (! $valid) {
@@ -119,28 +145,35 @@ class TaskFee extends Model
                 'receipt_request_message' => null,
             ];
 
-            if ($newStatus === self::STATUS_APPROVED) {
-                $updates['reviewed_by']      = $actor->id;
-                $updates['reviewed_at']      = $now;
-                $updates['reject_reason']    = null;
-                // 重新核准 → 清掉先前的取消核准紀錄
-                $updates['unapproved_by']    = null;
-                $updates['unapproved_at']    = null;
-                $updates['unapprove_reason'] = null;
+            if ($newStatus === self::STATUS_REVIEWED && $from === self::STATUS_PENDING) {
+                // 一階審核通過：記 reviewer + 清退件殘留
+                $updates['reviewed_by']   = $actor->id;
+                $updates['reviewed_at']   = $now;
+                $updates['reject_reason'] = null;
+            } elseif ($newStatus === self::STATUS_DISBURSED && $from === self::STATUS_REVIEWED) {
+                // 二階核發：記 disburser
+                $updates['disbursed_by'] = $actor->id;
+                $updates['disbursed_at'] = $now;
             } elseif ($newStatus === self::STATUS_REJECTED) {
-                $updates['reviewed_by']      = $actor->id;
-                $updates['reviewed_at']      = $now;
-                $updates['reject_reason']    = $reason;
-                $updates['unapproved_by']    = null;
-                $updates['unapproved_at']    = null;
-                $updates['unapprove_reason'] = null;
-            } elseif ($from === self::STATUS_APPROVED && $newStatus === self::STATUS_PENDING) {
-                // unapprove
+                $updates['reviewed_by']   = $actor->id;
+                $updates['reviewed_at']   = $now;
+                $updates['reject_reason'] = $reason;
+            } elseif ($from === self::STATUS_REVIEWED && $newStatus === self::STATUS_PENDING) {
+                // 會計/老闆把已審回退到 pending（改回待審）
                 $updates['unapproved_by']    = $actor->id;
                 $updates['unapproved_at']    = $now;
                 $updates['unapprove_reason'] = $reason;
+                $updates['reviewed_by']      = null;
+                $updates['reviewed_at']      = null;
+            } elseif ($from === self::STATUS_DISBURSED && $newStatus === self::STATUS_REVIEWED) {
+                // 老闆撤回核發
+                $updates['unapproved_by']    = $actor->id;
+                $updates['unapproved_at']    = $now;
+                $updates['unapprove_reason'] = $reason;
+                $updates['disbursed_by']     = null;
+                $updates['disbursed_at']     = null;
             } elseif ($from === self::STATUS_REJECTED && $newStatus === self::STATUS_PENDING) {
-                // resubmit — clear stale reject metadata so UI doesn't show it on a pending row
+                // resubmit — clear stale reject metadata
                 $updates['reject_reason'] = null;
                 $updates['reviewed_by']   = null;
                 $updates['reviewed_at']   = null;

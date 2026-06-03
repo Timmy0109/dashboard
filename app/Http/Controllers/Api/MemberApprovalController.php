@@ -15,7 +15,7 @@ class MemberApprovalController extends Controller
     private function managerGuard(Request $request): ?JsonResponse
     {
         $user = $request->user();
-        if (! $user->isManager() && ! $user->isAdmin()) {
+        if (! $user->canManage()) {
             return response()->json(['message' => '權限不足'], 403);
         }
         if (! $user->isAdmin() && ! $user->company_id) {

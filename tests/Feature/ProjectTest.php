@@ -64,7 +64,7 @@ class ProjectTest extends TestCase
     {
         $admin   = $this->admin();
         $company = $this->makeCompany($admin, 'ABCD1234');
-        $manager = User::factory()->create(['role' => 'manager', 'status' => 'active', 'company_id' => $company->id]);
+        $manager = User::factory()->create(['role' => 'boss', 'status' => 'active', 'company_id' => $company->id]);
 
         $this->actingAs($manager)
             ->postJson('/api/projects', $this->projectPayload($manager))

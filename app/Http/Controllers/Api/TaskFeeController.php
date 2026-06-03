@@ -32,7 +32,7 @@ class TaskFeeController extends Controller
     }
 
     // GET /api/projects/{project}/task-fees — 整個專案的任務費用
-    //  - admin / manager: 全部
+    //  - admin / boss / 會計（canReviewFee）: 全部
     //  - member: 只看自己提的
     public function projectIndex(Request $request, \App\Models\Project $project): JsonResponse
     {
@@ -48,7 +48,7 @@ class TaskFeeController extends Controller
                 'attachments',
             ]);
 
-        if (! $user->isAdmin() && ! $user->isManager()) {
+        if (! $user->canReviewFee()) {
             $query->where('submitted_by', $user->id);
         }
 

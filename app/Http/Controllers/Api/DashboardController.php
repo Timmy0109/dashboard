@@ -16,7 +16,8 @@ class DashboardController extends Controller
 
         $projectQuery = match ($user->role) {
             'admin' => Project::query(),
-            'manager' => Project::where('owner_id', $user->id),
+            'boss' => Project::where('owner_id', $user->id),
+            'accountant' => Project::where('company_id', $user->company_id),
             default => Project::whereHas('members', fn($q) => $q->where('user_id', $user->id)),
         };
 

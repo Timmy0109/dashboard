@@ -51,7 +51,8 @@ class Company extends Model
 
     public function managers(): HasMany
     {
-        return $this->hasMany(User::class)->where('role', 'manager');
+        // 4 角色制：boss 取代舊的 manager（負責審核 / 管理成員）
+        return $this->hasMany(User::class)->where('role', 'boss');
     }
 
     public function members(): HasMany

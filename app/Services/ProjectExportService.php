@@ -39,9 +39,10 @@ class ProjectExportService
     public function exportAllProjects(User $user): StreamedResponse
     {
         $projects = match ($user->role) {
-            'admin'   => Project::with(['owner', 'status', 'priority', 'tasks'])->latest()->get(),
-            'manager' => Project::with(['owner', 'status', 'priority', 'tasks'])->where('company_id', $user->company_id)->latest()->get(),
-            default   => Project::with(['owner', 'status', 'priority', 'tasks'])->whereHas('members', fn ($q) => $q->where('user_id', $user->id))->latest()->get(),
+            'admin'      => Project::with(['owner', 'status', 'priority', 'tasks'])->latest()->get(),
+            'boss',
+            'accountant' => Project::with(['owner', 'status', 'priority', 'tasks'])->where('company_id', $user->company_id)->latest()->get(),
+            default      => Project::with(['owner', 'status', 'priority', 'tasks'])->whereHas('members', fn ($q) => $q->where('user_id', $user->id))->latest()->get(),
         };
 
         $spreadsheet = new Spreadsheet();

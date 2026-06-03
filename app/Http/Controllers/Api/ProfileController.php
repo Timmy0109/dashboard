@@ -16,10 +16,11 @@ class ProfileController extends Controller
     public function update(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => 'required|string|max:100',
+            'name'      => 'required|string|max:100',
+            'job_title' => 'nullable|string|max:64',
         ]);
 
-        $request->user()->update(['name' => $data['name']]);
+        $request->user()->update($data);
         $user = $request->user()->fresh();
 
         return response()->json([
@@ -27,6 +28,7 @@ class ProfileController extends Controller
             'name'       => $user->name,
             'email'      => $user->email,
             'role'       => $user->role,
+            'job_title'  => $user->job_title,
             'avatar_url' => $user->avatar_url,
         ]);
     }

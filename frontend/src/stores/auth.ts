@@ -59,10 +59,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  async function updateProfile(name: string) {
-    const { data } = await api.put('/profile', { name })
+  async function updateProfile(name: string, jobTitle: string | null = null) {
+    const { data } = await api.put('/profile', { name, job_title: jobTitle })
     if (user.value) {
       user.value.name = data.name
+      user.value.job_title = data.job_title ?? null
       user.value.avatar_url = data.avatar_url
     }
   }

@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="d-flex align-center justify-space-between mb-4">
       <div>
-        <div class="text-caption text-grey">已核准總額</div>
+        <div class="text-caption text-grey">已核發總額</div>
         <div class="text-h6 font-weight-bold text-primary">{{ formatNT(approvedTotal) }}</div>
       </div>
       <v-btn
@@ -115,51 +115,68 @@
                 <v-tooltip activator="parent" text="重新提交" />
               </v-btn>
 
-              <!-- Manager/Admin: pending -->
+              <!-- 會計 / 老闆 / admin：pending（一階審核） -->
               <template v-if="canReview && fee.status === 'pending'">
-                <v-btn
-                  icon
-                  size="x-small"
-                  variant="text"
-                  color="success"
-                  @click="onApprove(fee)"
-                >
-                  <v-icon>mdi-check</v-icon>
-                  <v-tooltip activator="parent" text="核准" />
+                <v-btn icon size="x-small" variant="text" color="info" @click="onReview(fee)">
+                  <v-icon>mdi-check-decagram</v-icon>
+                  <v-tooltip activator="parent" text="審核通過" />
                 </v-btn>
-                <v-btn
-                  icon
-                  size="x-small"
-                  variant="text"
-                  color="error"
-                  @click="openReason('reject', fee)"
-                >
-                  <v-icon>mdi-close</v-icon>
-                  <v-tooltip activator="parent" text="駁回" />
-                </v-btn>
-                <v-btn
-                  icon
-                  size="x-small"
-                  variant="text"
-                  color="warning"
-                  @click="openReason('request_receipt', fee)"
-                >
+                <v-btn icon size="x-small" variant="text" color="warning" @click="openReason('request_receipt', fee)">
                   <v-icon>mdi-receipt-text-outline</v-icon>
                   <v-tooltip activator="parent" text="要求補件" />
                 </v-btn>
+                <v-btn icon size="x-small" variant="text" color="error" @click="openReason('reject', fee)">
+                  <v-icon>mdi-close</v-icon>
+                  <v-tooltip activator="parent" text="退件" />
+                </v-btn>
               </template>
 
-              <!-- Manager/Admin: disbursed (撤回核發) -->
+              <!-- 老闆 / admin：reviewed（二階核發） -->
+              <template v-if="canDisburse && fee.status === 'reviewed'">
+                <v-btn icon size="x-small" variant="text" color="success" @click="onDisburse(fee)">
+                  <v-icon>mdi-cash-check</v-icon>
+                  <v-tooltip activator="parent" text="核發" />
+                </v-btn>
+                <v-btn icon size="x-small" variant="text" color="grey-darken-1" @click="openReason('unreview', fee)">
+                  <v-icon>mdi-undo-variant</v-icon>
+                  <v-tooltip activator="parent" text="改回待審" />
+                </v-btn>
+                <v-btn icon size="x-small" variant="text" color="error" @click="openReason('reject', fee)">
+                  <v-icon>mdi-close</v-icon>
+                  <v-tooltip activator="parent" text="退件" />
+                </v-btn>
+              </template>
+
+              <!-- 會計（無核發權）：reviewed 只能改回待審或退件 -->
+              <template v-if="canReview && !canDisburse && fee.status === 'reviewed'">
+                <v-btn icon size="x-small" variant="text" color="grey-darken-1" @click="openReason('unreview', fee)">
+                  <v-icon>mdi-undo-variant</v-icon>
+                  <v-tooltip activator="parent" text="改回待審" />
+                </v-btn>
+                <v-btn icon size="x-small" variant="text" color="error" @click="openReason('reject', fee)">
+                  <v-icon>mdi-close</v-icon>
+                  <v-tooltip activator="parent" text="退件" />
+                </v-btn>
+              </template>
+
+              <!-- 老闆 / admin：disbursed（撤回核發） -->
               <v-btn
                 v-if="canDisburse && fee.status === 'disbursed'"
-                icon
-                size="x-small"
-                variant="text"
-                color="warning"
-                @click="openReason('unapprove', fee)"
+                icon size="x-small" variant="text" color="grey-darken-1"
+                @click="openReason('undisburse', fee)"
               >
                 <v-icon>mdi-undo-variant</v-icon>
-                <v-tooltip activator="parent" text="反悔" />
+                <v-tooltip activator="parent" text="撤回核發" />
+              </v-btn>
+
+              <!-- 會計 / 老闆 / admin：rejected（取消退件） -->
+              <v-btn
+                v-if="canReview && fee.status === 'rejected' && !isSubmitter(fee)"
+                icon size="x-small" variant="text" color="grey-darken-1"
+                @click="onResubmit(fee)"
+              >
+                <v-icon>mdi-restore</v-icon>
+                <v-tooltip activator="parent" text="改回待審" />
               </v-btn>
 
               <v-icon size="18" class="text-grey ml-1">
@@ -176,12 +193,20 @@
               <div class="text-caption text-grey">備註</div>
               <div class="text-body-2">{{ fee.note }}</div>
             </div>
+            <div v-if="fee.reviewer && fee.reviewed_at && fee.status !== 'rejected'" class="mb-2">
+              <div class="text-caption text-info">已審核</div>
+              <div class="text-body-2">{{ fee.reviewer.name }} · {{ formatTime(fee.reviewed_at) }}</div>
+            </div>
+            <div v-if="fee.disburser && fee.disbursed_at" class="mb-2">
+              <div class="text-caption text-success">已核發</div>
+              <div class="text-body-2">{{ fee.disburser.name }} · {{ formatTime(fee.disbursed_at) }}</div>
+            </div>
             <div v-if="fee.reject_reason" class="mb-2">
-              <div class="text-caption text-error">駁回原因</div>
+              <div class="text-caption text-error">退件原因</div>
               <div class="text-body-2">{{ fee.reject_reason }}</div>
             </div>
             <div v-if="fee.unapprove_reason" class="mb-2">
-              <div class="text-caption text-warning">反悔原因</div>
+              <div class="text-caption text-grey-darken-1">改回待審 / 撤回核發原因</div>
               <div class="text-body-2">{{ fee.unapprove_reason }}</div>
             </div>
             <div v-if="fee.attachments && fee.attachments.length" class="mb-1">
@@ -319,8 +344,8 @@ function closeForm() {
   editingFee.value = null
 }
 
-// ── Reason dialog (shared for reject / unapprove / request_receipt) ──
-type ReasonMode = 'reject' | 'unapprove' | 'request_receipt'
+// ── Reason dialog (shared for reject / unreview / undisburse / request_receipt) ──
+type ReasonMode = 'reject' | 'unreview' | 'undisburse' | 'request_receipt'
 const reasonDialog = reactive({
   open: false,
   mode: 'reject' as ReasonMode,
@@ -331,8 +356,9 @@ const reasonDialog = reactive({
 
 const reasonTitle = computed(() => {
   switch (reasonDialog.mode) {
-    case 'reject': return '駁回原因'
-    case 'unapprove': return '反悔原因'
+    case 'reject':          return '退件原因'
+    case 'unreview':        return '改回待審原因'
+    case 'undisburse':      return '撤回核發原因'
     case 'request_receipt': return '請補件'
   }
 })
@@ -362,10 +388,13 @@ async function confirmReason() {
   try {
     if (reasonDialog.mode === 'reject') {
       await feeStore.rejectTaskFee(fee, text)
-      toast.success('已駁回')
-    } else if (reasonDialog.mode === 'unapprove') {
+      toast.success('已退件')
+    } else if (reasonDialog.mode === 'unreview') {
       await feeStore.unreviewTaskFee(fee, text)
       toast.success('已改回待審')
+    } else if (reasonDialog.mode === 'undisburse') {
+      await feeStore.undisburseTaskFee(fee, text)
+      toast.success('已撤回核發')
     } else {
       await feeStore.requestReceipt(fee, text || undefined)
       toast.success('已要求補件')
@@ -380,16 +409,23 @@ async function confirmReason() {
 }
 
 // ── Direct actions ────────────────────────────────────────────────────
-async function onApprove(fee: TaskFee) {
+async function onReview(fee: TaskFee) {
   try {
-    // 暫時 C5 過渡：點「核准」=「會計審核通過 + 老闆核發」一次完成
-    // C6 會把按鈕拆成「審核」「核發」
-    if (fee.status === 'pending') await feeStore.reviewTaskFee(fee)
-    if (fee.status === 'reviewed' && auth.canDisburseFee) await feeStore.disburseTaskFee(fee)
-    toast.success('已核准')
+    await feeStore.reviewTaskFee(fee)
+    toast.success('審核通過')
   } catch (err: unknown) {
     const e = err as { response?: { data?: { message?: string } } }
-    toast.error(e?.response?.data?.message ?? '核准失敗')
+    toast.error(e?.response?.data?.message ?? '審核失敗')
+  }
+}
+
+async function onDisburse(fee: TaskFee) {
+  try {
+    await feeStore.disburseTaskFee(fee)
+    toast.success('已核發')
+  } catch (err: unknown) {
+    const e = err as { response?: { data?: { message?: string } } }
+    toast.error(e?.response?.data?.message ?? '核發失敗')
   }
 }
 
@@ -420,14 +456,16 @@ function formatNT(n: number) {
 }
 
 function statusColor(s: FeeStatus) {
-  if (s === 'approved') return 'success'
-  if (s === 'rejected') return 'error'
-  return 'warning'
+  if (s === 'disbursed') return 'success'
+  if (s === 'rejected')  return 'error'
+  if (s === 'reviewed')  return 'info'
+  return 'warning'  // pending
 }
 function statusLabel(s: FeeStatus) {
-  if (s === 'approved') return '已核准'
-  if (s === 'rejected') return '已駁回'
-  return '待審'
+  if (s === 'disbursed') return '已核發'
+  if (s === 'rejected')  return '已退件'
+  if (s === 'reviewed')  return '待核發'
+  return '待審核'
 }
 
 function truncate(s: string, n: number) {

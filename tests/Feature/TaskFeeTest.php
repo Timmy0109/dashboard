@@ -181,6 +181,91 @@ class TaskFeeTest extends TestCase
         $this->assertDatabaseHas('notifications', ['user_id' => $this->member->id, 'type' => 'fee_reviewed']);
     }
 
+    public function test_boss_disburses_reviewed_fee(): void
+    {
+        $fee = TaskFee::create([
+            'task_id' => $this->task->id, 'project_id' => $this->project->id,
+            'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'reviewed',
+            'reviewed_by' => $this->manager->id, 'reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($this->manager) // role='boss' in setUp
+            ->postJson("/api/task-fees/{$fee->id}/disburse")
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'disbursed']);
+
+        $fee->refresh();
+        $this->assertEquals($this->manager->id, $fee->disbursed_by);
+        $this->assertNotNull($fee->disbursed_at);
+
+        $this->assertDatabaseHas('task_fee_state_logs', [
+            'task_fee_id' => $fee->id, 'from_status' => 'reviewed', 'to_status' => 'disbursed',
+        ]);
+        $this->assertDatabaseHas('notifications', ['user_id' => $this->member->id, 'type' => 'fee_disbursed']);
+    }
+
+    public function test_accountant_can_review_but_cannot_disburse(): void
+    {
+        $accountant = User::factory()->create([
+            'role' => 'accountant', 'status' => 'active', 'company_id' => $this->project->company_id,
+        ]);
+        // 會計需是專案成員才有 project scope
+        $this->project->members()->attach($accountant->id, ['role' => 'member']);
+
+        $fee = TaskFee::create([
+            'task_id' => $this->task->id, 'project_id' => $this->project->id,
+            'submitted_by' => $this->member->id, 'amount' => 100, 'status' => 'pending',
+        ]);
+
+        // 會計可以一階審核
+        $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/review")
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'reviewed']);
+
+        $fee->refresh();
+
+        // 但不可二階核發
+        $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/disburse")
+            ->assertForbidden();
+    }
+
+    public function test_boss_can_undisburse_disbursed_fee(): void
+    {
+        $fee = TaskFee::create([
+            'task_id' => $this->task->id, 'project_id' => $this->project->id,
+            'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'disbursed',
+            'reviewed_by' => $this->manager->id, 'reviewed_at' => now(),
+            'disbursed_by' => $this->manager->id, 'disbursed_at' => now(),
+        ]);
+
+        $this->actingAs($this->manager)
+            ->postJson("/api/task-fees/{$fee->id}/undisburse", ['unapprove_reason' => '金額需確認'])
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'reviewed']);
+
+        $fee->refresh();
+        $this->assertNull($fee->disbursed_by);
+        $this->assertNull($fee->disbursed_at);
+    }
+
+    public function test_member_cannot_review_or_disburse(): void
+    {
+        $fee = TaskFee::create([
+            'task_id' => $this->task->id, 'project_id' => $this->project->id,
+            'submitted_by' => $this->otherMember->id, 'amount' => 100, 'status' => 'pending',
+        ]);
+
+        $this->actingAs($this->member)
+            ->postJson("/api/task-fees/{$fee->id}/review")
+            ->assertForbidden();
+
+        $this->actingAs($this->member)
+            ->postJson("/api/task-fees/{$fee->id}/disburse")
+            ->assertForbidden();
+    }
+
     public function test_manager_rejects_with_reason(): void
     {
         $fee = TaskFee::create(['task_id' => $this->task->id, 'project_id' => $this->project->id, 'submitted_by' => $this->member->id, 'amount' => 500, 'status' => 'pending']);

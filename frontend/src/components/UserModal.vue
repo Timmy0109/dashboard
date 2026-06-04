@@ -105,12 +105,7 @@
                 <v-select
                   v-model="form.role"
                   label="角色"
-                  :items="[
-                    { title: '管理員', value: 'admin' },
-                    { title: '老闆', value: 'boss' },
-                    { title: '會計', value: 'accountant' },
-                    { title: '成員', value: 'member' },
-                  ]"
+                  :items="roleItems"
                   variant="outlined"
                   density="comfortable"
                   hide-details="auto"
@@ -173,6 +168,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/lib/axios'
 import { useLookupStore } from '@/stores/lookup'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
   user: Record<string, unknown> | null
@@ -183,6 +179,23 @@ const emit = defineEmits<{ close: []; saved: [] }>()
 
 const lookup = useLookupStore()
 onMounted(() => lookup.fetch(props.companyId))
+
+const auth = useAuthStore()
+
+// 非 admin（老闆）僅能指派 member / accountant；admin 可指派全部角色
+const roleItems = computed(() =>
+  auth.isAdmin
+    ? [
+        { title: '管理員', value: 'admin' },
+        { title: '老闆', value: 'boss' },
+        { title: '會計', value: 'accountant' },
+        { title: '成員', value: 'member' },
+      ]
+    : [
+        { title: '會計', value: 'accountant' },
+        { title: '成員', value: 'member' },
+      ],
+)
 
 const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const saving = ref(false)
@@ -248,7 +261,12 @@ async function handleSubmit() {
     if (form.value.password) payload.password = form.value.password
 
     if (isEdit.value) {
-      await api.put(`/users/${props.user!.id}`, payload)
+      // admin 走系統管理 CRUD；老闆走 manager 成員端點（避開 /users 的 admin 守門）
+      if (auth.isAdmin) {
+        await api.put(`/users/${props.user!.id}`, payload)
+      } else {
+        await api.put(`/manager/members/${props.user!.id}`, payload)
+      }
     } else {
       if (props.companyId != null) payload.company_id = props.companyId
       await api.post('/users', payload)

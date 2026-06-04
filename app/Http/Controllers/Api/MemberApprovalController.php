@@ -40,6 +40,8 @@ class MemberApprovalController extends Controller
             'id'         => $u->id,
             'name'       => $u->name,
             'email'      => $u->email,
+            'role'       => $u->role,
+            'job_title'  => $u->job_title,
             'status'     => $u->status,
             'created_at' => $u->created_at?->format('Y-m-d'),
         ]);
@@ -80,11 +82,14 @@ class MemberApprovalController extends Controller
             return response()->json(['message' => '無權限操作此成員'], 403);
         }
 
+        // boss 僅可指派 member / accountant；admin 走 /users 端點，此處同樣不開放升級為 admin/boss
         $data = $request->validate([
-            'name'     => 'sometimes|string|max:100',
-            'email'    => 'sometimes|email|unique:users,email,' . $user->id,
-            'password' => ['sometimes', Password::min(8)],
-            'status'   => 'sometimes|in:active,inactive',
+            'name'      => 'sometimes|string|max:100',
+            'email'     => 'sometimes|email|unique:users,email,' . $user->id,
+            'password'  => ['sometimes', Password::min(8)],
+            'role'      => 'sometimes|in:member,accountant',
+            'job_title' => 'sometimes|nullable|string|max:100',
+            'status'    => 'sometimes|in:active,inactive',
         ]);
 
         if (isset($data['password'])) {
@@ -99,10 +104,12 @@ class MemberApprovalController extends Controller
         }
 
         return response()->json([
-            'id'     => $user->id,
-            'name'   => $user->name,
-            'email'  => $user->email,
-            'status' => $user->status,
+            'id'        => $user->id,
+            'name'      => $user->name,
+            'email'     => $user->email,
+            'role'      => $user->role,
+            'job_title' => $user->job_title,
+            'status'    => $user->status,
         ]);
     }
 

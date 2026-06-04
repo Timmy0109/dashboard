@@ -34,7 +34,7 @@ class TaskAttachmentController extends Controller
     // POST /projects/{project}/tasks/{task}/attachments
     public function store(Request $request, Project $project, Task $task): JsonResponse
     {
-        $this->authorize('view', $project);
+        $this->authorize('member', $project);
 
         $request->validate([
             'file'        => ['required', 'file', 'max:51200'], // 50 MB in KB for Laravel validator
@@ -109,7 +109,7 @@ class TaskAttachmentController extends Controller
     // DELETE /projects/{project}/tasks/{task}/attachments/{attachment}
     public function destroy(Request $request, Project $project, Task $task, TaskAttachment $attachment): JsonResponse
     {
-        $this->authorize('view', $project);
+        $this->authorize('member', $project);
 
         $canDelete = $attachment->uploader_id === $request->user()->id
             || $request->user()->isAdmin()

@@ -45,7 +45,7 @@ class TaskCommentController extends Controller
     // POST /projects/{project}/tasks/{task}/comments
     public function store(Request $request, Project $project, Task $task): JsonResponse
     {
-        $this->authorize('view', $project);
+        $this->authorize('member', $project);
 
         $data = $request->validate(['body' => 'required|string|max:2000']);
 
@@ -74,7 +74,7 @@ class TaskCommentController extends Controller
     // Replies are 1 level deep. Reply-to-reply is rejected with 422.
     public function reply(Request $request, Project $project, Task $task, TaskComment $comment): JsonResponse
     {
-        $this->authorize('view', $project);
+        $this->authorize('member', $project);
 
         if ($comment->task_id !== $task->id) {
             abort(404);
@@ -109,7 +109,7 @@ class TaskCommentController extends Controller
     // DELETE /projects/{project}/tasks/{task}/comments/{comment}
     public function destroy(Request $request, Project $project, Task $task, TaskComment $comment): JsonResponse
     {
-        $this->authorize('view', $project);
+        $this->authorize('member', $project);
 
         if ($comment->user_id !== $request->user()->id && ! $request->user()->isAdmin()) {
             return response()->json(['message' => '只能刪除自己的留言'], 403);

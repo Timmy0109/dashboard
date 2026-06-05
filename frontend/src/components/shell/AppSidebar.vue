@@ -44,7 +44,7 @@ const navItems = computed<NavItem[]>(() => {
     items.push({ to: '/stats', icon: 'mdi-chart-bar', label: '統計分析' })
   }
 
-  if (auth.canReviewFee) {
+  if (auth.canAccessFees) {
     items.push({ to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' })
   }
 

@@ -20,13 +20,13 @@ class TaskFee extends Model
      *  REJECTED  任一階段退件
      *
      * Transitions：
-     *  pending  → reviewed   (canReviewFee:    accountant/boss/admin)
+     *  pending  → reviewed   (canReviewFee:    boss)
      *  pending  → rejected   (canReviewFee)
-     *  reviewed → disbursed  (canDisburseFee:  boss/admin)
-     *  reviewed → pending    (canReviewFee, 改回待審)
-     *  reviewed → rejected   (canDisburseFee)
+     *  reviewed → disbursed  (canDisburseFee:  accountant；無會計的公司由 boss 兼任)
+     *  reviewed → pending    (canAccessFees, 改回待審)
+     *  reviewed → rejected   (canReviewFee 或 canDisburseFee)
      *  disbursed→ reviewed   (canDisburseFee, 撤回核發)
-     *  rejected → pending    (submitter / canReviewFee, resubmit)
+     *  rejected → pending    (submitter / canAccessFees, resubmit)
      */
     public const STATUS_PENDING   = 'pending';
     public const STATUS_REVIEWED  = 'reviewed';

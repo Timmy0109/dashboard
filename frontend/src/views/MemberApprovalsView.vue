@@ -298,6 +298,47 @@
       @close="workloadUserId = null"
       @edit="onWorkloadEdit"
     />
+
+    <!-- 核准開通：指派職稱 -->
+    <v-dialog
+      :model-value="approveTarget !== null"
+      max-width="420"
+      persistent
+      @update:model-value="approveTarget = null"
+    >
+      <v-card rounded="xl">
+        <v-card-title class="pa-5 pb-3 text-body-1 font-weight-semibold">
+          核准 {{ approveTarget?.name }}
+        </v-card-title>
+        <v-card-text class="px-5 pb-2">
+          <div class="text-caption text-medium-emphasis mb-3">
+            開通時指派職稱（成員本人之後不可自改，僅老闆 / 管理員可調整）
+          </div>
+          <v-select
+            v-model="approveJobTitle"
+            label="職稱"
+            placeholder="可不選"
+            :items="lookup.jobTitles"
+            item-title="name"
+            item-value="name"
+            clearable
+            variant="outlined"
+            density="comfortable"
+            hide-details="auto"
+            no-data-text="尚無職稱，請至設定管理新增"
+          />
+        </v-card-text>
+        <v-card-actions class="px-5 pb-4">
+          <v-btn variant="text" color="grey-darken-1" :disabled="approving" @click="approveTarget = null">
+            取消
+          </v-btn>
+          <v-spacer />
+          <v-btn color="success" variant="flat" rounded="lg" :loading="approving" @click="confirmApprove">
+            核准開通
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -306,6 +347,7 @@ import { ref, computed, onMounted } from "vue";
 import api from "@/lib/axios";
 import { useToast } from "@/composables/useToast";
 import { useAuthStore } from "@/stores/auth";
+import { useLookupStore } from "@/stores/lookup";
 import MemberWorkloadDialog from "@/components/MemberWorkloadDialog.vue";
 import UserModal from "@/components/UserModal.vue";
 import KPICard from "@/components/ui/KPICard.vue";
@@ -333,6 +375,7 @@ interface PendingMember {
 type StatusFilter = "all" | "active" | "pending" | "inactive";
 
 const auth = useAuthStore();
+const lookup = useLookupStore();
 const toast = useToast();
 const search = ref("");
 const statusFilter = ref<StatusFilter>("all");
@@ -445,17 +488,36 @@ async function openPendingDialog() {
   await fetchPending();
 }
 
-async function approve(p: PendingMember | Member) {
+// 開通時由管理者直接賦予職稱（成員本人之後不可自改）
+const approveTarget = ref<PendingMember | Member | null>(null);
+const approveJobTitle = ref<string | null>(null);
+const approving = ref(false);
+
+function approve(p: PendingMember | Member) {
+  approveTarget.value = p;
+  approveJobTitle.value = null;
+  lookup.fetch();
+}
+
+async function confirmApprove() {
+  const p = approveTarget.value;
+  if (!p) return;
+  approving.value = true;
   try {
-    await api.post(`/manager/members/${p.id}/approve`);
+    await api.post(`/manager/members/${p.id}/approve`, {
+      job_title: approveJobTitle.value,
+    });
     pending.value = pending.value.filter((m) => m.id !== p.id);
     const idx = members.value.findIndex((m) => m.id === p.id);
     if (idx !== -1) members.value[idx]!.status = "active";
     else await fetchMembers();
     toast.success(`已核准 ${p.name}`);
+    approveTarget.value = null;
   } catch (err: unknown) {
     const e = err as { response?: { data?: { message?: string } } };
     toast.error(e?.response?.data?.message ?? "操作失敗");
+  } finally {
+    approving.value = false;
   }
 }
 

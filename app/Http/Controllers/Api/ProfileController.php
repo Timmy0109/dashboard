@@ -13,11 +13,11 @@ use Illuminate\Validation\ValidationException;
 class ProfileController extends Controller
 {
     // PUT /api/profile
+    // 職稱由管理者（admin / boss）於開通或成員管理時指派，本人不可自改
     public function update(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'      => 'required|string|max:100',
-            'job_title' => 'nullable|string|max:64',
+            'name' => 'required|string|max:100',
         ]);
 
         $request->user()->update($data);

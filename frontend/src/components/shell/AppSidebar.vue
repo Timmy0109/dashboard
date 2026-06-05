@@ -34,6 +34,14 @@ const navItems = computed<NavItem[]>(() => {
     ]
   }
 
+  // 會計範圍收斂：只有財務相關功能（專案管理 / 每日任務 / 統計分析皆不需要）
+  if (auth.isAccountant) {
+    return [
+      { to: '/finance', icon: 'mdi-finance', label: '財務總覽' },
+      { to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' },
+    ]
+  }
+
   const items: NavItem[] = [
     { to: '/', icon: 'mdi-view-dashboard', label: '首頁總覽' },
     { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
@@ -45,6 +53,7 @@ const navItems = computed<NavItem[]>(() => {
   }
 
   if (auth.canAccessFees) {
+    items.push({ to: '/finance', icon: 'mdi-finance', label: '財務總覽' })
     items.push({ to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' })
   }
 

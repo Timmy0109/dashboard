@@ -12,6 +12,9 @@ interface User {
   role: UserRole
   job_title: string | null
   avatar_url: string | null
+  // 後端計算的能力旗標（核發權含「無會計→老闆兼任」規則，不可用 role 推算）
+  can_review_fee?: boolean
+  can_disburse_fee?: boolean
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -24,10 +27,13 @@ export const useAuthStore = defineStore('auth', () => {
   const isAccountant = computed(() => user.value?.role === 'accountant')
   const isMember = computed(() => user.value?.role === 'member')
 
-  // 費用審核流程不含 admin：一階審核 = 會計 + 老闆；二階核發 = 老闆
+  // 費用流程不含 admin：一階審核 = 老闆；二階核發 = 會計（無會計的公司由老闆兼任，後端計算）
+  // 旗標以後端為準，role 推算僅為舊回應的 fallback
+  const canReviewFee   = computed(() => user.value?.can_review_fee ?? user.value?.role === 'boss')
+  const canDisburseFee = computed(() => user.value?.can_disburse_fee ?? user.value?.role === 'accountant')
+  // 參與費用流程（一階或二階）→ 費用審核頁入口
+  const canAccessFees  = computed(() => canReviewFee.value || canDisburseFee.value)
   // 管理權（公司 / 專案 / 成員）仍含 admin
-  const canReviewFee   = computed(() => ['boss', 'accountant'].includes(user.value?.role ?? ''))
-  const canDisburseFee = computed(() => ['boss'].includes(user.value?.role ?? ''))
   const canManage      = computed(() => ['admin', 'boss'].includes(user.value?.role ?? ''))
 
   // 沿用舊名字當 alias，避免散布的 isManager check 全爆
@@ -84,7 +90,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user, loading, isLoggedIn,
     isAdmin, isBoss, isAccountant, isMember,
-    canReviewFee, canDisburseFee, canManage, canManageMembers,
+    canReviewFee, canDisburseFee, canAccessFees, canManage, canManageMembers,
     fetchUser, login, logout, updateProfile, updatePassword, updateAvatar,
   }
 })

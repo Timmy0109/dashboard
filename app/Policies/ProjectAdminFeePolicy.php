@@ -23,10 +23,10 @@ class ProjectAdminFeePolicy
     {
         if ($this->canWrite($user, $project)) return true;
 
-        // 會計（或其他 canReviewFee 角色）同公司唯讀
+        // 會計（或其他費用流程參與者）同公司唯讀
         return $user->company_id !== null
             && $user->company_id === $project->company_id
-            && $user->canReviewFee();
+            && $user->canAccessFees();
     }
 
     public function view(User $user, ProjectAdminFee $fee): bool

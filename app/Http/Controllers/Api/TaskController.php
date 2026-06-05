@@ -19,7 +19,7 @@ class TaskController extends Controller
 
         $user = $request->user();
         $scope = function ($q) use ($user) {
-            if (! $user->canReviewFee()) {
+            if (! $user->canAccessFees()) {
                 $q->where('submitted_by', $user->id);
             }
         };

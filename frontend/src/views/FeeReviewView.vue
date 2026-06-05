@@ -159,6 +159,7 @@
         <template #item.actions="{ item }">
           <div v-if="item.status === 'pending'" class="d-flex align-center justify-center gap-1" @click.stop>
             <v-btn
+              v-if="canReview"
               color="success"
               size="x-small"
               variant="flat"
@@ -175,6 +176,7 @@
               @click="onRequestReceipt(item)"
             >補件</v-btn>
             <v-btn
+              v-if="canReview"
               size="x-small"
               variant="outlined"
               color="error"
@@ -182,6 +184,7 @@
               :loading="busyId === item.id && busyAction === 'reject'"
               @click="onReject(item)"
             >退件</v-btn>
+            <span v-if="!canReview" class="text-caption text-medium-emphasis">待老闆審核</span>
           </div>
           <div v-else-if="item.status === 'reviewed'" class="d-flex align-center justify-center gap-1" @click.stop>
             <v-btn
@@ -378,6 +381,7 @@
           <v-btn variant="text" @click="detailDialog = false">關閉</v-btn>
           <v-spacer />
           <v-btn
+            v-if="canReview"
             variant="outlined"
             color="error"
             prepend-icon="mdi-close"
@@ -390,6 +394,7 @@
             @click="onRequestReceiptFromDetail(detailFee)"
           >補件</v-btn>
           <v-btn
+            v-if="canReview"
             color="success"
             variant="flat"
             prepend-icon="mdi-check"
@@ -568,7 +573,8 @@ const feeStore = useFeeStore()
 const auth = useAuthStore()
 const toast = useToast()
 
-// 二階核發僅 boss / admin（canDisburseFee）；會計只能一階審核
+// 一階審核 = 老闆（canReviewFee）；二階核發 = 會計（canDisburseFee，無會計的公司由老闆兼任）
+const canReview   = computed(() => auth.canReviewFee)
 const canDisburse = computed(() => auth.canDisburseFee)
 
 const kpi = computed(() => store.kpi)

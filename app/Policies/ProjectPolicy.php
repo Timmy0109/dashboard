@@ -22,13 +22,13 @@ class ProjectPolicy
             return true;
         }
 
-        // 同公司（company_id 相同且非 null）且可審核費用/可管理者，
+        // 同公司（company_id 相同且非 null）且參與費用流程/可管理者，
         // 取得「唯讀」檢視權：會計與同公司非 owner 老闆可看公司專案。
         // 一般 member 仍須是專案成員。寫入權（update/delete）不放寬。
         if (
             $user->company_id !== null
             && $user->company_id === $project->company_id
-            && ($user->canReviewFee() || $user->canManage())
+            && ($user->canAccessFees() || $user->canManage())
         ) {
             return true;
         }

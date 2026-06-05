@@ -155,4 +155,42 @@ class MemberApprovalTest extends TestCase
             ->assertJsonPath('name', 'Admin Edited')
             ->assertJsonPath('role', 'boss');
     }
+
+    /** 開通時由管理者直接賦予職稱 */
+    public function test_boss_can_assign_job_title_on_approve(): void
+    {
+        $company = $this->makeCompany();
+        $boss    = $this->boss($company);
+        $target  = User::factory()->create([
+            'role' => 'member', 'status' => 'pending', 'company_id' => $company->id,
+        ]);
+
+        $this->actingAs($boss)
+            ->postJson("/api/manager/members/{$target->id}/approve", ['job_title' => '美編'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $target->id, 'status' => 'active', 'job_title' => '美編',
+        ]);
+    }
+
+    /** 職稱由管理者指派，本人不可透過 profile 自改 */
+    public function test_member_cannot_change_own_job_title_via_profile(): void
+    {
+        $company = $this->makeCompany();
+        $target  = User::factory()->create([
+            'role' => 'member', 'status' => 'active',
+            'company_id' => $company->id, 'job_title' => '業助',
+        ]);
+
+        $this->actingAs($target)
+            ->putJson('/api/profile', ['name' => '改名字', 'job_title' => '老闆'])
+            ->assertOk()
+            ->assertJsonPath('name', '改名字')
+            ->assertJsonPath('job_title', '業助'); // 職稱不變
+
+        $this->assertDatabaseHas('users', [
+            'id' => $target->id, 'name' => '改名字', 'job_title' => '業助',
+        ]);
+    }
 }

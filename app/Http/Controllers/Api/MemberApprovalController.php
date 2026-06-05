@@ -137,7 +137,12 @@ class MemberApprovalController extends Controller
             return response()->json(['message' => '無權限操作此成員'], 403);
         }
 
-        $user->update(['status' => 'active']);
+        // 開通時由管理者（admin / boss）直接賦予職稱；本人之後不可自改
+        $data = $request->validate([
+            'job_title' => 'sometimes|nullable|string|max:100',
+        ]);
+
+        $user->update(['status' => 'active'] + $data);
         return response()->json(['message' => '已核准']);
     }
 

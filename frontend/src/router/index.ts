@@ -82,6 +82,12 @@ const router = createRouter({
           component: () => import('@/views/FeeReviewView.vue'),
           meta: { requiresAuth: true, managerOrAdmin: true },
         },
+        {
+          path: 'finance',
+          name: 'finance',
+          component: () => import('@/views/FinanceOverviewView.vue'),
+          meta: { requiresAuth: true, feesOnly: true },
+        },
       ],
     },
   ],
@@ -116,6 +122,21 @@ router.beforeEach(async (to) => {
   // 費用審核：僅費用流程參與者（老闆一階 / 會計二階）可進；admin 不參與費用
   if (to.meta.managerOrAdmin && !auth.canAccessFees) {
     return { name: 'dashboard' }
+  }
+
+  // 財務總覽：僅費用流程參與者可進
+  if (to.meta.feesOnly && !auth.canAccessFees) {
+    return { name: 'dashboard' }
+  }
+
+  // 會計範圍收斂：只保留財務（財務總覽 / 費用審核 / 專案詳情觀覽），
+  // 首頁總覽 / 專案管理 / 每日任務 / 統計分析一律導向財務總覽
+  if (
+    auth.isAccountant
+    && typeof to.name === 'string'
+    && ['dashboard', 'projects', 'todo', 'stats'].includes(to.name)
+  ) {
+    return { name: 'finance' }
   }
 })
 

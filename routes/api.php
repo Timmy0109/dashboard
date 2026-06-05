@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\TaskAttachmentController;
 use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\FeeReviewController;
+use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\TaskFeeController;
 use App\Http\Controllers\Api\TodoController;
 use App\Http\Controllers\Api\UserController;
@@ -106,6 +107,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Manager — fee reviews (cross-project)
     Route::get('manager/fee-reviews', [FeeReviewController::class, 'index']);
+
+    // 財務總覽（老闆 / 會計，公司範圍唯讀）
+    Route::get('finance/overview', [FinanceController::class, 'overview']);
 
     // Manager — member approval
     Route::prefix('manager/members')->group(function () {

@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import api from '@/lib/axios'
 import axios from 'axios'
 
-export type UserRole = 'admin' | 'boss' | 'accountant' | 'member'
+export type UserRole = 'admin' | 'boss' | 'manager' | 'accountant' | 'member'
 
 interface User {
   id: number
@@ -24,6 +24,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
   const isBoss = computed(() => user.value?.role === 'boss')
+  // 專案經理：管自己的專案 + 做任務 + 提費用；不參與費用審核
+  const isManager = computed(() => user.value?.role === 'manager')
   const isAccountant = computed(() => user.value?.role === 'accountant')
   const isMember = computed(() => user.value?.role === 'member')
 
@@ -35,6 +37,8 @@ export const useAuthStore = defineStore('auth', () => {
   const canAccessFees  = computed(() => canReviewFee.value || canDisburseFee.value)
   // 管理權（公司 / 專案 / 成員）仍含 admin
   const canManage      = computed(() => ['admin', 'boss'].includes(user.value?.role ?? ''))
+  // 可建立專案：admin / 老闆（全公司）、專案經理（自己的）
+  const canCreateProjects = computed(() => canManage.value || isManager.value)
 
   // 沿用舊名字當 alias，避免散布的 isManager check 全爆
   // canManageMembers 行為等同 canManage
@@ -90,8 +94,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, loading, isLoggedIn,
-    isAdmin, isBoss, isAccountant, isMember,
-    canReviewFee, canDisburseFee, canAccessFees, canManage, canManageMembers,
+    isAdmin, isBoss, isManager, isAccountant, isMember,
+    canReviewFee, canDisburseFee, canAccessFees, canManage, canManageMembers, canCreateProjects,
     fetchUser, login, logout, updateProfile, updatePassword, updateAvatar,
   }
 })

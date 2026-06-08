@@ -48,7 +48,7 @@
           icon="mdi-account-tie"
           icon-color="info"
           accent="info"
-          sub="manager 角色"
+          sub="boss 角色"
         />
       </v-col>
       <v-col cols="12" sm="6" md="3">
@@ -358,7 +358,7 @@ interface Member {
   id: number;
   name: string;
   email: string;
-  role?: "admin" | "boss" | "accountant" | "member";
+  role?: "admin" | "boss" | "manager" | "accountant" | "member";
   status: "active" | "pending" | "inactive";
   company_name?: string | null;
   created_at: string;
@@ -403,12 +403,14 @@ const statusLabel: Record<string, string> = {
 const roleLabel: Record<string, string> = {
   admin: "管理員",
   boss: "老闆",
+  manager: "專案經理",
   accountant: "會計",
   member: "成員",
 };
 const roleColor: Record<string, string> = {
   admin: "deep-purple",
   boss: "teal",
+  manager: "cyan",
   accountant: "indigo",
   member: "default",
 };

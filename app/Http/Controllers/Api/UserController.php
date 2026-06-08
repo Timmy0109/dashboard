@@ -28,7 +28,7 @@ class UserController extends Controller
             'name'       => 'required|string|max:100',
             'email'      => 'required|email|unique:users,email',
             'password'   => ['required', Password::min(8)],
-            'role'       => 'required|in:admin,boss,accountant,member',
+            'role'       => 'required|in:admin,boss,manager,accountant,member',
             'company_id' => 'sometimes|nullable|exists:companies,id',
             'job_title'  => 'sometimes|nullable|string|max:64',
         ]);
@@ -52,7 +52,7 @@ class UserController extends Controller
 
         $data = $request->validate([
             'name' => 'sometimes|string|max:100',
-            'role' => 'sometimes|in:admin,boss,accountant,member',
+            'role' => 'sometimes|in:admin,boss,manager,accountant,member',
             'status' => 'sometimes|in:active,inactive',
             'password' => ['sometimes', Password::min(8)],
             'job_title' => 'sometimes|nullable|string|max:64',

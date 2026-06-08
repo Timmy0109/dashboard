@@ -30,7 +30,8 @@ class MemberApprovalController extends Controller
         if ($err = $this->managerGuard($request)) return $err;
 
         $actor = $request->user();
-        $query = User::where('role', 'member');
+        // 員工 = member / 專案經理 / 會計（升職後仍要能在成員管理中檢視與調整）
+        $query = User::whereIn('role', ['member', 'manager', 'accountant']);
 
         if (! $actor->isAdmin()) {
             $query->where('company_id', $actor->company_id);
@@ -78,16 +79,17 @@ class MemberApprovalController extends Controller
         if ($err = $this->managerGuard($request)) return $err;
 
         $actor = $request->user();
-        if ($user->role !== 'member' || (! $actor->isAdmin() && $user->company_id !== $actor->company_id)) {
+        if (! in_array($user->role, ['member', 'manager', 'accountant'], true)
+            || (! $actor->isAdmin() && $user->company_id !== $actor->company_id)) {
             return response()->json(['message' => '無權限操作此成員'], 403);
         }
 
-        // boss 僅可指派 member / accountant；admin 走 /users 端點，此處同樣不開放升級為 admin/boss
+        // boss 僅可指派 member / 專案經理 / 會計；admin 走 /users 端點，此處同樣不開放升級為 admin/boss
         $data = $request->validate([
             'name'      => 'sometimes|string|max:100',
             'email'     => 'sometimes|email|unique:users,email,' . $user->id,
             'password'  => ['sometimes', Password::min(8)],
-            'role'      => 'sometimes|in:member,accountant',
+            'role'      => 'sometimes|in:member,manager,accountant',
             'job_title' => 'sometimes|nullable|string|max:100',
             'status'    => 'sometimes|in:active,inactive',
         ]);
@@ -119,7 +121,8 @@ class MemberApprovalController extends Controller
         if ($err = $this->managerGuard($request)) return $err;
 
         $actor = $request->user();
-        if ($user->role !== 'member' || (! $actor->isAdmin() && $user->company_id !== $actor->company_id)) {
+        if (! in_array($user->role, ['member', 'manager', 'accountant'], true)
+            || (! $actor->isAdmin() && $user->company_id !== $actor->company_id)) {
             return response()->json(['message' => '無權限操作此成員'], 403);
         }
 

@@ -57,7 +57,8 @@ class ProjectPolicy
 
     public function create(User $user): bool
     {
-        return $user->canManage();
+        // 老闆 / admin，以及專案經理（建立後 owner 即本人，僅能管自己的專案）
+        return $user->canCreateProjects();
     }
 
     public function update(User $user, Project $project): bool

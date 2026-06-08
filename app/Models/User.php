@@ -26,6 +26,7 @@ class User extends Authenticatable
      */
     public const ROLE_ADMIN      = 'admin';
     public const ROLE_BOSS       = 'boss';
+    public const ROLE_MANAGER    = 'manager';   // 專案經理：管自己的專案 + 做任務 + 提費用；不參與費用審核
     public const ROLE_ACCOUNTANT = 'accountant';
     public const ROLE_MEMBER     = 'member';
 
@@ -73,6 +74,12 @@ class User extends Authenticatable
     public function isBoss(): bool
     {
         return $this->role === self::ROLE_BOSS;
+    }
+
+    /** 專案經理（manager）：管自己的專案、做任務、提費用；不參與費用審核/核發 */
+    public function isManager(): bool
+    {
+        return $this->role === self::ROLE_MANAGER;
     }
 
     public function isAccountant(): bool
@@ -129,6 +136,12 @@ class User extends Authenticatable
     public function canManage(): bool
     {
         return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_BOSS], true);
+    }
+
+    /** 可建立專案：admin / 老闆（全公司）、專案經理（自己的，owner 限本人） */
+    public function canCreateProjects(): bool
+    {
+        return $this->canManage() || $this->isManager();
     }
 
     public function ownedProjects(): HasMany

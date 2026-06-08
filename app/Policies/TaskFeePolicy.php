@@ -34,8 +34,10 @@ class TaskFeePolicy
 
     public function create(User $user, Task $task): bool
     {
-        if ($user->isAdmin() || $this->canManageProjectForTask($user, $task)) return true;
-        return ($user->isMember() || $user->isAccountant()) && $task->assignee_id === $user->id;
+        if ($this->canManageProjectForTask($user, $task)) return true;
+        // 被指派者本人可提交（member / 專案經理 / 會計）
+        return ($user->isMember() || $user->isManager() || $user->isAccountant())
+            && $task->assignee_id === $user->id;
     }
 
     public function update(User $user, TaskFee $fee): bool
@@ -117,16 +119,14 @@ class TaskFeePolicy
             && $fee->project->company_id === $user->company_id;
     }
 
-    /** 可管理此專案（老闆/admin） */
+    /** 可管理此專案（老闆，或專案經理且為 owner；admin 已被 before() 排除） */
     private function canManageProject(User $user, TaskFee $fee): bool
     {
-        if ($user->isAdmin()) return true;
-        return $user->canManage() && (new ProjectPolicy())->update($user, $fee->project);
+        return $user->canCreateProjects() && (new ProjectPolicy())->update($user, $fee->project);
     }
 
     private function canManageProjectForTask(User $user, Task $task): bool
     {
-        if ($user->isAdmin()) return true;
-        return $user->canManage() && (new ProjectPolicy())->update($user, $task->project);
+        return $user->canCreateProjects() && (new ProjectPolicy())->update($user, $task->project);
     }
 }

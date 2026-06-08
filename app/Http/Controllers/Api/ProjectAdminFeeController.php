@@ -16,7 +16,7 @@ class ProjectAdminFeeController extends Controller
         $this->authorize('viewAny', [ProjectAdminFee::class, $project]);
 
         $fees = $project->adminFees()
-            ->with(['creator:id,name', 'attachments'])
+            ->with(['creator:id,name', 'reviewer:id,name', 'attachments'])
             ->orderByDesc('incurred_on')
             ->orderByDesc('created_at')
             ->get();
@@ -35,15 +35,46 @@ class ProjectAdminFeeController extends Controller
             'incurred_on' => 'nullable|date',
         ]);
 
+        // boss（canManage）建立 → 免審直接核准；專案經理建立 → pending 待會計審核
+        $creator = $request->user();
+        $isAutoApproved = $creator->canManage();
+
         $fee = $project->adminFees()->create([
-            'created_by'  => $request->user()->id,
+            'created_by'  => $creator->id,
             'amount'      => $data['amount'],
             'note'        => $data['note'] ?? null,
             'incurred_on' => $data['incurred_on'] ?? null,
+            'status'      => $isAutoApproved
+                ? ProjectAdminFee::STATUS_APPROVED
+                : ProjectAdminFee::STATUS_PENDING,
         ]);
 
-        $fee->load(['creator:id,name', 'attachments']);
+        $fee->load(['creator:id,name', 'reviewer:id,name', 'attachments']);
         return response()->json($fee, 201);
+    }
+
+    // POST /api/project-admin-fees/{fee}/review
+    // 會計（無會計時老闆兼審）核准或退件 PM 建立的行政費
+    public function review(Request $request, ProjectAdminFee $fee): JsonResponse
+    {
+        $this->authorize('review', $fee);
+
+        $data = $request->validate([
+            'decision'    => 'required|in:approve,reject',
+            'review_note' => 'nullable|string|max:1000',
+        ]);
+
+        $fee->update([
+            'status' => $data['decision'] === 'approve'
+                ? ProjectAdminFee::STATUS_APPROVED
+                : ProjectAdminFee::STATUS_REJECTED,
+            'reviewed_by'  => $request->user()->id,
+            'reviewed_at'  => now(),
+            'review_note'  => $data['review_note'] ?? null,
+        ]);
+
+        $fee->load(['creator:id,name', 'reviewer:id,name', 'attachments']);
+        return response()->json($fee);
     }
 
     // PATCH /api/project-admin-fees/{fee}
@@ -58,7 +89,7 @@ class ProjectAdminFeeController extends Controller
         ]);
 
         $fee->update($data);
-        $fee->load(['creator:id,name', 'attachments']);
+        $fee->load(['creator:id,name', 'reviewer:id,name', 'attachments']);
         return response()->json($fee);
     }
 
@@ -78,8 +109,9 @@ class ProjectAdminFeeController extends Controller
 
         $user = $request->user();
         // admin 不參與費用：看不到專案總額 / 預算 / 行政費用（落入 member self scope）
+        // 老闆（全公司可管的專案）與專案經理（自己的專案）皆可看全貌
         $canSeeAll = ! $user->isAdmin()
-            && $user->canManage()
+            && ($user->canManage() || $user->isManager())
             && (new \App\Policies\ProjectPolicy())->update($user, $project);
 
         // Member: 只看得到自己提交的費用，看不到專案總額 / 預算 / 行政費用
@@ -102,7 +134,11 @@ class ProjectAdminFeeController extends Controller
             ->where('status', \App\Models\TaskFee::STATUS_DISBURSED)->sum('amount');
         $taskPending = $project->taskFees()
             ->where('status', \App\Models\TaskFee::STATUS_PENDING)->sum('amount');
-        $adminTotal = $project->adminFees()->sum('amount');
+        // 僅「已核准」行政費計入支出；待審（pending）另計、不佔預算
+        $adminTotal   = $project->adminFees()
+            ->where('status', ProjectAdminFee::STATUS_APPROVED)->sum('amount');
+        $adminPending = $project->adminFees()
+            ->where('status', ProjectAdminFee::STATUS_PENDING)->sum('amount');
         $spent      = $taskApproved + $adminTotal;
         $budget     = (float) $project->total_budget;
 
@@ -112,6 +148,7 @@ class ProjectAdminFeeController extends Controller
             'task_fees_approved' => (float) $taskApproved,
             'task_fees_pending'  => (float) $taskPending,
             'admin_fees'         => (float) $adminTotal,
+            'admin_fees_pending' => (float) $adminPending,
             'total_budget'       => $budget,
             'remaining'          => (float) ($budget - $spent),
             'over_budget'        => $spent > $budget,

@@ -15,6 +15,7 @@ interface User {
   // 後端計算的能力旗標（核發權含「無會計→老闆兼任」規則，不可用 role 推算）
   can_review_fee?: boolean
   can_disburse_fee?: boolean
+  can_review_admin_fee?: boolean
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -33,6 +34,8 @@ export const useAuthStore = defineStore('auth', () => {
   // 旗標以後端為準，role 推算僅為舊回應的 fallback
   const canReviewFee   = computed(() => user.value?.can_review_fee ?? user.value?.role === 'boss')
   const canDisburseFee = computed(() => user.value?.can_disburse_fee ?? user.value?.role === 'accountant')
+  // 行政費審核：會計（無會計的公司由老闆兼審）；旗標以後端為準
+  const canReviewAdminFee = computed(() => user.value?.can_review_admin_fee ?? user.value?.role === 'accountant')
   // 參與費用流程（一階或二階）→ 費用審核頁入口
   const canAccessFees  = computed(() => canReviewFee.value || canDisburseFee.value)
   // 管理權（公司 / 專案 / 成員）仍含 admin
@@ -95,7 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user, loading, isLoggedIn,
     isAdmin, isBoss, isManager, isAccountant, isMember,
-    canReviewFee, canDisburseFee, canAccessFees, canManage, canManageMembers, canCreateProjects,
+    canReviewFee, canDisburseFee, canReviewAdminFee, canAccessFees, canManage, canManageMembers, canCreateProjects,
     fetchUser, login, logout, updateProfile, updatePassword, updateAvatar,
   }
 })

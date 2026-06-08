@@ -169,6 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Project admin fee actions
     Route::patch('project-admin-fees/{fee}',  [ProjectAdminFeeController::class, 'update']);
     Route::delete('project-admin-fees/{fee}', [ProjectAdminFeeController::class, 'destroy']);
+    Route::post('project-admin-fees/{fee}/review', [ProjectAdminFeeController::class, 'review']);
     Route::post('project-admin-fees/{fee}/attachments', [ProjectAdminFeeAttachmentController::class, 'store']);
     Route::delete('project-admin-fee-attachments/{attachment}', [ProjectAdminFeeAttachmentController::class, 'destroy']);
 });

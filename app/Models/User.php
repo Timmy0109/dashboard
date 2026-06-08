@@ -116,6 +116,19 @@ class User extends Authenticatable
         return $this->role === self::ROLE_BOSS && ! $this->companyHasAccountant();
     }
 
+    /**
+     * 可審核行政費（PM 建立的行政費 pending → approved/rejected）：
+     *   會計專有；過渡規則：公司無在職會計時由老闆兼審（與核發規則一致）
+     */
+    public function canReviewAdminFee(): bool
+    {
+        if ($this->role === self::ROLE_ACCOUNTANT) {
+            return true;
+        }
+
+        return $this->role === self::ROLE_BOSS && ! $this->companyHasAccountant();
+    }
+
     /** 參與費用流程（一階或二階）：費用審核頁入口與公司範圍唯讀的依據 */
     public function canAccessFees(): bool
     {

@@ -5,12 +5,14 @@ import api from '@/lib/axios'
 export interface Category { id: number; name: string; color: string }
 export interface Priority { id: number; name: string; color: string; sort_order: number }
 export interface StatusRule { id: number; name: string; icon: string; color: string; sort_order: number }
+export interface JobTitle { id: number; name: string; sort_order: number }
 export interface UserOption { id: number; name: string; role: string }
 
 export const useLookupStore = defineStore('lookup', () => {
   const categories = ref<Category[]>([])
   const priorities = ref<Priority[]>([])
   const statuses = ref<StatusRule[]>([])
+  const jobTitles = ref<JobTitle[]>([])
   const users = ref<UserOption[]>([])
   const loaded = ref(false)
 
@@ -23,17 +25,19 @@ export const useLookupStore = defineStore('lookup', () => {
       return
     }
 
-    const [cat, pri, sta] = await Promise.all([
+    const [cat, pri, sta, job] = await Promise.all([
       api.get('/lookups/categories'),
       api.get('/lookups/priorities'),
       api.get('/lookups/statuses'),
+      api.get('/lookups/jobtitles'),
     ])
     categories.value = cat.data
     priorities.value = pri.data
     statuses.value = sta.data
+    jobTitles.value = job.data
     loaded.value = true
     await fetchUsers
   }
 
-  return { categories, priorities, statuses, users, loaded, fetch }
+  return { categories, priorities, statuses, jobTitles, users, loaded, fetch }
 })

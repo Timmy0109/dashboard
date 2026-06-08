@@ -19,8 +19,8 @@ const tabItems = [
 ]
 
 // ---------- 個人資料 ----------
+// 職稱由管理者（admin / 老闆）於開通或成員管理時指派，本人僅可檢視
 const name = ref(auth.user?.name ?? '')
-const jobTitle = ref(auth.user?.job_title ?? '')
 const savingName = ref(false)
 const uploadingAvatar = ref(false)
 const nameError = ref('')
@@ -30,9 +30,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const profileChanged = computed(() => {
   if (name.value.trim() === '') return false
-  const nameDelta = name.value.trim() !== auth.user?.name
-  const titleDelta = (jobTitle.value || '') !== (auth.user?.job_title ?? '')
-  return nameDelta || titleDelta
+  return name.value.trim() !== auth.user?.name
 })
 // 保留舊名字 alias 不破壞別處
 const nameChanged = profileChanged
@@ -77,7 +75,7 @@ async function saveName() {
   profileError.value = ''
   savingName.value = true
   try {
-    await auth.updateProfile(trimmed, jobTitle.value.trim() || null)
+    await auth.updateProfile(trimmed)
     toast.success('個人資料已更新')
   } catch (err) {
     const e = err as { response?: { data?: { message?: string } } }
@@ -199,15 +197,14 @@ async function savePassword() {
           />
 
           <v-text-field
-            v-model="jobTitle"
-            label="職稱（業助 / 美編 / 出納 / PM…）"
-            placeholder="可選"
+            :model-value="auth.user?.job_title || '未設定'"
+            label="職稱"
             prepend-inner-icon="mdi-card-account-details-outline"
             variant="outlined"
             density="comfortable"
             class="mb-2"
-            maxlength="64"
-            hint="僅顯示用，不影響權限"
+            readonly
+            hint="職稱由管理者指派，如需調整請聯絡老闆或管理員"
             persistent-hint
           />
 

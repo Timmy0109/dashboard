@@ -181,6 +181,7 @@ class TaskFeeTest extends TestCase
         $this->assertDatabaseHas('notifications', ['user_id' => $this->member->id, 'type' => 'fee_reviewed']);
     }
 
+    /** 公司無在職會計時，老闆依過渡規則兼任二階核發 */
     public function test_boss_disburses_reviewed_fee(): void
     {
         $fee = TaskFee::create([
@@ -189,7 +190,7 @@ class TaskFeeTest extends TestCase
             'reviewed_by' => $this->manager->id, 'reviewed_at' => now(),
         ]);
 
-        $this->actingAs($this->manager) // role='boss' in setUp
+        $this->actingAs($this->manager) // role='boss' in setUp；公司無會計 → fallback 可核發
             ->postJson("/api/task-fees/{$fee->id}/disburse")
             ->assertOk()
             ->assertJsonFragment(['status' => 'disbursed']);
@@ -204,31 +205,44 @@ class TaskFeeTest extends TestCase
         $this->assertDatabaseHas('notifications', ['user_id' => $this->member->id, 'type' => 'fee_disbursed']);
     }
 
-    public function test_accountant_can_review_but_cannot_disburse(): void
+    /** 對調後：一階審核 = 老闆專有；二階核發 = 會計專有 */
+    public function test_accountant_can_disburse_but_cannot_review(): void
     {
         $accountant = User::factory()->create([
             'role' => 'accountant', 'status' => 'active', 'company_id' => $this->project->company_id,
         ]);
-        // 會計需是專案成員才有 project scope
-        $this->project->members()->attach($accountant->id, ['role' => 'member']);
 
         $fee = TaskFee::create([
             'task_id' => $this->task->id, 'project_id' => $this->project->id,
             'submitted_by' => $this->member->id, 'amount' => 100, 'status' => 'pending',
         ]);
 
-        // 會計可以一階審核
+        // 會計不可一階審核（老闆專有）
         $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/review")
+            ->assertForbidden();
+
+        // 老闆一階審核
+        $this->actingAs($this->manager)
             ->postJson("/api/task-fees/{$fee->id}/review")
             ->assertOk()
             ->assertJsonFragment(['status' => 'reviewed']);
 
         $fee->refresh();
 
-        // 但不可二階核發
-        $this->actingAs($accountant)
+        // 公司有在職會計 → 老闆不可二階核發
+        $this->actingAs($this->manager)
             ->postJson("/api/task-fees/{$fee->id}/disburse")
             ->assertForbidden();
+
+        // 會計二階核發
+        $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/disburse")
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'disbursed']);
+
+        $fee->refresh();
+        $this->assertEquals($accountant->id, $fee->disbursed_by);
     }
 
     public function test_boss_can_undisburse_disbursed_fee(): void
@@ -404,6 +418,86 @@ class TaskFeeTest extends TestCase
         $this->actingAs($this->member)
             ->postJson("/api/projects/{$this->project->id}/admin-fees", ['amount' => 100])
             ->assertForbidden();
+    }
+
+    public function test_accountant_can_disburse_and_request_receipt_without_being_project_member(): void
+    {
+        // 會計是公司層級財務角色，不是專案成員（先前走成員檢查會 403）
+        $accountant = User::factory()->create([
+            'role' => 'accountant', 'status' => 'active', 'company_id' => $this->project->company_id,
+        ]);
+        $this->assertFalse($this->project->members()->where('user_id', $accountant->id)->exists());
+
+        $fee = TaskFee::create([
+            'task_id' => $this->task->id, 'project_id' => $this->project->id,
+            'submitted_by' => $this->member->id, 'amount' => 1000, 'status' => 'pending',
+        ]);
+
+        // 補件通知（兩階段皆可要求）
+        $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/request-receipt", ['message' => '請補上收據'])
+            ->assertOk();
+        $this->assertNotNull($fee->fresh()->receipt_requested_at);
+
+        // 會計不可一階審核（老闆專有）
+        $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/review")
+            ->assertForbidden();
+
+        // 老闆一階審核後，會計（非專案成員）可二階核發
+        $this->actingAs($this->manager)
+            ->postJson("/api/task-fees/{$fee->id}/review")
+            ->assertOk();
+        $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/disburse")
+            ->assertOk();
+        $this->assertSame('disbursed', $fee->fresh()->status);
+    }
+
+    public function test_accountant_from_other_company_cannot_review_fee(): void
+    {
+        $otherCompany = Company::create([
+            'name' => 'OtherCo', 'status' => 'active',
+            'invite_code' => 'OTHER1234567', 'created_by' => $this->admin->id,
+        ]);
+        $outsider = User::factory()->create([
+            'role' => 'accountant', 'status' => 'active', 'company_id' => $otherCompany->id,
+        ]);
+
+        $fee = TaskFee::create([
+            'task_id' => $this->task->id, 'project_id' => $this->project->id,
+            'submitted_by' => $this->member->id, 'amount' => 1000, 'status' => 'pending',
+        ]);
+
+        $this->actingAs($outsider)
+            ->postJson("/api/task-fees/{$fee->id}/review")
+            ->assertForbidden();
+        $this->actingAs($outsider)
+            ->postJson("/api/task-fees/{$fee->id}/request-receipt", ['message' => 'x'])
+            ->assertForbidden();
+    }
+
+    public function test_member_sees_receipt_request_on_own_fee(): void
+    {
+        $accountant = User::factory()->create([
+            'role' => 'accountant', 'status' => 'active', 'company_id' => $this->project->company_id,
+        ]);
+        $fee = TaskFee::create([
+            'task_id' => $this->task->id, 'project_id' => $this->project->id,
+            'submitted_by' => $this->member->id, 'amount' => 1000, 'status' => 'pending',
+        ]);
+        $this->actingAs($accountant)
+            ->postJson("/api/task-fees/{$fee->id}/request-receipt", ['message' => '請補收據'])
+            ->assertOk();
+
+        // member 在自己的 task 費用列表要看得到補件要求 + 留言 + 要求者
+        $res = $this->actingAs($this->member)
+            ->getJson("/api/projects/{$this->project->id}/tasks/{$this->task->id}/fees")
+            ->assertOk();
+        $row = collect($res->json())->firstWhere('id', $fee->id);
+        $this->assertNotNull($row['receipt_requested_at']);
+        $this->assertSame('請補收據', $row['receipt_request_message']);
+        $this->assertSame($accountant->name, $row['receipt_requester']['name']);
     }
 
     public function test_approve_returns_409_when_fee_state_already_changed(): void

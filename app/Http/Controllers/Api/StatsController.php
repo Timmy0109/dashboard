@@ -27,6 +27,10 @@ class StatsController extends Controller
         $projectQuery = match ($user->role) {
             'admin' => Project::query(),
             'boss' => Project::where('owner_id', $user->id),
+            // 專案經理：自己的專案 + 自己參與（被指派任務）的專案
+            'manager' => Project::where(fn ($q) => $q
+                ->where('owner_id', $user->id)
+                ->orWhereHas('members', fn ($qq) => $qq->where('user_id', $user->id))),
             'accountant' => Project::where('company_id', $user->company_id),
             default => Project::whereHas('members', fn ($q) => $q->where('user_id', $user->id)),
         };

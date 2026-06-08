@@ -12,11 +12,13 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             PrioritySeeder::class,
             StatusRuleSeeder::class,
+            JobTitleSeeder::class,
             FeatureSeeder::class,
             UserSeeder::class,
             CompanySeeder::class,
             DemoProjectSeeder::class,
             DemoFeeSeeder::class,
+            DemoMultiCompanySeeder::class,
         ]);
     }
 }

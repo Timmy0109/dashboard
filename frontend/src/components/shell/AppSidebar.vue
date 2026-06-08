@@ -25,12 +25,20 @@ interface NavItem {
 
 const navItems = computed<NavItem[]>(() => {
   if (auth.isAdmin) {
+    // admin 只管系統層面：不含費用審核（費用流程僅老闆 / 會計）
     // 成員管理已整合進系統管理頁面，admin 側欄不再單獨列出
     return [
       { to: '/projects', icon: 'mdi-folder-multiple', label: '專案管理' },
-      { to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' },
       { to: '/settings', icon: 'mdi-cog', label: '設定管理' },
       { to: '/system', icon: 'mdi-domain', label: '系統管理' },
+    ]
+  }
+
+  // 會計範圍收斂：只有財務相關功能（專案管理 / 每日任務 / 統計分析皆不需要）
+  if (auth.isAccountant) {
+    return [
+      { to: '/finance', icon: 'mdi-finance', label: '財務總覽' },
+      { to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' },
     ]
   }
 
@@ -44,7 +52,8 @@ const navItems = computed<NavItem[]>(() => {
     items.push({ to: '/stats', icon: 'mdi-chart-bar', label: '統計分析' })
   }
 
-  if (auth.canReviewFee) {
+  if (auth.canAccessFees) {
+    items.push({ to: '/finance', icon: 'mdi-finance', label: '財務總覽' })
     items.push({ to: '/manager/fee-reviews', icon: 'mdi-cash-check', label: '費用審核' })
   }
 

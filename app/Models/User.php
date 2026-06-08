@@ -26,6 +26,7 @@ class User extends Authenticatable
      */
     public const ROLE_ADMIN      = 'admin';
     public const ROLE_BOSS       = 'boss';
+    public const ROLE_MANAGER    = 'manager';   // 專案經理：管自己的專案 + 做任務 + 提費用；不參與費用審核
     public const ROLE_ACCOUNTANT = 'accountant';
     public const ROLE_MEMBER     = 'member';
 
@@ -75,6 +76,12 @@ class User extends Authenticatable
         return $this->role === self::ROLE_BOSS;
     }
 
+    /** 專案經理（manager）：管自己的專案、做任務、提費用；不參與費用審核/核發 */
+    public function isManager(): bool
+    {
+        return $this->role === self::ROLE_MANAGER;
+    }
+
     public function isAccountant(): bool
     {
         return $this->role === self::ROLE_ACCOUNTANT;
@@ -86,27 +93,55 @@ class User extends Authenticatable
     }
 
     /**
-     * 階層：admin ⊇ boss ⊇ accountant ⊇ (fee 一階審核權限)
-     *      admin ⊇ boss              ⊇ (fee 二階核發權限)
-     *      admin ⊇ boss              ⊇ (manage 公司、行政費用…)
+     * 費用流程權責（admin 不參與費用）：
+     *   一階審核（核准支出）  = boss 專有
+     *   二階核發（執行出帳）  = accountant 專有；
+     *     過渡規則：公司無在職會計時由 boss 兼任核發
+     *     （多重角色系統上線後改為 boss 加掛 accountant 角色，移除此特例）
      */
 
-    /** 可一階審核費用：pending → reviewed */
+    /** 可一階審核費用：pending → reviewed（僅老闆） */
     public function canReviewFee(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_BOSS, self::ROLE_ACCOUNTANT], true);
+        return $this->role === self::ROLE_BOSS;
     }
 
-    /** 可二階核發費用：reviewed → disbursed */
+    /** 可二階核發費用：reviewed → disbursed（僅會計；無會計的公司由老闆兼任） */
     public function canDisburseFee(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_BOSS], true);
+        if ($this->role === self::ROLE_ACCOUNTANT) {
+            return true;
+        }
+
+        return $this->role === self::ROLE_BOSS && ! $this->companyHasAccountant();
+    }
+
+    /** 參與費用流程（一階或二階）：費用審核頁入口與公司範圍唯讀的依據 */
+    public function canAccessFees(): bool
+    {
+        return $this->canReviewFee() || $this->canDisburseFee();
+    }
+
+    /** 公司是否有在職會計（過渡規則用） */
+    private function companyHasAccountant(): bool
+    {
+        return $this->company_id !== null
+            && static::where('company_id', $this->company_id)
+                ->where('role', self::ROLE_ACCOUNTANT)
+                ->where('status', 'active')
+                ->exists();
     }
 
     /** 可管理公司 / 專案 / 行政費用 / 成員 */
     public function canManage(): bool
     {
         return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_BOSS], true);
+    }
+
+    /** 可建立專案：admin / 老闆（全公司）、專案經理（自己的，owner 限本人） */
+    public function canCreateProjects(): bool
+    {
+        return $this->canManage() || $this->isManager();
     }
 
     public function ownedProjects(): HasMany

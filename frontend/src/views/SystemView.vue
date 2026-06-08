@@ -350,7 +350,7 @@ interface Employee {
   id: number
   name: string
   email: string
-  role: 'admin' | 'boss' | 'accountant' | 'member'
+  role: 'admin' | 'boss' | 'manager' | 'accountant' | 'member'
   status: 'active' | 'inactive'
   created_at: string
 }
@@ -398,8 +398,8 @@ const employeesLoading = ref(false)
 const employeeSearch = ref('')
 const showUserModal = ref(false)
 
-const roleLabel: Record<string, string> = { admin: '管理員', boss: '老闆', accountant: '會計', member: '成員' }
-const roleColor: Record<string, string> = { admin: 'deep-purple', boss: 'teal', accountant: 'indigo', member: 'default' }
+const roleLabel: Record<string, string> = { admin: '管理員', boss: '老闆', manager: '專案經理', accountant: '會計', member: '成員' }
+const roleColor: Record<string, string> = { admin: 'deep-purple', boss: 'teal', manager: 'cyan', accountant: 'indigo', member: 'default' }
 
 const companyHeaders = [
   { title: '公司名稱', key: 'name',           sortable: true },

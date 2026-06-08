@@ -182,16 +182,18 @@ onMounted(() => lookup.fetch(props.companyId))
 
 const auth = useAuthStore()
 
-// 非 admin（老闆）僅能指派 member / accountant；admin 可指派全部角色
+// 非 admin（老闆）僅能指派 member / 專案經理 / 會計；admin 可指派全部角色
 const roleItems = computed(() =>
   auth.isAdmin
     ? [
         { title: '管理員', value: 'admin' },
         { title: '老闆', value: 'boss' },
+        { title: '專案經理', value: 'manager' },
         { title: '會計', value: 'accountant' },
         { title: '成員', value: 'member' },
       ]
     : [
+        { title: '專案經理', value: 'manager' },
         { title: '會計', value: 'accountant' },
         { title: '成員', value: 'member' },
       ],
@@ -226,6 +228,7 @@ const avatarColor = computed(() => {
   switch (form.value.role) {
     case 'admin':      return 'deep-purple'
     case 'boss':       return 'teal'
+    case 'manager':    return 'cyan'
     case 'accountant': return 'indigo'
     default:           return 'primary'
   }

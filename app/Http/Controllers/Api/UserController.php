@@ -28,8 +28,9 @@ class UserController extends Controller
             'name'       => 'required|string|max:100',
             'email'      => 'required|email|unique:users,email',
             'password'   => ['required', Password::min(8)],
-            'role'       => 'required|in:admin,boss,accountant,member',
+            'role'       => 'required|in:admin,boss,manager,accountant,member',
             'company_id' => 'sometimes|nullable|exists:companies,id',
+            'job_title'  => 'sometimes|nullable|string|max:64',
         ]);
 
         $user = User::create([
@@ -38,10 +39,11 @@ class UserController extends Controller
             'password'   => Hash::make($data['password']),
             'role'       => $data['role'],
             'company_id' => $data['company_id'] ?? null,
+            'job_title'  => $data['job_title'] ?? null,
             'status'     => 'active',
         ]);
 
-        return response()->json($user->only(['id', 'name', 'email', 'role', 'status']), 201);
+        return response()->json($user->only(['id', 'name', 'email', 'role', 'status', 'job_title']), 201);
     }
 
     public function update(Request $request, User $user): JsonResponse
@@ -50,9 +52,10 @@ class UserController extends Controller
 
         $data = $request->validate([
             'name' => 'sometimes|string|max:100',
-            'role' => 'sometimes|in:admin,boss,accountant,member',
+            'role' => 'sometimes|in:admin,boss,manager,accountant,member',
             'status' => 'sometimes|in:active,inactive',
             'password' => ['sometimes', Password::min(8)],
+            'job_title' => 'sometimes|nullable|string|max:64',
         ]);
 
         if (isset($data['password'])) {
@@ -66,7 +69,7 @@ class UserController extends Controller
             DB::table('sessions')->where('user_id', $user->id)->delete();
         }
 
-        return response()->json($user->only(['id', 'name', 'email', 'role', 'status']));
+        return response()->json($user->only(['id', 'name', 'email', 'role', 'status', 'job_title']));
     }
 
     public function destroy(Request $request, User $user): JsonResponse

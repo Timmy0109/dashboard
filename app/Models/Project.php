@@ -80,7 +80,10 @@ class Project extends Model
         $taskFeeApproved = $this->taskFees()
             ->where('status', TaskFee::STATUS_DISBURSED)
             ->sum('amount');
-        $adminFees = $this->adminFees()->sum('amount');
+        // 僅計入已核准的行政費（pending/rejected 不佔支出）
+        $adminFees = $this->adminFees()
+            ->where('status', ProjectAdminFee::STATUS_APPROVED)
+            ->sum('amount');
         return (float) ($taskFeeApproved + $adminFees);
     }
 

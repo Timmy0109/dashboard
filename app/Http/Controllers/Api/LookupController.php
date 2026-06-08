@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\JobTitle;
 use App\Models\Priority;
 use App\Models\StatusRule;
 use App\Models\User;
@@ -24,6 +25,11 @@ class LookupController extends Controller
     public function statuses(): JsonResponse
     {
         return response()->json(StatusRule::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'icon', 'color', 'sort_order']));
+    }
+
+    public function jobTitles(): JsonResponse
+    {
+        return response()->json(JobTitle::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'sort_order']));
     }
 
     public function users(\Illuminate\Http\Request $request): JsonResponse

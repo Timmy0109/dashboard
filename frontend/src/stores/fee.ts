@@ -183,6 +183,25 @@ export const useFeeStore = defineStore('fee', () => {
     invalidateSummary(fee.project_id)
   }
 
+  /** 會計（無會計時老闆兼審）核准 / 退件 PM 建立的行政費 */
+  async function reviewAdminFee(
+    fee: ProjectAdminFee,
+    decision: 'approve' | 'reject',
+    reviewNote?: string,
+  ): Promise<ProjectAdminFee> {
+    const res = await api.post<ProjectAdminFee>(`/project-admin-fees/${fee.id}/review`, {
+      decision,
+      ...(reviewNote ? { review_note: reviewNote } : {}),
+    })
+    const list = adminByProject.value[fee.project_id]
+    if (list) {
+      const i = list.findIndex(f => f.id === fee.id)
+      if (i >= 0) list[i] = res.data
+    }
+    invalidateSummary(fee.project_id)
+    return res.data
+  }
+
   // ── Summary ─────────────────────────────────────────────────
   async function fetchSummary(projectId: number): Promise<FeeSummary> {
     loading.summary = true
@@ -233,6 +252,7 @@ export const useFeeStore = defineStore('fee', () => {
     createAdminFee,
     updateAdminFee,
     deleteAdminFee,
+    reviewAdminFee,
 
     fetchSummary,
     invalidateSummary,

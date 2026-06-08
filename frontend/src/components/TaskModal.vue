@@ -463,7 +463,8 @@ const tabItems = computed(() => [
   { value: 'comments', label: '留言', count: taskComments.value.reduce((s, c) => s + 1 + (c.replies?.length ?? 0), 0) },
   { value: 'history', label: '歷史', count: taskHistory.value.length },
   { value: 'attachments', label: '附件', count: taskAttachments.value.length },
-  { value: 'fees', label: '費用', count: props.task?.fees_count ?? feeStore.byTask[props.task?.id ?? -1]?.length ?? 0 },
+  // admin 不參與費用，不顯示費用分頁
+  ...(auth.isAdmin ? [] : [{ value: 'fees', label: '費用', count: props.task?.fees_count ?? feeStore.byTask[props.task?.id ?? -1]?.length ?? 0 }]),
 ])
 
 // ── WebSocket realtime ────────────────────────────────────────────────────

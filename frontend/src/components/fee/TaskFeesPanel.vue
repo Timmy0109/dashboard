@@ -60,6 +60,16 @@
             >
               {{ statusLabel(fee.status) }}
             </v-chip>
+            <v-chip
+              v-if="fee.receipt_requested_at"
+              color="warning"
+              size="small"
+              variant="flat"
+              class="mr-2"
+              prepend-icon="mdi-receipt-text-outline"
+            >
+              需補件
+            </v-chip>
             <v-icon
               v-if="(fee.attachments?.length ?? 0) > 0"
               size="16"
@@ -115,23 +125,23 @@
                 <v-tooltip activator="parent" text="重新提交" />
               </v-btn>
 
-              <!-- 會計 / 老闆 / admin：pending（一階審核） -->
-              <template v-if="canReview && fee.status === 'pending'">
-                <v-btn icon size="x-small" variant="text" color="info" @click="onReview(fee)">
+              <!-- 老闆：pending（一階審核）；補件兩階皆可要求 -->
+              <template v-if="fee.status === 'pending'">
+                <v-btn v-if="canReview" icon size="x-small" variant="text" color="info" @click="onReview(fee)">
                   <v-icon>mdi-check-decagram</v-icon>
                   <v-tooltip activator="parent" text="審核通過" />
                 </v-btn>
-                <v-btn icon size="x-small" variant="text" color="warning" @click="openReason('request_receipt', fee)">
+                <v-btn v-if="canAccessFees" icon size="x-small" variant="text" color="warning" @click="openReason('request_receipt', fee)">
                   <v-icon>mdi-receipt-text-outline</v-icon>
                   <v-tooltip activator="parent" text="要求補件" />
                 </v-btn>
-                <v-btn icon size="x-small" variant="text" color="error" @click="openReason('reject', fee)">
+                <v-btn v-if="canReview" icon size="x-small" variant="text" color="error" @click="openReason('reject', fee)">
                   <v-icon>mdi-close</v-icon>
                   <v-tooltip activator="parent" text="退件" />
                 </v-btn>
               </template>
 
-              <!-- 老闆 / admin：reviewed（二階核發） -->
+              <!-- 會計（無會計時為老闆）：reviewed（二階核發） -->
               <template v-if="canDisburse && fee.status === 'reviewed'">
                 <v-btn icon size="x-small" variant="text" color="success" @click="onDisburse(fee)">
                   <v-icon>mdi-cash-check</v-icon>
@@ -147,7 +157,7 @@
                 </v-btn>
               </template>
 
-              <!-- 會計（無核發權）：reviewed 只能改回待審或退件 -->
+              <!-- 老闆（公司有會計、無核發權）：reviewed 可自我修正改回待審或退件 -->
               <template v-if="canReview && !canDisburse && fee.status === 'reviewed'">
                 <v-btn icon size="x-small" variant="text" color="grey-darken-1" @click="openReason('unreview', fee)">
                   <v-icon>mdi-undo-variant</v-icon>
@@ -159,7 +169,7 @@
                 </v-btn>
               </template>
 
-              <!-- 老闆 / admin：disbursed（撤回核發） -->
+              <!-- 會計：disbursed（撤回核發） -->
               <v-btn
                 v-if="canDisburse && fee.status === 'disbursed'"
                 icon size="x-small" variant="text" color="grey-darken-1"
@@ -169,9 +179,9 @@
                 <v-tooltip activator="parent" text="撤回核發" />
               </v-btn>
 
-              <!-- 會計 / 老闆 / admin：rejected（取消退件） -->
+              <!-- 老闆 / 會計：rejected（取消退件） -->
               <v-btn
-                v-if="canReview && fee.status === 'rejected' && !isSubmitter(fee)"
+                v-if="canAccessFees && fee.status === 'rejected' && !isSubmitter(fee)"
                 icon size="x-small" variant="text" color="grey-darken-1"
                 @click="onResubmit(fee)"
               >
@@ -208,6 +218,15 @@
             <div v-if="fee.unapprove_reason" class="mb-2">
               <div class="text-caption text-grey-darken-1">改回待審 / 撤回核發原因</div>
               <div class="text-body-2">{{ fee.unapprove_reason }}</div>
+            </div>
+            <div v-if="fee.receipt_requested_at" class="mb-2">
+              <div class="text-caption text-warning">
+                需補件<template v-if="fee.receipt_requester"> · {{ fee.receipt_requester.name }}</template>
+                · {{ formatTime(fee.receipt_requested_at) }}
+              </div>
+              <div class="text-body-2">
+                {{ fee.receipt_request_message || '審核者要求補上收據／憑證，請編輯後重新上傳。' }}
+              </div>
             </div>
             <div v-if="fee.attachments && fee.attachments.length" class="mb-1">
               <div class="text-caption text-grey mb-1">收據</div>
@@ -319,8 +338,9 @@ const approvedTotal = computed(() =>
     .reduce((sum, f) => sum + Number(f.amount), 0),
 )
 
-const canReview   = computed(() => auth.canReviewFee)
-const canDisburse = computed(() => auth.canDisburseFee)
+const canReview     = computed(() => auth.canReviewFee)
+const canDisburse   = computed(() => auth.canDisburseFee)
+const canAccessFees = computed(() => auth.canAccessFees)
 const isSubmitter = (fee: TaskFee) => auth.user?.id === fee.submitted_by
 
 const expanded = reactive<Record<number, boolean>>({})

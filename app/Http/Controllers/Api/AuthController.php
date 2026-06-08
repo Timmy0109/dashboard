@@ -49,6 +49,10 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'job_title' => $user->job_title,
+                // 能力旗標：前端不可用 role 推算（核發權含「無會計→老闆兼任」的後端規則）
+                'can_review_fee'   => $user->canReviewFee(),
+                'can_disburse_fee' => $user->canDisburseFee(),
+                'can_review_admin_fee' => $user->canReviewAdminFee(),
             ],
         ]);
     }
@@ -73,6 +77,10 @@ class AuthController extends Controller
             'role'       => $user->role,
             'job_title'  => $user->job_title,
             'avatar_url' => $user->avatar_url,
+            // 能力旗標：前端不可用 role 推算（核發權含「無會計→老闆兼任」的後端規則）
+            'can_review_fee'   => $user->canReviewFee(),
+            'can_disburse_fee' => $user->canDisburseFee(),
+            'can_review_admin_fee' => $user->canReviewAdminFee(),
         ]);
     }
 }

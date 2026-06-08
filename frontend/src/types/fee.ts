@@ -72,6 +72,14 @@ export interface ProjectAdminFeeAttachment {
   created_at: string
 }
 
+/**
+ * 行政費審核狀態：
+ *   pending  — PM 建立，待會計審核
+ *   approved — 已核准（boss 建立免審 / 審核通過），計入支出
+ *   rejected — 審核退件
+ */
+export type AdminFeeStatus = 'pending' | 'approved' | 'rejected'
+
 export interface ProjectAdminFee {
   id: number
   project_id: number
@@ -79,8 +87,14 @@ export interface ProjectAdminFee {
   amount: string
   note: string | null
   incurred_on: string | null
+  status: AdminFeeStatus
+
+  reviewed_by: number | null
+  reviewed_at: string | null
+  review_note: string | null
 
   creator?: UserRef
+  reviewer?: UserRef | null
   attachments?: ProjectAdminFeeAttachment[]
 
   created_at: string
@@ -105,6 +119,7 @@ export type FeeSummary =
       task_fees_approved: number
       task_fees_pending: number
       admin_fees: number
+      admin_fees_pending: number
       total_budget: number
       remaining: number
       over_budget: boolean

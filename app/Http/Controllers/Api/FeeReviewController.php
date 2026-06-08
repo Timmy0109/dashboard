@@ -18,8 +18,8 @@ class FeeReviewController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (! $user->canReviewFee()) {
-            abort(403, '僅可審核費用者（admin / boss / 會計）可使用');
+        if (! $user->canAccessFees()) {
+            abort(403, '僅費用流程相關人員（老闆 / 會計）可使用');
         }
 
         // 可見的 project 範圍

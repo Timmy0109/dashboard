@@ -73,7 +73,7 @@ class ProjectController extends Controller
             'owner', 'category', 'priority', 'status', 'members',
             'tasks' => function ($q) use ($user) {
                 $scope = function ($qq) use ($user) {
-                    if (! $user->canReviewFee()) {
+                    if (! $user->canAccessFees()) {
                         $qq->where('submitted_by', $user->id);
                     }
                 };

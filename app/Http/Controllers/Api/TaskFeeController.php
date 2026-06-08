@@ -21,10 +21,10 @@ class TaskFeeController extends Controller
 
         $user = $request->user();
         $query = $task->fees()
-            ->with(['submitter:id,name', 'reviewer:id,name', 'disburser:id,name', 'unapprover:id,name', 'attachments']);
+            ->with(['submitter:id,name', 'reviewer:id,name', 'disburser:id,name', 'unapprover:id,name', 'receiptRequester:id,name', 'attachments']);
 
-        // 只有可審核者 (admin/boss/accountant) 看全部；member 只看自己提的
-        if (! $user->canReviewFee()) {
+        // 費用流程參與者（boss 一階 / accountant 二階）看全部；member 只看自己提的（admin 不參與費用）
+        if (! $user->canAccessFees()) {
             $query->where('submitted_by', $user->id);
         }
 
@@ -48,7 +48,7 @@ class TaskFeeController extends Controller
                 'attachments',
             ]);
 
-        if (! $user->canReviewFee()) {
+        if (! $user->canAccessFees()) {
             $query->where('submitted_by', $user->id);
         }
 
@@ -305,7 +305,7 @@ class TaskFeeController extends Controller
             'message'     => $data['message'] ?? null,
         ]);
 
-        return response()->json($fee->fresh(['submitter:id,name', 'attachments']));
+        return response()->json($fee->fresh(['submitter:id,name', 'receiptRequester:id,name', 'attachments']));
     }
 
     private function notify(int $userId, string $type, array $payload): void

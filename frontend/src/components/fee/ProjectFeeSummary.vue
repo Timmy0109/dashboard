@@ -150,6 +150,12 @@ const BodyContent = defineComponent({
               amount: Math.abs(s.remaining), ratio: pctOf(Math.abs(s.remaining)),
             })),
           ]),
+          s.admin_fees_pending > 0
+            ? h('div', { class: 'text-caption text-warning mt-3 d-flex align-center' }, [
+                h(resolveComponent('VIcon') as never, { icon: 'mdi-clock-alert-outline', size: 14, class: 'mr-1' }),
+                `另有待審行政費 ${fmt(s.admin_fees_pending)}（核准後才計入支出）`,
+              ])
+            : null,
         ])
       }
 

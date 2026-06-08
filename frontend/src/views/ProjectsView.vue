@@ -168,25 +168,33 @@
           <h2 class="text-h6 font-weight-bold">專案管理</h2>
           <p class="text-body-2 text-medium-emphasis">我的專案</p>
         </div>
-        <div v-if="auth.canManageMembers" class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-wrap">
+          <template v-if="auth.canManageMembers">
+            <v-btn
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-upload"
+              rounded="lg"
+              @click="showImport = true"
+              >匯入</v-btn
+            >
+            <v-btn
+              variant="outlined"
+              color="grey"
+              prepend-icon="mdi-download"
+              rounded="lg"
+              :loading="exporting"
+              @click="exportAll"
+              >匯出全部</v-btn
+            >
+          </template>
+          <!-- 專案經理可建立自己的專案 -->
           <v-btn
-            variant="outlined"
+            v-if="auth.canCreateProjects"
             color="primary"
-            prepend-icon="mdi-upload"
+            prepend-icon="mdi-plus"
             rounded="lg"
-            @click="showImport = true"
-            >匯入</v-btn
-          >
-          <v-btn
-            variant="outlined"
-            color="grey"
-            prepend-icon="mdi-download"
-            rounded="lg"
-            :loading="exporting"
-            @click="exportAll"
-            >匯出全部</v-btn
-          >
-          <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate"
+            @click="openCreate"
             >新增專案</v-btn
           >
         </div>

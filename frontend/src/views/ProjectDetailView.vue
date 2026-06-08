@@ -190,8 +190,9 @@
     </v-row>
 
     <!-- ── Mid section：Gantt（左 58%）+ Fees Panel（右 42%） ─────── -->
+    <!-- admin 不參與費用：隱藏費用面板，甘特圖佔滿 -->
     <v-row class="mb-5" dense>
-      <v-col cols="12" lg="7">
+      <v-col cols="12" :lg="auth.isAdmin ? 12 : 7">
         <v-card rounded="xl" class="pms-gantt-card">
           <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-3 d-flex align-center gap-2">
             <v-icon icon="mdi-chart-gantt" size="18" color="primary" />
@@ -208,7 +209,7 @@
         </v-card>
       </v-col>
 
-      <v-col cols="12" lg="5">
+      <v-col v-if="!auth.isAdmin" cols="12" lg="5">
         <ProjectFeesPanel :project-id="project.id" />
       </v-col>
     </v-row>

@@ -119,8 +119,8 @@
         </v-btn>
       </div>
 
-      <!-- 下半：行政費用明細（僅 manager/admin） -->
-      <template v-if="canManageAdminFees">
+      <!-- 下半：行政費用明細（專案負責人 / 老闆 / 審核者可見） -->
+      <template v-if="showAdminSection">
         <v-divider class="my-5" />
 
         <div class="d-flex align-center gap-2 mb-3">
@@ -130,7 +130,9 @@
             {{ fees.length }} 筆 · NT${{ adminTotal.toLocaleString() }}
           </v-chip>
           <v-spacer />
-          <span class="text-caption text-medium-emphasis">由專案負責人填寫，無需審核</span>
+          <span class="text-caption text-medium-emphasis">
+            {{ canReviewAdminFees ? '經理提交後由你審核' : '老闆填寫免審；經理提交需會計審核' }}
+          </span>
         </div>
 
         <v-skeleton-loader v-if="loading && fees.length === 0" type="list-item-three-line@2" />
@@ -154,8 +156,14 @@
               </template>
 
               <v-list-item-title class="d-flex align-center gap-3 flex-wrap">
+                <v-chip
+                  :color="adminStatusColor(fee.status)"
+                  size="x-small" variant="flat" density="compact" class="pms-status-chip"
+                >
+                  {{ adminStatusLabel(fee.status) }}
+                </v-chip>
                 <span class="text-body-2 font-weight-semibold flex-grow-1">
-                  {{ fee.note ? truncate(fee.note, 28) : '行政費用' }}
+                  {{ fee.note ? truncate(fee.note, 24) : '行政費用' }}
                 </span>
                 <span class="text-body-1 font-weight-bold pms-tnum text-primary">
                   {{ fmt(fee.amount) }}
@@ -170,12 +178,29 @@
                   <v-icon start icon="mdi-paperclip" size="12" />
                   {{ fee.attachments!.length }}
                 </v-chip>
+                <span v-if="fee.status === 'rejected' && fee.review_note" class="text-error">
+                  · 退件原因：{{ truncate(fee.review_note, 24) }}
+                </span>
               </v-list-item-subtitle>
 
               <template #append>
                 <div class="d-flex align-center" @click.stop>
-                  <v-btn icon="mdi-pencil" size="x-small" variant="text" color="grey" @click="openEdit(fee)" />
-                  <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="handleDelete(fee)" />
+                  <!-- 審核者：pending 顯示核准 / 退件 -->
+                  <template v-if="canReviewAdminFees && fee.status === 'pending'">
+                    <v-btn
+                      icon="mdi-check" size="x-small" variant="text" color="success"
+                      :loading="reviewing" @click="handleApprove(fee)"
+                    />
+                    <v-btn
+                      icon="mdi-close" size="x-small" variant="text" color="error"
+                      :disabled="reviewing" @click="openReject(fee)"
+                    />
+                  </template>
+                  <!-- 可管理者：編輯 / 刪除 -->
+                  <template v-if="canManageAdminFees">
+                    <v-btn icon="mdi-pencil" size="x-small" variant="text" color="grey" @click="openEdit(fee)" />
+                    <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="handleDelete(fee)" />
+                  </template>
                   <v-btn
                     :icon="expanded[fee.id] ? 'mdi-chevron-up' : 'mdi-chevron-down'"
                     size="x-small" variant="text" color="grey"
@@ -312,8 +337,14 @@
                   </v-avatar>
                 </template>
                 <v-list-item-title class="d-flex align-center gap-3 flex-wrap">
+                  <v-chip
+                    :color="adminStatusColor(fee.status)"
+                    size="x-small" variant="flat" density="compact" class="pms-status-chip"
+                  >
+                    {{ adminStatusLabel(fee.status) }}
+                  </v-chip>
                   <span class="text-body-2 font-weight-semibold flex-grow-1">
-                    {{ fee.note ? truncate(fee.note, 40) : '行政費用' }}
+                    {{ fee.note ? truncate(fee.note, 36) : '行政費用' }}
                   </span>
                   <span class="text-body-1 font-weight-bold pms-tnum text-primary">{{ fmt(fee.amount) }}</span>
                 </v-list-item-title>
@@ -328,8 +359,20 @@
                 </v-list-item-subtitle>
                 <template #append>
                   <div class="d-flex align-center" @click.stop>
-                    <v-btn icon="mdi-pencil" size="x-small" variant="text" color="grey" @click="openEdit(fee)" />
-                    <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="handleDelete(fee)" />
+                    <template v-if="canReviewAdminFees && fee.status === 'pending'">
+                      <v-btn
+                        icon="mdi-check" size="x-small" variant="text" color="success"
+                        :loading="reviewing" @click="handleApprove(fee)"
+                      />
+                      <v-btn
+                        icon="mdi-close" size="x-small" variant="text" color="error"
+                        :disabled="reviewing" @click="openReject(fee)"
+                      />
+                    </template>
+                    <template v-if="canManageAdminFees">
+                      <v-btn icon="mdi-pencil" size="x-small" variant="text" color="grey" @click="openEdit(fee)" />
+                      <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="handleDelete(fee)" />
+                    </template>
                   </div>
                 </template>
               </v-list-item>
@@ -348,6 +391,33 @@
             prepend-icon="mdi-plus"
             @click="showAdminFeesDialog = false; openCreate()"
           >新增行政費用</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 退件原因 dialog -->
+    <v-dialog v-model="rejectDialog" max-width="440">
+      <v-card rounded="xl">
+        <v-card-title class="text-body-1 font-weight-semibold pa-5 pb-2">退件行政費用</v-card-title>
+        <v-card-text class="pa-5 pt-2">
+          <div class="text-body-2 text-medium-emphasis mb-3">
+            {{ rejectTarget ? fmt(rejectTarget.amount) : '' }}
+            <span v-if="rejectTarget?.creator"> · {{ rejectTarget.creator.name }}</span>
+          </div>
+          <v-textarea
+            v-model="rejectNote"
+            label="退件原因（選填）"
+            variant="outlined"
+            rows="3"
+            auto-grow
+            density="comfortable"
+            hide-details
+          />
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer />
+          <v-btn variant="text" :disabled="reviewing" @click="rejectDialog = false">取消</v-btn>
+          <v-btn color="error" variant="flat" :loading="reviewing" @click="confirmReject">確定退件</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -377,13 +447,30 @@ const feeStore = useFeeStore()
 const auth = useAuthStore()
 const toast = useToast()
 
-const canManageAdminFees = computed(() => auth.canManage)
-const fees = computed<ProjectAdminFee[]>(() => feeStore.adminByProject[props.projectId] ?? [])
-const loading = computed(() => feeStore.loading.admin)
-
 const summary = computed(() => feeStore.summaryByProject[props.projectId])
 const isManagerView = computed(() => summary.value?.scope === 'all')
+
+// 行政費用：可管理（建立/編輯/刪除）= 該專案財務全貌可見者（老闆/專案經理本人，非 admin）
+const canManageAdminFees = computed(() => isManagerView.value && !auth.isAdmin)
+// 審核（核准/退件 pending）= 會計（無會計的公司由老闆兼審），以後端旗標為準
+const canReviewAdminFees = computed(() => auth.canReviewAdminFee)
+// 行政費區塊顯示：可管理者或審核者皆可見
+const showAdminSection = computed(() => canManageAdminFees.value || canReviewAdminFees.value)
+
+const fees = computed<ProjectAdminFee[]>(() => feeStore.adminByProject[props.projectId] ?? [])
+const loading = computed(() => feeStore.loading.admin)
 const adminTotal = computed(() => fees.value.reduce((s, f) => s + Number(f.amount), 0))
+
+function adminStatusColor(s: ProjectAdminFee['status']): string {
+  if (s === 'approved') return 'success'
+  if (s === 'pending') return 'warning'
+  return 'error'
+}
+function adminStatusLabel(s: ProjectAdminFee['status']): string {
+  if (s === 'approved') return '已核准'
+  if (s === 'pending') return '待審核'
+  return '已退件'
+}
 
 const taskFees = computed<TaskFee[]>(() => feeStore.taskFeesByProject[props.projectId] ?? [])
 const loadingTaskFees = computed(() => feeStore.loading.projectTask)
@@ -446,12 +533,58 @@ async function handleDelete(fee: ProjectAdminFee) {
   }
 }
 
+// ── 行政費審核（會計 / 無會計時老闆兼審）──────────────────
+const reviewing = ref(false)
+async function handleApprove(fee: ProjectAdminFee) {
+  if (reviewing.value) return
+  reviewing.value = true
+  try {
+    await feeStore.reviewAdminFee(fee, 'approve')
+    toast.success('已核准行政費用')
+  } catch {
+    toast.error('核准失敗，請重試')
+  } finally {
+    reviewing.value = false
+  }
+}
+
+const rejectDialog = ref(false)
+const rejectTarget = ref<ProjectAdminFee | null>(null)
+const rejectNote = ref('')
+function openReject(fee: ProjectAdminFee) {
+  rejectTarget.value = fee
+  rejectNote.value = ''
+  rejectDialog.value = true
+}
+async function confirmReject() {
+  if (!rejectTarget.value || reviewing.value) return
+  reviewing.value = true
+  try {
+    await feeStore.reviewAdminFee(rejectTarget.value, 'reject', rejectNote.value.trim() || undefined)
+    toast.success('已退件')
+    rejectDialog.value = false
+    rejectTarget.value = null
+  } catch {
+    toast.error('退件失敗，請重試')
+  } finally {
+    reviewing.value = false
+  }
+}
+
 onMounted(() => {
   feeStore.fetchProjectTaskFees(props.projectId)
-  if (canManageAdminFees.value) {
-    feeStore.fetchAdminFees(props.projectId)
-  }
 })
+
+// showAdminSection 依賴 summary（非同步載入）→ 一旦可見即抓行政費清單
+watch(
+  showAdminSection,
+  (visible) => {
+    if (visible && feeStore.adminByProject[props.projectId] === undefined) {
+      feeStore.fetchAdminFees(props.projectId)
+    }
+  },
+  { immediate: true },
+)
 
 // summary 被 invalidate 後 taskFeesByProject 也會被清掉 → 自動 refetch
 watch(
